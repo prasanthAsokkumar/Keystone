@@ -115,6 +115,8 @@ public static class RunwayCalculator
         int maxProjectionMonths = 60,
         int financialYearStartMonth = 1)
     {
+        // Transfers move money between the household's own accounts; they don't change its cash.
+        transactions = transactions.Where(t => !t.IsTransfer).ToList();
         var firstDate = transactions.Count > 0 ? transactions.Min(t => t.Date) : today;
         var past = Expand(transactions, firstDate, today);
         var balance = startingBalance + past.Sum(o => o.SignedAmount);

@@ -35,7 +35,12 @@ public partial class App : Application
 
     private void About_Click(object? sender, EventArgs e)
     {
-        if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
-            new AboutWindow().ShowDialog(owner);
+        if (ApplicationLifetime is not IClassicDesktopStyleApplicationLifetime { MainWindow: { } owner })
+            return;
+        // The About window takes focus from the main window; that isn't leaving Keystone.
+        var ownWindow = (owner.DataContext as MainViewModel)?.OwnWindow();
+        var about = new AboutWindow();
+        about.Closed += (_, _) => ownWindow?.Dispose();
+        about.ShowDialog(owner);
     }
 }

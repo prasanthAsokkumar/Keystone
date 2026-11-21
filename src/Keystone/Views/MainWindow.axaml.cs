@@ -1,11 +1,15 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
+using Avalonia.VisualTree;
 using Avalonia.Threading;
 using Avalonia.Input;
+using Avalonia.Input.Platform;
 using Avalonia.Interactivity;
 using Avalonia.Platform.Storage;
 using Keystone.ViewModels;
@@ -41,12 +45,42 @@ public partial class MainWindow : Window
         AddHandler(DragDrop.DropEvent, Window_Drop);
         DataContextChanged += (_, _) =>
         {
-            if (DataContext is MainViewModel vm)
-                vm.PropertyChanged += ViewModel_PropertyChanged;
+            if (DataContext is not MainViewModel vm)
+                return;
+            vm.PropertyChanged += ViewModel_PropertyChanged;
+            vm.CopyToClipboard = text => Clipboard?.SetTextAsync(text) ?? System.Threading.Tasks.Task.CompletedTask;
         };
+
+        // The app lock counts time away from the window.
+        Deactivated += (_, _) => (DataContext as MainViewModel)?.OnLeftApp(System.DateTime.Now);
+        Activated += (_, _) => (DataContext as MainViewModel)?.OnReturnedToApp(System.DateTime.Now);
+
+        // ⌘F searches everything.
+        KeyBindings.Add(new KeyBinding
+        {
+            Gesture = new KeyGesture(Key.F, KeyModifiers.Meta),
+            Command = new CommunityToolkit.Mvvm.Input.RelayCommand(() =>
+            {
+                GlobalSearchBox.Focus();
+                GlobalSearchBox.SelectAll();
+            }),
+        });
     }
 
     private bool _closingAfterSave;
+
+    /// <summary>File pickers take focus; that isn't leaving Keystone, so the app lock ignores it.</summary>
+    private async Task<IReadOnlyList<IStorageFile>> PickFilesAsync(FilePickerOpenOptions options)
+    {
+        using ((DataContext as MainViewModel)?.OwnWindow())
+            return await StorageProvider.OpenFilePickerAsync(options);
+    }
+
+    private async Task<IReadOnlyList<IStorageFolder>> PickFolderAsync(FolderPickerOpenOptions options)
+    {
+        using ((DataContext as MainViewModel)?.OwnWindow())
+            return await StorageProvider.OpenFolderPickerAsync(options);
+    }
 
     /// <summary>A note edit that hasn't been written yet is saved before the window closes.</summary>
     protected override async void OnClosing(WindowClosingEventArgs e)
@@ -61,9 +95,12 @@ public partial class MainWindow : Window
         Close();
     }
 
-    /// <summary>A new, empty note gets the cursor in its title.</summary>
+    /// <summary>A new, empty note gets the cursor in its title; search results open below the search box.</summary>
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
+        if (e.PropertyName is nameof(MainViewModel.SearchResults) && sender is MainViewModel search)
+            SearchPopup.IsOpen = search.HasSearchResults || search.ShowsNoSearchResults;
+
         if (e.PropertyName == nameof(MainViewModel.SelectedNoteItem) &&
             sender is MainViewModel { SelectedNoteItem: { IsUntitled: true, HasPreview: false } })
             Dispatcher.UIThread.Post(() => NoteTitleBox.Focus(), DispatcherPriority.Background);
@@ -76,7 +113,8 @@ public partial class MainWindow : Window
             return null;
         return e.DataTransfer.TryGetFiles()?
             .Select(f => f.TryGetLocalPath())
-            .FirstOrDefault(p => p is not null && File.Exists(p) && (vm.DropFilesAsDocument || MainViewModel.CanImport(p)));
+            .FirstOrDefault(p => p is not null && File.Exists(p) &&
+                                 (vm.DropFilesAsDocument || MainViewModel.CanImport(p) || MainViewModel.IsBankStatement(p)));
     }
 
     private static List<string> DroppedPaths(DragEventArgs e) =>
@@ -88,7 +126,7 @@ public partial class MainWindow : Window
 
     private void Window_DragOver(object? sender, DragEventArgs e)
     {
-        var canDrop = DroppedPath(e) is not null;
+        var canDrop = DataContext is MainViewModel { CanAcceptDrop: true } && DroppedPath(e) is not null;
         e.DragEffects = canDrop ? DragDropEffects.Copy : DragDropEffects.None;
         DropOverlay.IsVisible = canDrop;
     }
@@ -96,8 +134,15 @@ public partial class MainWindow : Window
     private async void Window_Drop(object? sender, DragEventArgs e)
     {
         DropOverlay.IsVisible = false;
-        if (DroppedPath(e) is not { } path || DataContext is not MainViewModel vm)
+        if (DroppedPath(e) is not { } path || DataContext is not MainViewModel { CanAcceptDrop: true } vm)
             return;
+
+        // Bank statements are read without the AI, except where files are filed as documents.
+        if (!vm.IsDocumentsPage && !vm.IsRetirementPage && MainViewModel.IsBankStatement(path))
+        {
+            await vm.ImportBankStatementAsync(path);
+            return;
+        }
 
         // Several files at once are filed together, each read by the local AI.
         var paths = DroppedPaths(e);
@@ -118,7 +163,7 @@ public partial class MainWindow : Window
     /// <summary>One file opens the document form; several go to the import list.</summary>
     private async void AddDocument_Click(object? sender, RoutedEventArgs e)
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await PickFilesAsync(new FilePickerOpenOptions
         {
             Title = "Add bills, letters or notices",
             AllowMultiple = true,
@@ -135,7 +180,7 @@ public partial class MainWindow : Window
 
     private async void AttachStatementLetter_Click(object? sender, RoutedEventArgs e)
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await PickFilesAsync(new FilePickerOpenOptions
         {
             Title = "Choose the letter",
         });
@@ -143,9 +188,48 @@ public partial class MainWindow : Window
             await vm.AttachStatementLetterAsync(path);
     }
 
+    private async void ImportBankStatement_Click(object? sender, RoutedEventArgs e)
+    {
+        var files = await PickFilesAsync(new FilePickerOpenOptions
+        {
+            Title = "Import a bank statement",
+            FileTypeFilter =
+            [
+                new FilePickerFileType("Bank statements (camt.053, CSV)") { Patterns = ["*.xml", "*.camt", "*.csv", "*.txt", "*.tsv"] },
+            ],
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is { } path && DataContext is MainViewModel vm)
+            await vm.ImportBankStatementAsync(path);
+    }
+
+    /// <summary>Matches one account in Settings to the balance typed in its flyout.</summary>
+    private void MatchAccount_Click(object? sender, RoutedEventArgs e)
+    {
+        if (sender is not Button { Tag: Keystone.Models.BankAccount account } button || DataContext is not MainViewModel vm)
+            return;
+        vm.BalanceAccount = vm.AccountOptions.FirstOrDefault(o => o.Account == account);
+        vm.MatchBankBalanceCommand.Execute(null);
+        button.FindAncestorOfType<Popup>()?.Close();
+    }
+
+    private async void RestoreBackup_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm)
+            return;
+        var start = await StorageProvider.TryGetFolderFromPathAsync(vm.BackupFolder);
+        var files = await PickFilesAsync(new FilePickerOpenOptions
+        {
+            Title = "Choose a backup to restore",
+            SuggestedStartLocation = start,
+            FileTypeFilter = [new FilePickerFileType("Keystone backups") { Patterns = ["*.db"] }],
+        });
+        if (files.FirstOrDefault()?.TryGetLocalPath() is { } path)
+            vm.ChooseBackupToRestore(path);
+    }
+
     private async void ChangeDocumentsFolder_Click(object? sender, RoutedEventArgs e)
     {
-        var folders = await StorageProvider.OpenFolderPickerAsync(new FolderPickerOpenOptions
+        var folders = await PickFolderAsync(new FolderPickerOpenOptions
         {
             Title = "Choose where to keep documents",
         });
@@ -155,7 +239,7 @@ public partial class MainWindow : Window
 
     private async void Import_Click(object? sender, RoutedEventArgs e)
     {
-        var files = await StorageProvider.OpenFilePickerAsync(new FilePickerOpenOptions
+        var files = await PickFilesAsync(new FilePickerOpenOptions
         {
             Title = "Import a bill, payslip or statement",
             FileTypeFilter =

@@ -38,8 +38,11 @@ The screenshots show a made-up family with sample data.
 - Daily income and spending, savings this financial year, and how long savings cover living costs
 - A chart of cash over time with a projection, and the payments coming up in the next 30 days
 
-**Transactions and debts**
+**Transactions, accounts and debts**
 - One-time, monthly, quarterly and yearly income and expenses, per household member or shared
+- Several bank accounts, cards and cash, with transfers between them and an overdraft or credit limit
+- Bank statement import: camt.053/054 files and CSV exports from Swiss banks, with categories suggested,
+  entries you already have recognised, and the account set to the statement's closing balance
 - Debts with monthly repayment, repayment at once, or interest only, including extra repayments
 - A year view by financial year, with any start month
 
@@ -57,6 +60,20 @@ The screenshots show a made-up family with sample data.
 **Tasks and notes**
 - Tasks with due dates and a person, with overdue and upcoming tasks shown on the Overview
 - Notes for projects and ideas that save as you type, grouped by project and pinnable
+
+**Insurance**
+- Every policy with its premium, the end of its term and the last day to cancel it, e.g. 30 November for
+  basic health insurance
+
+**Taxes**
+- A tax year's income, deductions (pillar 3a, pension fund buy-ins, childcare, medical costs, donations, debt
+  interest) and assets on 31 December, plus a checklist of certificates to collect
+
+**Everything else**
+- Search across entries, documents, tasks, notes, insurance and accounts (⌘F)
+- Reminders as macOS notifications for bills, tasks, insurance deadlines and pillar 3a, even when Keystone is closed
+- Daily backups of all data next to your documents in OneDrive, kept for 30 days, with restore
+- App lock with Touch ID or your Mac password
 
 **Retirement provision (Swiss three pillars)**
 - AHV, pension fund (BVG), vested benefits, pillar 3a and 3b accounts per person

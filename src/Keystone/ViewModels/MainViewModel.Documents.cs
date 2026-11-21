@@ -110,6 +110,7 @@ public partial class MainViewModel
                 _documentStore.Exists(d), Today))
             .ToList();
 
+        ScheduleReminders();
         var open = Documents.Where(d => d.IsOpenBill).ToList();
         var overdue = open.Count(d => d.IsOverdue(Today));
         HasOverdueBills = overdue > 0;
@@ -176,6 +177,8 @@ public partial class MainViewModel
         DocumentsFolder = _documentStore.RootFolder;
         OnPropertyChanged(nameof(DocumentsFolderNote));
         OnPropertyChanged(nameof(DropDetailText));
+        if (!_isLoading)
+            RefreshBackupStatus();
     }
 
     /// <summary>

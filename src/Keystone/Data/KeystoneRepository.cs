@@ -17,6 +17,9 @@ public sealed class KeystoneRepository(string databasePath)
 
     private KeystoneDbContext CreateContext() => new(databasePath);
 
+    /// <summary>The database file, e.g. for backups.</summary>
+    public string DatabasePath => databasePath;
+
     /// <summary>Creates the database if needed and applies pending schema migrations.</summary>
     public void Migrate()
     {
@@ -249,6 +252,52 @@ public sealed class KeystoneRepository(string databasePath)
         await db.PensionStatements.Where(s => s.Id == id).ExecuteDeleteAsync();
     }
 
+    public async Task<List<InsurancePolicy>> GetInsurancePoliciesAsync()
+    {
+        await using var db = CreateContext();
+        return await db.InsurancePolicies.AsNoTracking().ToListAsync();
+    }
+
+    public async Task<InsurancePolicy> SaveInsurancePolicyAsync(InsurancePolicy policy)
+    {
+        await using var db = CreateContext();
+        if (policy.Id == 0)
+            db.InsurancePolicies.Add(policy);
+        else
+            db.InsurancePolicies.Update(policy);
+        await db.SaveChangesAsync();
+        return policy;
+    }
+
+    public async Task DeleteInsurancePolicyAsync(int id)
+    {
+        await using var db = CreateContext();
+        await db.InsurancePolicies.Where(p => p.Id == id).ExecuteDeleteAsync();
+    }
+
+    public async Task<List<BankAccount>> GetBankAccountsAsync()
+    {
+        await using var db = CreateContext();
+        return await db.BankAccounts.AsNoTracking().OrderBy(a => a.Id).ToListAsync();
+    }
+
+    public async Task<BankAccount> SaveBankAccountAsync(BankAccount account)
+    {
+        await using var db = CreateContext();
+        if (account.Id == 0)
+            db.BankAccounts.Add(account);
+        else
+            db.BankAccounts.Update(account);
+        await db.SaveChangesAsync();
+        return account;
+    }
+
+    public async Task DeleteBankAccountAsync(int id)
+    {
+        await using var db = CreateContext();
+        await db.BankAccounts.Where(a => a.Id == id).ExecuteDeleteAsync();
+    }
+
     public Task SetLanguageAsync(string language) => UpdateSettingsAsync(s => s.Language = language);
 
     public Task SetDocumentsFolderAsync(string folder) => UpdateSettingsAsync(s => s.DocumentsFolder = folder);
@@ -302,6 +351,12 @@ public sealed class KeystoneRepository(string databasePath)
         ArgumentOutOfRangeException.ThrowIfGreaterThan(month, 12);
         return UpdateSettingsAsync(s => s.FinancialYearStartMonth = month);
     }
+
+    public Task SetLockAsync(bool enabled, int afterMinutes) =>
+        UpdateSettingsAsync(s => (s.LockEnabled, s.LockAfterMinutes) = (enabled, afterMinutes));
+
+    public Task SetRemindersAsync(bool enabled, int hour) =>
+        UpdateSettingsAsync(s => (s.RemindersEnabled, s.ReminderHour) = (enabled, hour));
 
     public Task SetAiImportEnabledAsync(bool enabled) => UpdateSettingsAsync(s => s.AiImportEnabled = enabled);
 

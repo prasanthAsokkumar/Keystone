@@ -4,6 +4,7 @@
         xmlns:vm="using:Keystone.ViewModels"
         xmlns:models="using:Keystone.Models"
         xmlns:controls="using:Keystone.Controls"
+        xmlns:pages="using:Keystone.Views.Pages"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d" d:DesignWidth="1280" d:DesignHeight="860"
@@ -19,21 +20,74 @@
         <KeyBinding Gesture="Escape" Command="{Binding ClosePanelCommand}" />
         <KeyBinding Gesture="Meta+N" Command="{Binding NewEntryCommand}" />
         <KeyBinding Gesture="Ctrl+N" Command="{Binding NewEntryCommand}" />
+        <KeyBinding Gesture="Meta+L" Command="{Binding LockNowCommand}" />
     </Window.KeyBindings>
 
-    <Grid ColumnDefinitions="236,*">
+    <Panel>
+    <Grid ColumnDefinitions="236,*" IsVisible="{Binding !IsLocked}">
 
         <!-- ═══════════════ Sidebar ═══════════════ -->
         <Border Background="{DynamicResource SidebarBackground}" BorderBrush="{DynamicResource Hairline}"
                 BorderThickness="0,0,1,0" Padding="16,22">
             <DockPanel>
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10" Margin="8,0,0,28">
-                    <Image Source="/Assets/keystone.png" Width="34" Height="34" />
-                    <StackPanel VerticalAlignment="Center">
-                        <TextBlock Text="{l:T 'Keystone'}" FontSize="17" FontWeight="Bold" />
-                        <TextBlock Classes="muted" Text="{l:T 'Household finances'}" />
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="8,0,0,18">
+                    <StackPanel Orientation="Horizontal" Spacing="10">
+                        <Image Source="/Assets/keystone.png" Width="34" Height="34" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock Text="{l:T 'Keystone'}" FontSize="17" FontWeight="Bold" />
+                            <TextBlock Classes="muted" Text="{l:T 'Household finances'}" />
+                        </StackPanel>
                     </StackPanel>
-                </StackPanel>
+                    <Button Grid.Column="1" Classes="icon" Command="{Binding LockNowCommand}" IsVisible="{Binding IsLockEnabled}"
+                            ToolTip.Tip="{l:T 'Lock now (⌘L)'}" VerticalAlignment="Center">
+                        <PathIcon Data="{StaticResource IconLock}" />
+                    </Button>
+                </Grid>
+
+                <Panel DockPanel.Dock="Top" Margin="0,0,0,16">
+                    <TextBox x:Name="GlobalSearchBox" Text="{Binding GlobalSearch}" PlaceholderText="{l:T 'Search everything (⌘F)'}">
+                        <TextBox.InnerLeftContent>
+                            <PathIcon Data="{StaticResource IconSearch}" Width="16" Height="16" Margin="10,0,0,0"
+                                      Foreground="{DynamicResource TextMuted}" />
+                        </TextBox.InnerLeftContent>
+                        <TextBox.KeyBindings>
+                            <KeyBinding Gesture="Enter" Command="{Binding OpenFirstSearchResultCommand}" />
+                            <KeyBinding Gesture="Escape" Command="{Binding ClearSearchCommand}" />
+                        </TextBox.KeyBindings>
+                    </TextBox>
+                    <Popup x:Name="SearchPopup" PlacementTarget="{Binding #GlobalSearchBox}" Placement="BottomEdgeAlignedLeft"
+                           VerticalOffset="6" IsLightDismissEnabled="True">
+                        <Border Background="{DynamicResource Surface}" BorderBrush="{DynamicResource Hairline}" BorderThickness="1"
+                                CornerRadius="12" Padding="6" Width="440" BoxShadow="0 8 24 0 #26000000">
+                            <Panel>
+                                <TextBlock Classes="muted" Text="{l:T 'Nothing found.'}" Margin="12,10"
+                                           IsVisible="{Binding ShowsNoSearchResults}" />
+                                <ScrollViewer MaxHeight="460" IsVisible="{Binding HasSearchResults}">
+                                    <ItemsControl ItemsSource="{Binding SearchResults}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:SearchResult">
+                                                <Button Classes="searchResult" HorizontalAlignment="Stretch"
+                                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenSearchResultCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                                        <StackPanel>
+                                                            <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}"
+                                                                       TextTrimming="CharacterEllipsis" IsVisible="{Binding HasDetail}" />
+                                                        </StackPanel>
+                                                        <Border Grid.Column="1" Classes="pill" VerticalAlignment="Center">
+                                                            <TextBlock Text="{Binding Kind}" />
+                                                        </Border>
+                                                    </Grid>
+                                                </Button>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </ScrollViewer>
+                            </Panel>
+                        </Border>
+                    </Popup>
+                </Panel>
 
                 <Button DockPanel.Dock="Bottom" Classes="primary" HorizontalAlignment="Stretch"
                         Command="{Binding NewEntryCommand}" ToolTip.Tip="{l:T 'New entry (⌘N)'}">
@@ -93,6 +147,18 @@
                             <TextBlock Text="{l:T 'Retirement'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsInsurancePage}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconUmbrella}" />
+                            <TextBlock Text="{l:T 'Insurance'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTaxesPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconReceipt}" />
+                            <TextBlock Text="{l:T 'Taxes'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
                     <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsYearPage}">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconCalendar}" />
@@ -134,10 +200,41 @@
                                 Margin="6,0,0,0" />
                     </StackPanel>
 
-                    <Button Classes="primary" Command="{Binding NewEntryCommand}" IsVisible="{Binding IsTransactionsPage}">
+                    <!-- Tax year switcher -->
+                    <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding IsTaxesPage}">
+                        <Button Classes="icon" Command="{Binding PreviousTaxYearCommand}" ToolTip.Tip="{l:T 'Previous year'}">
+                            <PathIcon Data="{StaticResource IconChevronLeft}" />
+                        </Button>
+                        <TextBlock Text="{Binding TaxYear}" FontSize="17" FontWeight="SemiBold"
+                                   VerticalAlignment="Center" MinWidth="64" TextAlignment="Center" />
+                        <Button Classes="icon" Command="{Binding NextTaxYearCommand}" ToolTip.Tip="{l:T 'Next year'}">
+                            <PathIcon Data="{StaticResource IconChevronRight}" />
+                        </Button>
+                        <Button Classes="secondary" Command="{Binding CopyTaxSummaryCommand}" Margin="6,0,0,0"
+                                ToolTip.Tip="{Binding TaxCopyStatus}">
+                            <TextBlock Text="{l:T 'Copy summary'}" />
+                        </Button>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsTransactionsPage}">
+                        <Button Classes="secondary" Click="ImportBankStatement_Click"
+                                ToolTip.Tip="{l:T 'camt.053 or CSV from your bank. You can also drop it on the window.'}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconBank}" />
+                                <TextBlock Text="{l:T 'Import bank statement'}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="primary" Command="{Binding NewEntryCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconPlus}" />
+                                <TextBlock Text="{l:T 'New entry'}" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                    <Button Classes="primary" Command="{Binding NewInsuranceCommand}" IsVisible="{Binding IsInsurancePage}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <PathIcon Data="{StaticResource IconPlus}" />
-                            <TextBlock Text="{l:T 'New entry'}" />
+                            <TextBlock Text="{l:T 'Add insurance'}" />
                         </StackPanel>
                     </Button>
                     <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsOverviewPage}">
@@ -215,6 +312,8 @@
                             <TextBlock Text="{Binding RunwayDetailText}" FontSize="15" FontWeight="Medium" />
                             <TextBlock Classes="muted" Text="{Binding RunwayCauseText}" FontSize="13"
                                        IsVisible="{Binding HasRunwayCause}" Margin="0,2,0,0" />
+                            <TextBlock Classes="muted" Text="{Binding OverdraftRunwayText}" FontSize="13"
+                                       IsVisible="{Binding HasOverdraftRunway}" Margin="0,2,0,0" />
                             <ProgressBar Classes="runway" Value="{Binding RunwayBarValue}" Maximum="12" Margin="0,20,0,6" />
                             <Grid ColumnDefinitions="*,*,*">
                                 <TextBlock Classes="muted" Text="{l:T 'Today'}" />
@@ -240,6 +339,8 @@
                                             <TextBlock Text="{l:T 'What’s in your bank today?'}" FontWeight="SemiBold" />
                                             <TextBlock Classes="muted" TextWrapping="Wrap"
                                                        Text="{l:T 'Keystone adjusts the starting balance so its cash matches your bank. Your entries stay as they are.'}" />
+                                            <ComboBox ItemsSource="{Binding AccountOptions}" SelectedItem="{Binding BalanceAccount}"
+                                                      IsVisible="{Binding HasSeveralAccounts}" HorizontalAlignment="Stretch" />
                                             <NumericUpDown Value="{Binding BankBalance}" FormatString="N2"
                                                            Increment="100" PlaceholderText="{l:T 'Bank balance'}"
                                                            ShowButtonSpinner="False" />
@@ -259,6 +360,18 @@
                                     <TextBlock Grid.Row="1" Grid.Column="1" Classes="secondary" FontSize="13"
                                                FontWeight="Medium" Text="{Binding NetWorthText}" />
                                 </Grid>
+                                <ItemsControl ItemsSource="{Binding AccountRows}" IsVisible="{Binding HasSeveralAccounts}" Margin="0,6,0,0">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:AccountRow">
+                                            <Grid ColumnDefinitions="*,Auto" Margin="0,2">
+                                                <TextBlock Classes="muted" FontSize="13" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Grid.Column="1" Classes="secondary" FontSize="13" Text="{Binding BalanceText}"
+                                                           Classes.negative="{Binding IsNegative}" />
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                                <TextBlock Classes="muted" FontSize="12" Text="{Binding OverdraftText}" IsVisible="{Binding HasOverdraft}" />
                             </StackPanel>
                         </DockPanel>
                     </Border>
@@ -403,6 +516,8 @@
                         </TextBox>
                         <ComboBox ItemsSource="{Binding TypeFilters}" SelectedIndex="{Binding TypeFilterIndex}" Width="120" />
                         <ComboBox ItemsSource="{Binding PersonFilters}" SelectedItem="{Binding PersonFilter}" Width="120" />
+                        <ComboBox ItemsSource="{Binding AccountFilters}" SelectedItem="{Binding AccountFilter}" Width="150"
+                                  IsVisible="{Binding HasSeveralAccounts}" />
                         <ComboBox ItemsSource="{Binding CategoryFilters}" SelectedItem="{Binding CategoryFilter}" Width="150" />
                         <ComboBox ItemsSource="{Binding ScheduleFilters}" SelectedIndex="{Binding ScheduleFilterIndex}" Width="152" />
                         <ComboBox ItemsSource="{Binding SortOptions}" SelectedIndex="{Binding SortIndex}" Width="148"
@@ -1055,6 +1170,12 @@
                 </Grid>
             </Grid>
 
+            <!-- ═══ Insurance ═══ -->
+            <pages:InsurancePage Grid.Row="1" IsVisible="{Binding IsInsurancePage}" />
+
+            <!-- ═══ Taxes ═══ -->
+            <pages:TaxesPage Grid.Row="1" IsVisible="{Binding IsTaxesPage}" />
+
             <!-- ═══ Year ═══ -->
             <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="16" IsVisible="{Binding IsYearPage}">
                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
@@ -1146,31 +1267,71 @@
 
                     <Border Classes="card" Padding="24">
                         <StackPanel Spacing="14">
-                            <StackPanel Spacing="2">
-                                <TextBlock Classes="sectionTitle" Text="{l:T 'Cash'}" />
-                                <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
-                                           Text="{l:T 'Keystone works out today’s cash from a starting balance plus every entry. The easiest way to get it right is to enter what your bank shows today.'}" />
-                            </StackPanel>
-                            <Grid ColumnDefinitions="*,*" ColumnSpacing="24">
-                                <StackPanel Spacing="4">
-                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Bank balance today'}" />
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <NumericUpDown Value="{Binding BankBalance}" FormatString="N2" Increment="100"
-                                                       PlaceholderText="{Binding BalanceText}" ShowButtonSpinner="False" />
-                                        <Button Grid.Column="1" Classes="primary" Content="{l:T 'Match'}"
-                                                Command="{Binding MatchBankBalanceCommand}" />
-                                    </Grid>
+                            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                <StackPanel Spacing="2">
+                                    <TextBlock Classes="sectionTitle" Text="{l:T 'Bank accounts'}" />
+                                    <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                               Text="{l:T 'Each account’s balance comes from its starting balance plus its entries. Match it to what your bank shows today, or import a bank statement.'}" />
                                 </StackPanel>
-                                <StackPanel Grid.Column="1" Spacing="4">
-                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Starting balance (before your first entry)'}" />
-                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
-                                        <NumericUpDown Value="{Binding StartingBalance}" FormatString="N2" Increment="100"
-                                                       ShowButtonSpinner="False" />
-                                        <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Save'}"
-                                                Command="{Binding SaveStartingBalanceCommand}" />
-                                    </Grid>
-                                </StackPanel>
+                                <Button Grid.Column="1" Classes="secondary" Command="{Binding NewBankAccountCommand}" VerticalAlignment="Top">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Data="{StaticResource IconPlus}" />
+                                        <TextBlock Text="{l:T 'Add account'}" />
+                                    </StackPanel>
+                                </Button>
                             </Grid>
+                            <ItemsControl ItemsSource="{Binding AccountRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:AccountRow">
+                                        <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="0,10">
+                                            <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                                                <Border Classes="iconTile">
+                                                    <PathIcon Data="{StaticResource IconBank}" />
+                                                </Border>
+                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                                    <TextBlock Text="{Binding BalanceText}" FontWeight="SemiBold" TextAlignment="Right"
+                                                               Classes.negative="{Binding IsNegative}" />
+                                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding OverdraftText}" TextAlignment="Right"
+                                                               IsVisible="{Binding HasOverdraft}" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                                    <Button Classes="icon" ToolTip.Tip="{l:T 'Match my bank balance'}">
+                                                        <PathIcon Data="{StaticResource IconCheck}" />
+                                                        <Button.Flyout>
+                                                            <Flyout Placement="BottomEdgeAlignedRight">
+                                                                <StackPanel Spacing="10" Width="250" Margin="4">
+                                                                    <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                                    <TextBlock Classes="muted" TextWrapping="Wrap" FontSize="13"
+                                                                               Text="{l:T 'What does your bank show for this account today?'}" />
+                                                                    <NumericUpDown FormatString="N2" ShowButtonSpinner="False" PlaceholderText="{Binding BalanceText}"
+                                                                                   Value="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).BankBalance}" />
+                                                                    <Button Classes="primary" Content="{l:T 'Match'}" HorizontalAlignment="Stretch"
+                                                                            Click="MatchAccount_Click" Tag="{Binding Account}" />
+                                                                </StackPanel>
+                                                            </Flyout>
+                                                        </Button.Flyout>
+                                                    </Button>
+                                                    <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).EditBankAccountCommand}"
+                                                            CommandParameter="{Binding Account}">
+                                                        <PathIcon Data="{StaticResource IconEdit}" />
+                                                    </Button>
+                                                    <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}" IsVisible="{Binding !IsPrimary}"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteBankAccountCommand}"
+                                                            CommandParameter="{Binding Account}">
+                                                        <PathIcon Data="{StaticResource IconDelete}" />
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                        </Border>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Classes="error" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" />
                         </StackPanel>
                     </Border>
 
@@ -1196,6 +1357,107 @@
                             <ComboBox Grid.Column="1" ItemsSource="{Binding MonthNames}"
                                       SelectedIndex="{Binding FinancialYearStartIndex}" VerticalAlignment="Center" />
                         </Grid>
+                    </Border>
+
+                    <!-- Reminders -->
+                    <Border Classes="card" Padding="24">
+                        <StackPanel Spacing="14">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Border Classes="iconTile">
+                                    <PathIcon Data="{StaticResource IconBell}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Classes="sectionTitle" Text="{l:T 'Reminders'}" />
+                                    <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                               Text="{l:T 'Notifications for bills due, tasks, insurance notice deadlines and pillar 3a in December. They arrive even when Keystone is closed.'}" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="2" IsChecked="{Binding RemindersEnabled}" OnContent="" OffContent=""
+                                              VerticalAlignment="Top" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,140" ColumnSpacing="12" IsVisible="{Binding RemindersEnabled}">
+                                <TextBlock Classes="secondary" FontSize="13" Text="{l:T 'Time of day'}" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding ReminderHourNames}" SelectedIndex="{Binding ReminderHourIndex}" />
+                            </Grid>
+                            <StackPanel Spacing="6" IsVisible="{Binding RemindersEnabled}">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Coming up'}" IsVisible="{Binding HasUpcomingReminders}" />
+                                <ItemsControl ItemsSource="{Binding UpcomingReminders}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:ReminderRow">
+                                            <Grid ColumnDefinitions="150,*" ColumnSpacing="12" Margin="0,3">
+                                                <TextBlock Classes="muted" FontSize="13" Text="{Binding WhenText}" />
+                                                <StackPanel Grid.Column="1">
+                                                    <TextBlock FontSize="13" FontWeight="Medium" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Body}" TextTrimming="CharacterEllipsis" />
+                                                </StackPanel>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                <TextBlock Classes="muted" FontSize="13" Text="{Binding ReminderPermissionText}" TextWrapping="Wrap"
+                                           VerticalAlignment="Center" Classes.warning="{Binding IsNotificationsDenied}" />
+                                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Open System Settings'}"
+                                        Command="{Binding OpenNotificationSettingsCommand}" IsVisible="{Binding IsNotificationsDenied}" />
+                                <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Send a test reminder'}"
+                                        Command="{Binding SendTestReminderCommand}" IsVisible="{Binding CanSendNotifications}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- App lock -->
+                    <Border Classes="card" Padding="24">
+                        <StackPanel Spacing="14">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Border Classes="iconTile">
+                                    <PathIcon Data="{StaticResource IconLock}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Classes="sectionTitle" Text="{l:T 'App lock'}" />
+                                    <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                               Text="{l:T 'Ask for Touch ID or your Mac password when Keystone opens and after time away.'}" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="2" IsChecked="{Binding IsLockEnabled}" IsEnabled="{Binding CanLock}"
+                                              OnContent="" OffContent="" VerticalAlignment="Top" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,240" ColumnSpacing="12" IsVisible="{Binding IsLockEnabled}">
+                                <TextBlock Classes="secondary" FontSize="13" Text="{l:T 'Lock again'}" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding LockDelayNames}" SelectedIndex="{Binding LockDelayIndex}" />
+                            </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Backup -->
+                    <Border Classes="card" Padding="24">
+                        <StackPanel Spacing="14">
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                                <Border Classes="iconTile">
+                                    <PathIcon Data="{StaticResource IconCloud}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Classes="sectionTitle" Text="{l:T 'Backup'}" />
+                                    <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" Text="{Binding BackupNote}" />
+                                </StackPanel>
+                            </Grid>
+                            <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                                <TextBlock Classes="secondary" FontSize="13" Text="{Binding BackupStatusText}" VerticalAlignment="Center"
+                                           TextWrapping="Wrap" />
+                                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Back up now'}" Command="{Binding BackUpNowCommand}" />
+                                <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Open folder'}" Command="{Binding OpenBackupsFolderCommand}" />
+                                <Button Grid.Column="3" Classes="secondary" Content="{l:T 'Restore…'}" Click="RestoreBackup_Click" />
+                            </Grid>
+                            <Border Background="{DynamicResource WarningSoft}" CornerRadius="10" Padding="14"
+                                    IsVisible="{Binding HasRestoreCandidate}">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="{Binding RestoreQuestion}" TextWrapping="Wrap" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Classes="primary" Content="{l:T 'Restore'}" Command="{Binding RestoreBackupCommand}" />
+                                        <Button Classes="secondary" Content="{l:T 'Cancel'}" Command="{Binding CancelRestoreCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+                            <TextBlock Classes="error" Text="{Binding BackupError}" IsVisible="{Binding HasBackupError}" />
+                        </StackPanel>
                     </Border>
 
                     <Border Classes="card" Padding="24">
@@ -1356,14 +1618,35 @@
 
                     <ScrollViewer>
                         <StackPanel Spacing="18" Margin="28,12,28,20">
-                            <Border Classes="segments">
+                            <Border Classes="segments" IsVisible="{Binding !HasSeveralAccounts}">
                                 <Grid ColumnDefinitions="*,*">
                                     <RadioButton Classes="segment" GroupName="EntryType" Content="{l:T 'Expense'}"
-                                                 IsChecked="{Binding !NewIsIncome, Mode=OneWay}" />
+                                                 IsChecked="{Binding NewIsExpense}" />
                                     <RadioButton Grid.Column="1" Classes="segment" GroupName="EntryType" Content="{l:T 'Income'}"
                                                  IsChecked="{Binding NewIsIncome}" />
                                 </Grid>
                             </Border>
+                            <Border Classes="segments" IsVisible="{Binding HasSeveralAccounts}">
+                                <Grid ColumnDefinitions="*,*,*">
+                                    <RadioButton Classes="segment" GroupName="EntryType3" Content="{l:T 'Expense'}"
+                                                 IsChecked="{Binding NewIsExpense}" />
+                                    <RadioButton Grid.Column="1" Classes="segment" GroupName="EntryType3" Content="{l:T 'Income'}"
+                                                 IsChecked="{Binding NewIsIncome}" />
+                                    <RadioButton Grid.Column="2" Classes="segment" GroupName="EntryType3" Content="{l:T 'Transfer'}"
+                                                 IsChecked="{Binding NewIsTransfer}" />
+                                </Grid>
+                            </Border>
+
+                            <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsVisible="{Binding HasSeveralAccounts}">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="fieldLabel" Text="{Binding AccountLabel}" />
+                                    <ComboBox ItemsSource="{Binding AccountOptions}" SelectedItem="{Binding NewAccount}" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="4" IsVisible="{Binding NewIsTransfer}">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'To account'}" />
+                                    <ComboBox ItemsSource="{Binding AccountOptions}" SelectedItem="{Binding NewToAccount}" />
+                                </StackPanel>
+                            </Grid>
 
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Description'}" />
@@ -1382,7 +1665,7 @@
                                 </StackPanel>
                             </Grid>
 
-                            <StackPanel Spacing="4">
+                            <StackPanel Spacing="4" IsVisible="{Binding !NewIsTransfer}">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Category'}" />
                                 <ComboBox ItemsSource="{Binding CategoryOptions}" Text="{Binding NewCategory}"
                                           IsEditable="True" PlaceholderText="{l:T 'Choose or type a category'}" />
@@ -1509,7 +1792,8 @@
                 <DockPanel>
                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="{l:T 'Import document'}" FontSize="20" FontWeight="Bold" />
+                            <TextBlock Text="{l:T 'Import document'}" FontSize="20" FontWeight="Bold" IsVisible="{Binding !IsBankImport}" />
+                            <TextBlock Text="{l:T 'Import bank statement'}" FontSize="20" FontWeight="Bold" IsVisible="{Binding IsBankImport}" />
                             <TextBlock Classes="muted" FontSize="13" Text="{Binding ImportFileName}"
                                        TextTrimming="CharacterEllipsis" />
                         </StackPanel>
@@ -1545,6 +1829,14 @@
 
                             <TextBlock Classes="error" Text="{Binding ImportError}" IsVisible="{Binding HasImportError}"
                                        TextWrapping="Wrap" />
+                            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" IsVisible="{Binding IsBankImport}">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Account'}" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding AccountOptions}" SelectedItem="{Binding ImportAccount}"
+                                          HorizontalAlignment="Stretch" />
+                            </Grid>
+                            <CheckBox IsChecked="{Binding ImportMatchBalance}" IsVisible="{Binding HasImportBalance}">
+                                <TextBlock Text="{Binding ImportBalanceText}" TextWrapping="Wrap" />
+                            </CheckBox>
                             <TextBlock Classes="muted" Text="{Binding ImportNote}" TextWrapping="Wrap" />
                             <TextBlock Classes="muted" TextWrapping="Wrap" IsVisible="{Binding HasImportItems}"
                                        Text="{l:T 'Check what was found. Untick anything you don’t want, and fix the details before adding.'}" />
@@ -1567,15 +1859,18 @@
                                                                        FormatString="N2" ShowButtonSpinner="False" />
                                                     </Grid>
                                                     <Grid ColumnDefinitions="100,128,118,*" ColumnSpacing="8">
-                                                        <ComboBox ItemsSource="{x:Static vm:ImportItem.TypeNames}"
+                                                        <ComboBox ItemsSource="{Binding TypeNames}"
                                                                   SelectedIndex="{Binding TypeIndex}" HorizontalAlignment="Stretch" />
                                                         <CalendarDatePicker Grid.Column="1" SelectedDate="{Binding Date}"
                                                                             HorizontalAlignment="Stretch" />
                                                         <ComboBox Grid.Column="2" ItemsSource="{x:Static vm:ImportItem.RecurrenceNames}"
                                                                   SelectedIndex="{Binding RecurrenceIndex}" HorizontalAlignment="Stretch" />
                                                         <ComboBox Grid.Column="3" ItemsSource="{Binding CategoryOptions}"
-                                                                  Text="{Binding Category}" IsEditable="True"
+                                                                  Text="{Binding Category}" IsEditable="True" IsVisible="{Binding IsNotTransfer}"
                                                                   PlaceholderText="{l:T 'Category'}" HorizontalAlignment="Stretch" />
+                                                        <ComboBox Grid.Column="3" IsVisible="{Binding IsTransfer}" HorizontalAlignment="Stretch"
+                                                                  ItemsSource="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AccountOptions}"
+                                                                  SelectedItem="{Binding CounterAccount}" ToolTip.Tip="{l:T 'The other account'}" />
                                                     </Grid>
                                                     <Border Classes="pill" HorizontalAlignment="Left" IsVisible="{Binding IsDuplicate}">
                                                         <TextBlock Text="{l:T 'Looks like an entry you already have'}" />
@@ -2072,6 +2367,16 @@
             </Border>
         </Panel>
 
+        <!-- Insurance and account forms -->
+        <Panel Grid.ColumnSpan="2" IsVisible="{Binding IsPanelOpen}" IsHitTestVisible="{Binding IsPanelOpen}">
+            <Border Classes="panel" Width="460" HorizontalAlignment="Right" IsVisible="{Binding IsInsurancePanelOpen}">
+                <pages:InsurancePanel />
+            </Border>
+            <Border Classes="panel" Width="440" HorizontalAlignment="Right" IsVisible="{Binding IsAccountPanelOpen}">
+                <pages:AccountPanel />
+            </Border>
+        </Panel>
+
         <!-- Shown while a file is dragged over the window. -->
         <Border x:Name="DropOverlay" Grid.ColumnSpan="2" IsVisible="False" IsHitTestVisible="False"
                 Background="{DynamicResource Backdrop}" Padding="40">
@@ -2087,4 +2392,22 @@
             </Border>
         </Border>
     </Grid>
+
+    <!-- ═══════════════ Lock screen ═══════════════ -->
+    <Border Background="{DynamicResource AppBackground}" IsVisible="{Binding IsLocked}">
+        <StackPanel HorizontalAlignment="Center" VerticalAlignment="Center" Spacing="14" MaxWidth="320">
+            <Image Source="/Assets/keystone.png" Width="96" Height="96" HorizontalAlignment="Center" />
+            <TextBlock Text="{l:T 'Keystone is locked'}" FontSize="22" FontWeight="Bold" HorizontalAlignment="Center" />
+            <TextBlock Classes="secondary" TextWrapping="Wrap" TextAlignment="Center"
+                       Text="{l:T 'Unlock with Touch ID or your Mac password.'}" />
+            <Button Classes="primary" HorizontalAlignment="Center" Command="{Binding UnlockCommand}" Margin="0,6,0,0">
+                <StackPanel Orientation="Horizontal" Spacing="8">
+                    <PathIcon Data="{StaticResource IconLock}" />
+                    <TextBlock Text="{l:T 'Unlock'}" />
+                </StackPanel>
+            </Button>
+            <TextBlock Classes="error" Text="{Binding LockMessage}" HorizontalAlignment="Center" TextAlignment="Center" />
+        </StackPanel>
+    </Border>
+    </Panel>
 </Window>

@@ -30,6 +30,10 @@ public class KeystoneDbContext(string databasePath) : DbContext
 
     public DbSet<PensionStatement> PensionStatements => Set<PensionStatement>();
 
+    public DbSet<BankAccount> BankAccounts => Set<BankAccount>();
+
+    public DbSet<InsurancePolicy> InsurancePolicies => Set<InsurancePolicy>();
+
     /// <summary>
     /// ~/Library/Application Support/Keystone/keystone.db. A database from when the app was called Runway
     /// is moved there first.
@@ -115,6 +119,10 @@ public class KeystoneDbContext(string databasePath) : DbContext
             entity.HasIndex(t => t.Date);
             // Removing a person keeps their entries as shared ones.
             entity.HasOne<Person>().WithMany().HasForeignKey(t => t.PersonId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne<BankAccount>().WithMany().HasForeignKey(t => t.AccountId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne<BankAccount>().WithMany().HasForeignKey(t => t.ToAccountId).OnDelete(DeleteBehavior.SetNull);
+            entity.Property(t => t.ExternalId).HasMaxLength(200);
+            entity.HasIndex(t => t.ExternalId);
         });
 
         modelBuilder.Entity<Person>().Property(p => p.Name).HasMaxLength(100);
@@ -126,6 +134,9 @@ public class KeystoneDbContext(string databasePath) : DbContext
             entity.Property(s => s.AiModel).HasMaxLength(100).HasDefaultValue(AppSettings.DefaultAiModel);
             entity.Property(s => s.DocumentsFolder).HasMaxLength(500);
             entity.Property(s => s.Language).HasMaxLength(8);
+            entity.Property(s => s.RemindersEnabled).HasDefaultValue(true);
+            entity.Property(s => s.ReminderHour).HasDefaultValue(8);
+            entity.Property(s => s.LockAfterMinutes).HasDefaultValue(5);
         });
 
         modelBuilder.Entity<HouseholdDocument>(entity =>
@@ -174,6 +185,25 @@ public class KeystoneDbContext(string databasePath) : DbContext
             entity.HasIndex(s => s.Date);
             // Deleting the letter from Documents keeps the figures.
             entity.HasOne<HouseholdDocument>().WithMany().HasForeignKey(s => s.DocumentId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<BankAccount>(entity =>
+        {
+            entity.Property(a => a.Name).HasMaxLength(100);
+            entity.Property(a => a.Kind).HasConversion<string>().HasMaxLength(16);
+            entity.Property(a => a.Iban).HasMaxLength(40);
+        });
+
+        modelBuilder.Entity<InsurancePolicy>(entity =>
+        {
+            entity.ToTable("Insurance");
+            entity.Property(p => p.Insurer).HasMaxLength(200);
+            entity.Property(p => p.Kind).HasConversion<string>().HasMaxLength(24);
+            entity.Property(p => p.PremiumRecurrence).HasConversion<string>().HasMaxLength(16);
+            entity.Property(p => p.PolicyNumber).HasMaxLength(100);
+            entity.Property(p => p.Notes).HasMaxLength(2000);
+            entity.HasOne<Person>().WithMany().HasForeignKey(p => p.PersonId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasOne<HouseholdDocument>().WithMany().HasForeignKey(p => p.DocumentId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Debt>(entity =>

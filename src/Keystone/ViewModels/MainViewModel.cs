@@ -26,7 +26,9 @@ public enum AppPage
     Tasks,
     Notes,
     Debts,
+    Insurance,
     Retirement,
+    Taxes,
     Year,
     Settings,
 }
@@ -76,7 +78,7 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(
-        nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsRetirementPage),
+        nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsRetirementPage), nameof(IsInsurancePage), nameof(IsTaxesPage),
         nameof(IsYearPage), nameof(IsSettingsPage), nameof(PageTitle), nameof(PageSubtitle), nameof(DropHint),
         nameof(DropFilesAsDocument), nameof(DropDetailText))]
     public partial AppPage CurrentPage { get; set; }
@@ -95,6 +97,10 @@ public partial class MainViewModel : ViewModelBase
 
     public bool IsRetirementPage { get => CurrentPage == AppPage.Retirement; set { if (value) CurrentPage = AppPage.Retirement; } }
 
+    public bool IsInsurancePage { get => CurrentPage == AppPage.Insurance; set { if (value) CurrentPage = AppPage.Insurance; } }
+
+    public bool IsTaxesPage { get => CurrentPage == AppPage.Taxes; set { if (value) CurrentPage = AppPage.Taxes; } }
+
     public bool IsYearPage { get => CurrentPage == AppPage.Year; set { if (value) CurrentPage = AppPage.Year; } }
 
     public bool IsSettingsPage { get => CurrentPage == AppPage.Settings; set { if (value) CurrentPage = AppPage.Settings; } }
@@ -107,6 +113,8 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Notes => Loc.T("Notes"),
         AppPage.Debts => Loc.T("Debts"),
         AppPage.Retirement => Loc.T("Retirement"),
+        AppPage.Insurance => Loc.T("Insurance"),
+        AppPage.Taxes => Loc.T("Taxes"),
         AppPage.Year => Loc.T("Year overview"),
         AppPage.Settings => Loc.T("Settings"),
         _ => Loc.T("Overview"),
@@ -120,8 +128,10 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Notes => Loc.T("Thoughts, ideas and plans for your projects"),
         AppPage.Debts => Loc.T("What you owe and when it’s paid off"),
         AppPage.Retirement => Loc.T("Your Swiss retirement provision: AHV, pension fund and pillar 3a"),
+        AppPage.Insurance => Loc.T("What your policies cost, and by when to cancel them"),
+        AppPage.Taxes => Loc.T("Everything you need for your tax return, gathered in one place"),
         AppPage.Year => Loc.T("Income and spending month by month"),
-        AppPage.Settings => Loc.T("Your cash, financial year, household and language"),
+        AppPage.Settings => Loc.T("Accounts, reminders, backup, household and language"),
         _ => Loc.F("How long your money lasts · {0:dddd, d MMMM}", Today),
     };
 
@@ -141,7 +151,8 @@ public partial class MainViewModel : ViewModelBase
     public partial bool IsImportPanelOpen { get; set; }
 
     public bool IsPanelOpen => IsEntryPanelOpen || IsDebtPanelOpen || IsImportPanelOpen || IsDocumentPanelOpen || IsTaskPanelOpen ||
-                               IsStatementPanelOpen || IsPensionAccountPanelOpen || IsBulkPanelOpen;
+                               IsStatementPanelOpen || IsPensionAccountPanelOpen || IsBulkPanelOpen ||
+                               IsInsurancePanelOpen || IsAccountPanelOpen;
 
     /// <summary>
     /// A dropped file is filed as a document on the Documents page, or when import is off;
@@ -170,6 +181,8 @@ public partial class MainViewModel : ViewModelBase
             CloseDocumentPanel();
         CloseTaskPanel();
         CloseRetirementPanels();
+        CloseInsurancePanel();
+        CloseAccountPanel();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
     }
@@ -185,6 +198,8 @@ public partial class MainViewModel : ViewModelBase
         CloseDocumentPanel();
         CloseTaskPanel();
         CloseRetirementPanels();
+        CloseInsurancePanel();
+        CloseAccountPanel();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
         IsEntryPanelOpen = true;
@@ -202,6 +217,8 @@ public partial class MainViewModel : ViewModelBase
         CloseDocumentPanel();
         CloseTaskPanel();
         CloseRetirementPanels();
+        CloseInsurancePanel();
+        CloseAccountPanel();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
         IsDebtPanelOpen = true;
@@ -220,6 +237,8 @@ public partial class MainViewModel : ViewModelBase
         CloseDocumentPanel();
         CloseTaskPanel();
         CloseRetirementPanels();
+        CloseInsurancePanel();
+        CloseAccountPanel();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
     }
@@ -281,7 +300,8 @@ public partial class MainViewModel : ViewModelBase
             .Select(o =>
             {
                 var t = o.Source;
-                var category = Categories.Display(t.Category);
+                var category = t.IsTransfer ? AccountText(t) is { Length: > 0 } accounts ? $"{Loc.T("Transfer")} · {accounts}" : Loc.T("Transfer")
+                    : Categories.Display(t.Category);
                 var detail = t.IsDebtPayment ? Loc.T("Debt")
                     : t.PersonId is { } id && names.TryGetValue(id, out var name) ? $"{category} · {name}".TrimStart(' ', '·')
                     : category;
@@ -290,7 +310,7 @@ public partial class MainViewModel : ViewModelBase
                     o.Date.ToString("MMM", CultureInfo.CurrentCulture).ToUpper(CultureInfo.CurrentCulture),
                     t.Description,
                     string.IsNullOrWhiteSpace(detail) ? t.RecurrenceName : detail,
-                    Format.SignedMoney(t.SignedAmount),
+                    t.IsTransfer ? Format.Money(t.Amount) : Format.SignedMoney(t.SignedAmount),
                     t.IsIncome);
             })
             .ToList();
@@ -337,17 +357,6 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial decimal? BankBalance { get; set; }
 
-    /// <summary>Sets the starting balance so that today's cash matches the bank.</summary>
-    [RelayCommand]
-    private async Task MatchBankBalanceAsync()
-    {
-        if (BankBalance is not { } bank)
-            return;
-
-        StartingBalance = (StartingBalance ?? 0m) + bank - Summary.CurrentBalance;
-        BankBalance = null;
-        await SaveStartingBalanceAsync();
-    }
 
     // ── Financial year ──────────────────────────────────────────────────────
 
@@ -484,7 +493,7 @@ public partial class MainViewModel : ViewModelBase
 
     // ── Entries table ───────────────────────────────────────────────────────
 
-    public IReadOnlyList<string> TypeFilters => Translate("All types", "Income", "Expenses");
+    public IReadOnlyList<string> TypeFilters => Translate("All types", "Income", "Expenses", "Transfers");
 
     public IReadOnlyList<string> ScheduleFilters =>
         Translate("Any schedule", "Repeating", "Monthly", "Every 3 months", "Yearly", "One-time");
@@ -563,7 +572,7 @@ public partial class MainViewModel : ViewModelBase
         var names = People.ToDictionary(p => p.Id, p => p.Name);
         var search = SearchText.Trim();
         var matches = Transactions.Where(t =>
-            (TypeFilterIndex switch { 1 => t.IsIncome, 2 => !t.IsIncome, _ => true }) &&
+            (TypeFilterIndex switch { 1 => t.IsIncome, 2 => t.Type == TransactionType.Expense, 3 => t.IsTransfer, _ => true }) &&
             (ScheduleFilterIndex switch
             {
                 1 => t.IsRecurring,
@@ -574,6 +583,7 @@ public partial class MainViewModel : ViewModelBase
                 _ => true,
             }) &&
             (PersonFilter ?? PersonOption.Everyone).Matches(t) &&
+            (AccountFilter.Account is not { } filterAccount || Touches(t, filterAccount.Id)) &&
             (CategoryFilter is null || CategoryFilter == AllCategories ||
              string.Equals(Categories.Display(t.Category), CategoryFilter, StringComparison.CurrentCultureIgnoreCase)) &&
             (search.Length == 0 ||
@@ -590,7 +600,8 @@ public partial class MainViewModel : ViewModelBase
         };
 
         EntryRows = matches
-            .Select(t => new EntryRow(t, t.PersonId is { } id && names.TryGetValue(id, out var name) ? name : Loc.T(PersonOption.SharedName)))
+            .Select(t => new EntryRow(t, t.PersonId is { } id && names.TryGetValue(id, out var name) ? name : Loc.T(PersonOption.SharedName),
+                AccountText(t)))
             .ToList();
 
         // Recurring and one-time amounts can't be added up meaningfully, so they're totalled apart.
@@ -601,7 +612,17 @@ public partial class MainViewModel : ViewModelBase
         EntriesSummaryText = Loc.F("{0}   ·   Active repeating: {1} / month   ·   One-time: {2} in, {3} out",
             count, Format.SignedMoney(monthlyNet),
             Format.Money(oneTime.Where(r => r.IsIncome).Sum(r => r.Transaction.Amount)),
-            Format.Money(oneTime.Where(r => !r.IsIncome).Sum(r => r.Transaction.Amount)));
+            Format.Money(oneTime.Where(r => r.Transaction.Type == TransactionType.Expense).Sum(r => r.Transaction.Amount)));
+    }
+
+    /// <summary>"Savings → Main account" for a transfer, the account for others, when there are several.</summary>
+    private string AccountText(Transaction transaction)
+    {
+        if (!HasSeveralAccounts)
+            return "";
+        string Name(int? id) => BankAccounts.FirstOrDefault(a => a.Id == id)?.Name ?? "";
+        var from = Name(AccountIdOf(transaction));
+        return transaction.IsTransfer ? $"{from} → {Name(transaction.ToAccountId)}" : from;
     }
 
     // ── Household ───────────────────────────────────────────────────────────
@@ -684,12 +705,16 @@ public partial class MainViewModel : ViewModelBase
             task.PersonId = null;
         foreach (var account in _pensionAccounts.Where(a => a.PersonId == person.Id))
             account.PersonId = null;
+        foreach (var policy in _policies.Where(p => p.PersonId == person.Id))
+            policy.PersonId = null;
         People.Remove(person);
         RefreshPersonOptions();
         RefreshEntryRows();
         RefreshDocumentRows();
         RefreshTaskRows();
         RefreshRetirement();
+        RefreshInsurance();
+        RefreshTaxes();
     }
 
     private IReadOnlyList<string> HouseholdNames => People.Select(p => p.Name).ToList();
@@ -711,6 +736,11 @@ public partial class MainViewModel : ViewModelBase
         var taskPersonId = TaskPerson?.Id;
         var taskFilterId = TaskPersonFilter?.IsEveryone == true ? (int?)null : TaskPersonFilter?.Id;
         var taskFilterIsEveryone = TaskPersonFilter is null or { IsEveryone: true };
+        var insuranceFilterId = InsurancePersonFilter?.IsEveryone == true ? (int?)null : InsurancePersonFilter?.Id;
+        var insuranceFilterIsEveryone = InsurancePersonFilter is null or { IsEveryone: true };
+        var taxFilterId = TaxPersonFilter?.IsEveryone == true ? (int?)null : TaxPersonFilter?.Id;
+        var taxFilterIsEveryone = TaxPersonFilter is null or { IsEveryone: true };
+        var policyPersonId = PolicyPerson?.Id;
         var retirementFilterId = RetirementPersonFilter?.IsEveryone == true ? (int?)null : RetirementPersonFilter?.Id;
         var retirementFilterIsEveryone = RetirementPersonFilter is null or { IsEveryone: true };
         var newPensionPersonId = NewPensionPerson?.Id;
@@ -737,6 +767,13 @@ public partial class MainViewModel : ViewModelBase
             ? PersonOption.Everyone
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == retirementFilterId) ?? PersonOption.Everyone;
         NewPensionPerson = PersonOptions.FirstOrDefault(o => o.Id == newPensionPersonId) ?? PersonOption.Shared;
+        PolicyPerson = PersonOptions.FirstOrDefault(o => o.Id == policyPersonId) ?? PersonOption.Shared;
+        InsurancePersonFilter = insuranceFilterIsEveryone
+            ? PersonOption.Everyone
+            : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == insuranceFilterId) ?? PersonOption.Everyone;
+        TaxPersonFilter = taxFilterIsEveryone
+            ? PersonOption.Everyone
+            : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == taxFilterId) ?? PersonOption.Everyone;
         foreach (var item in BulkItems)
             item.Person = PersonOptions.FirstOrDefault(o => o.Id == item.Person.Id) ?? PersonOption.Shared;
         PensionAccountPerson = PersonOptions.FirstOrDefault(o => o.Id == pensionAccountPersonId) ?? PersonOption.Shared;
@@ -823,6 +860,8 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             var settings = await repository.GetSettingsAsync();
+            ApplyLockSettings(settings.LockEnabled, settings.LockAfterMinutes);
+            ApplyReminderSettings(settings.RemindersEnabled, settings.ReminderHour);
             StartingBalance = settings.StartingBalance;
             FinancialYearStartIndex = settings.FinancialYearStartMonth - 1;
             SelectedLanguage = Loc.Find(string.IsNullOrEmpty(settings.Language) ? null : settings.Language);
@@ -839,7 +878,9 @@ public partial class MainViewModel : ViewModelBase
                 People.Add(person);
             RefreshPersonOptions();
 
+            await LoadAccountsAsync(settings);
             await LoadDocumentsAsync(settings);
+            await LoadInsuranceAsync();
             await LoadTasksAsync();
             await LoadNotesAsync();
             await LoadRetirementAsync();
@@ -864,6 +905,10 @@ public partial class MainViewModel : ViewModelBase
         {
             _isLoading = false;
         }
+
+        StartBackups();
+        RefreshTaxes();
+        ScheduleReminders();
     }
 
     [RelayCommand]
@@ -883,6 +928,14 @@ public partial class MainViewModel : ViewModelBase
             return;
         }
 
+        var fromAccount = NewAccount?.Account ?? PrimaryAccount;
+        var toAccount = NewToAccount?.Account;
+        if (NewIsTransfer && (toAccount is null || toAccount == fromAccount))
+        {
+            ErrorMessage = Loc.T("Choose two different accounts for a transfer.");
+            return;
+        }
+
         var date = DateOnly.FromDateTime(NewDate ?? DateTime.Today);
         DateOnly? endDate = NewIsRecurring && NewEndDate is { } end ? DateOnly.FromDateTime(end) : null;
         if (endDate < date)
@@ -896,12 +949,15 @@ public partial class MainViewModel : ViewModelBase
             Id = EditingTransaction?.Id ?? 0,
             Date = date,
             Description = NewDescription.Trim(),
-            Category = Categories.Normalize(NewCategory ?? ""),
+            Category = NewIsTransfer ? "" : Categories.Normalize(NewCategory ?? ""),
             Amount = NewAmount.Value,
-            Type = NewIsIncome ? TransactionType.Income : TransactionType.Expense,
+            Type = NewIsTransfer ? TransactionType.Transfer : NewIsIncome ? TransactionType.Income : TransactionType.Expense,
             Recurrence = NewRecurrence,
             EndDate = endDate,
             PersonId = NewPerson.Id,
+            AccountId = fromAccount?.Id,
+            ToAccountId = NewIsTransfer ? toAccount?.Id : null,
+            ExternalId = EditingTransaction?.ExternalId,
         };
 
         try
@@ -934,6 +990,10 @@ public partial class MainViewModel : ViewModelBase
         ErrorMessage = null;
         EditingTransaction = transaction;
         NewIsIncome = transaction.IsIncome;
+        NewIsTransfer = transaction.IsTransfer;
+        NewAccount = AccountOptions.FirstOrDefault(o => o.Account!.Id == AccountIdOf(transaction)) ?? NewAccount;
+        if (transaction.ToAccountId is { } toId)
+            NewToAccount = AccountOptions.FirstOrDefault(o => o.Account!.Id == toId) ?? NewToAccount;
         NewRecurrence = transaction.Recurrence;
         NewDescription = transaction.Description;
         NewCategory = Categories.Display(transaction.Category);
@@ -946,6 +1006,8 @@ public partial class MainViewModel : ViewModelBase
         CloseDocumentPanel();
         CloseTaskPanel();
         CloseRetirementPanels();
+        CloseInsurancePanel();
+        CloseAccountPanel();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
         IsEntryPanelOpen = true;
@@ -1227,6 +1289,7 @@ public partial class MainViewModel : ViewModelBase
         IsDebtPanelOpen = false;
         CloseDocumentPanel();
         IsImportPanelOpen = true;
+        IsBankImport = false;
         SetImportItems([]);
         ImportError = null;
         ImportNote = "";
@@ -1291,7 +1354,8 @@ public partial class MainViewModel : ViewModelBase
         {
             foreach (var item in selected)
             {
-                var transaction = await repository.AddTransactionAsync(item.ToTransaction(ImportPerson.Id));
+                var transaction = await repository.AddTransactionAsync(
+                    item.ToTransaction(ImportPerson.Id, IsBankImport ? ImportAccount?.Account?.Id : null));
                 InsertSorted(transaction);
                 ImportItems.Remove(item);
                 added++;
@@ -1310,6 +1374,8 @@ public partial class MainViewModel : ViewModelBase
 
         if (ImportError is null)
         {
+            if (added > 0)
+                await FinishBankImportAsync();
             CloseImport();
             CurrentPage = AppPage.Transactions;
         }
@@ -1321,6 +1387,8 @@ public partial class MainViewModel : ViewModelBase
         _importCancellation = null;
         IsImporting = false;
         IsImportPanelOpen = false;
+        IsBankImport = false;
+        _importStatement = null;
         SetImportItems([]);
     }
 
@@ -1385,12 +1453,14 @@ public partial class MainViewModel : ViewModelBase
         // Lists of choices are rebuilt, which can clear their selection; keep what was chosen.
         var selections = (TypeFilterIndex, ScheduleFilterIndex, SortIndex, FinancialYearStartIndex,
             DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, TaskStatusFilterIndex,
-            NewPensionPillarIndex, PensionPillarIndex);
+            NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
+            LockDelayIndex, ReminderHourIndex);
         CategoryFilter = AllCategories;
         OnPropertyChanged(string.Empty);
         (TypeFilterIndex, ScheduleFilterIndex, SortIndex, FinancialYearStartIndex,
             DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, TaskStatusFilterIndex,
-            NewPensionPillarIndex, PensionPillarIndex) = selections;
+            NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
+            LockDelayIndex, ReminderHourIndex) = selections;
 
         RefreshPersonOptions();
         RefreshDocumentRows();
@@ -1400,7 +1470,12 @@ public partial class MainViewModel : ViewModelBase
         foreach (var item in BulkItems)
             item.RefreshTexts();
         RefreshBulkTexts();
+        RefreshAccountOptions();
+        RefreshInsurance();
+        RefreshBackupStatus();
         Recalculate();
+        RefreshTaxes();
+        ScheduleReminders();
     }
 
     // ── Local AI settings ───────────────────────────────────────────────────
@@ -1519,10 +1594,12 @@ public partial class MainViewModel : ViewModelBase
         // Debt payments count as expenses alongside the user's own entries.
         _entries = Transactions.Concat(DebtPlans.SelectMany(p => p.ToTransactions())).ToList();
         Summary = RunwayCalculator.Calculate(
-            StartingBalance ?? 0m, _entries, Today, financialYearStartMonth: FinancialYearStartIndex + 1);
+            TotalOpeningBalance, _entries, Today, financialYearStartMonth: FinancialYearStartIndex + 1);
+        RefreshAccounts();
         RebuildReport();
         RefreshEntryRows();
         RefreshUpcoming();
+        RefreshTaxes();
     }
 
     private void RebuildReport() =>

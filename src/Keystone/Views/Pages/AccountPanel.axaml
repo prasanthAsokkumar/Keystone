@@ -1,0 +1,63 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             x:Class="Keystone.Views.Pages.AccountPanel"
+             x:DataType="vm:MainViewModel">
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <TextBlock Text="{Binding AccountFormTitle}" FontSize="20" FontWeight="Bold" />
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}"
+                    VerticalAlignment="Top">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="28,16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding SaveBankAccountCommand}" />
+                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}" Command="{Binding ClosePanelCommand}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Spacing="18" Margin="28,12,28,20">
+                <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Name'}" />
+                        <TextBox Text="{Binding AccountName}" PlaceholderText="{l:T 'e.g. UBS salary account'}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
+                        <ComboBox ItemsSource="{Binding AccountKindNames}" SelectedIndex="{Binding AccountKindIndex}" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'IBAN (optional)'}" />
+                    <TextBox Text="{Binding AccountIban}" PlaceholderText="CH93 0076 2011 6238 5295 7" />
+                    <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                               Text="{l:T 'Used to recognise the account in imported bank statements.'}" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4" IsVisible="{Binding IsNewAccount}">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Balance today'}" />
+                        <NumericUpDown Value="{Binding AccountBalanceToday}" FormatString="N2" PlaceholderText="0.00"
+                                       ShowButtonSpinner="False" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{Binding OverdraftLabel}" />
+                        <NumericUpDown Value="{Binding AccountOverdraft}" Minimum="0" FormatString="N2" PlaceholderText="0.00"
+                                       ShowButtonSpinner="False" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                           Text="{l:T 'The overdraft isn’t counted as cash. The Overview shows how much longer it would stretch your money.'}" />
+
+                <TextBlock Classes="error" Text="{Binding AccountError}" IsVisible="{Binding HasAccountError}" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

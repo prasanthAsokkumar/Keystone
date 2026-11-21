@@ -1,0 +1,105 @@
+using System;
+using Keystone.Localization;
+
+namespace Keystone.Models;
+
+/// <remarks>Stored by name, so new values need no migration.</remarks>
+public enum InsuranceKind
+{
+    HealthBasic,
+    HealthSupplementary,
+    HouseholdLiability,
+    Car,
+    Life,
+    LegalProtection,
+    Travel,
+    Building,
+    Other,
+}
+
+/// <summary>An insurance policy: what it costs, when its term ends and by when it must be cancelled.</summary>
+public class InsurancePolicy
+{
+    public int Id { get; set; }
+
+    public string Insurer { get; set; } = "";
+
+    public InsuranceKind Kind { get; set; }
+
+    /// <summary>The insured household member; null for the whole household.</summary>
+    public int? PersonId { get; set; }
+
+    public string PolicyNumber { get; set; } = "";
+
+    /// <summary>The premium per <see cref="PremiumRecurrence"/>.</summary>
+    public decimal Premium { get; set; }
+
+    public Recurrence PremiumRecurrence { get; set; } = Recurrence.Yearly;
+
+    /// <summary>The last day of the current term, e.g. 31 December.</summary>
+    public DateOnly? ContractEnd { get; set; }
+
+    /// <summary>The term renews by itself for another year unless cancelled.</summary>
+    public bool RenewsAutomatically { get; set; } = true;
+
+    /// <summary>Months before the end of the term that a cancellation must arrive.</summary>
+    public int NoticeMonths { get; set; } = 3;
+
+    public string Notes { get; set; } = "";
+
+    /// <summary>The policy document, filed in Documents.</summary>
+    public int? DocumentId { get; set; }
+
+    public decimal YearlyPremium => PremiumRecurrence switch
+    {
+        Recurrence.Monthly => Premium * 12,
+        Recurrence.Quarterly => Premium * 4,
+        _ => Premium,
+    };
+
+    /// <summary>
+    /// The next term end that can still be cancelled in time, and the last day to cancel for it. For a
+    /// policy that renews by itself, a missed deadline moves on to the next year's.
+    /// </summary>
+    public (DateOnly End, DateOnly CancelBy)? NextDeadline(DateOnly today)
+    {
+        if (ContractEnd is not { } end)
+            return null;
+
+        DateOnly CancelBy(DateOnly termEnd) => termEnd.AddDays(1).AddMonths(-NoticeMonths).AddDays(-1);
+
+        if (RenewsAutomatically)
+        {
+            while (CancelBy(end) < today)
+                end = end.AddYears(1);
+        }
+        else if (end < today)
+        {
+            return null; // ended
+        }
+
+        return (end, CancelBy(end));
+    }
+
+    public bool HasEnded(DateOnly today) => !RenewsAutomatically && ContractEnd < today;
+
+    /// <summary>Typical Swiss notice periods: basic health insurance by 30 November for 1 January, others 3 months.</summary>
+    public static int DefaultNoticeMonths(InsuranceKind kind) => kind == InsuranceKind.HealthBasic ? 1 : 3;
+
+    public static string KindName(InsuranceKind kind) => Loc.T(kind switch
+    {
+        InsuranceKind.HealthBasic => "Health insurance (basic)",
+        InsuranceKind.HealthSupplementary => "Health insurance (supplementary)",
+        InsuranceKind.HouseholdLiability => "Household contents and liability",
+        InsuranceKind.Car => "Car",
+        InsuranceKind.Life => "Life",
+        InsuranceKind.LegalProtection => "Legal protection",
+        InsuranceKind.Travel => "Travel",
+        InsuranceKind.Building => "Building",
+        _ => "Other",
+    });
+
+    /// <summary>The expense category premiums of this kind belong in.</summary>
+    public static string CategoryFor(InsuranceKind kind) =>
+        kind is InsuranceKind.HealthBasic or InsuranceKind.HealthSupplementary ? "Health insurance" : "Other insurance";
+}

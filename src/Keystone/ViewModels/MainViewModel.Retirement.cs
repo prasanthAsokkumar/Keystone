@@ -145,9 +145,18 @@ public partial class MainViewModel
     /// <summary>For each person with a 3a account or 3a payments, what is paid in this year against the limit.</summary>
     private void RefreshPillar3a(PersonOption filter)
     {
-        var year = Today.Year;
+        Pillar3aRows = Pillar3aRowsFor(filter, Today.Year);
+        OnPropertyChanged(nameof(Pillar3aTitle));
+        ScheduleReminders();
+    }
+
+    private IReadOnlyList<Pillar3aRow> Pillar3aRowsForReminders() => Pillar3aRowsFor(PersonOption.Everyone, Today.Year);
+
+    /// <summary>Pillar 3a payments in <paramref name="year"/> per person, against that year's limit.</summary>
+    internal IReadOnlyList<Pillar3aRow> Pillar3aRowsFor(PersonOption filter, int year)
+    {
         var payments = Schedule.Expand(
-                Transactions.Where(t => !t.IsIncome && t.Category == Categories.Pillar3a),
+                Transactions.Where(t => t.Type == TransactionType.Expense && t.Category == Categories.Pillar3a),
                 new DateOnly(year, 1, 1), new DateOnly(year, 12, 31))
             .ToList();
 
@@ -157,14 +166,13 @@ public partial class MainViewModel
             .Where(id => filter.IsEveryone || id == filter.Id)
             .OrderBy(id => PersonName(id), StringComparer.CurrentCultureIgnoreCase);
 
-        Pillar3aRows = personIds.Select(id =>
+        return personIds.Select(id =>
         {
             var hasPensionFund = _pensionAccounts.Any(a => a.PersonId == id && a.Pillar == PensionPillar.PensionFund);
             var paid = payments.Where(p => p.Source.PersonId == id).Sum(p => p.Source.Amount);
             var paidByToday = payments.Where(p => p.Source.PersonId == id && p.Date <= Today).Sum(p => p.Source.Amount);
             return new Pillar3aRow(id, PersonName(id), paid, paidByToday, SwissPension.Pillar3aLimit(year, hasPensionFund), hasPensionFund);
         }).ToList();
-        OnPropertyChanged(nameof(Pillar3aTitle));
     }
 
     /// <summary>Opens a new entry for a 3a payment of what is left to pay in this year.</summary>

@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             x:Class="Keystone.Views.Pages.InsurancePage"
+             x:DataType="vm:MainViewModel">
+    <!-- What each policy costs, and by when it must be cancelled to switch. -->
+    <Grid RowDefinitions="Auto,*" RowSpacing="16">
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+            <Border Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Premiums per year'}" />
+                    <TextBlock Classes="value" Text="{Binding InsurancePremiumsText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding InsurancePremiumsDetail}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Next notice deadline'}" />
+                    <TextBlock Classes="value" Text="{Binding NextDeadlineText}" Classes.warning="{Binding IsNextDeadlineSoon}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding NextDeadlineDetail}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="1" Classes="card" Padding="8">
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,160" Margin="16,12,12,8">
+                    <TextBlock Classes="sectionTitle" Text="{l:T 'Policies'}" VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding PersonFilters}" SelectedItem="{Binding InsurancePersonFilter}" />
+                </Grid>
+                <Border DockPanel.Dock="Bottom" Padding="16,8" IsVisible="{Binding HasError}">
+                    <TextBlock Classes="error" Text="{Binding ErrorMessage}" />
+                </Border>
+                <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,0,0,1"
+                        Padding="28,6,28,10" Margin="0,0,0,4">
+                    <Grid ColumnDefinitions="*,130,150,190,106" ColumnSpacing="16">
+                        <TextBlock Classes="columnHeader" Text="{l:T 'Insurer'}" />
+                        <TextBlock Grid.Column="1" Classes="columnHeader" Text="{l:T 'Person'}" />
+                        <TextBlock Grid.Column="2" Classes="columnHeader" Text="{l:T 'Premium'}" TextAlignment="Right" />
+                        <TextBlock Grid.Column="3" Classes="columnHeader" Text="{l:T 'Term and notice'}" TextAlignment="Right" />
+                    </Grid>
+                </Border>
+                <Panel>
+                    <TextBlock Classes="secondary" Text="{Binding InsuranceEmptyText}" IsVisible="{Binding !HasInsuranceRows}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                               TextWrapping="Wrap" MaxWidth="420" />
+                    <ListBox Classes="table" ItemsSource="{Binding InsuranceRows}" IsVisible="{Binding HasInsuranceRows}" Margin="12,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:InsuranceRow">
+                                <Grid ColumnDefinitions="*,130,150,190,106" ColumnSpacing="16" Background="Transparent"
+                                      Opacity="{Binding HasEnded, Converter={x:Static vm:Format.EndedOpacityConverter}}">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Insurer}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="muted" FontSize="13" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Classes="pill" Classes.brand="{Binding !IsShared}">
+                                        <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding PremiumText}" FontWeight="SemiBold" TextAlignment="Right" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding YearlyText}" TextAlignment="Right"
+                                                   IsVisible="{Binding HasYearly}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                        <TextBlock Classes="secondary" FontSize="13" Text="{Binding TermText}" TextAlignment="Right" />
+                                        <TextBlock FontSize="12" Text="{Binding CancelByText}" TextAlignment="Right"
+                                                   IsVisible="{Binding HasCancelBy}" Classes="muted"
+                                                   Classes.negative="{Binding IsDeadlineUrgent}" Classes.warning="{Binding IsDeadlineSoon}" />
+                                    </StackPanel>
+                                    <Grid Grid.Column="4" ColumnDefinitions="34,34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Classes="icon" ToolTip.Tip="{l:T 'Open policy document'}" IsVisible="{Binding HasDocument}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).OpenPolicyDocumentCommand}"
+                                                CommandParameter="{Binding Document}">
+                                            <PathIcon Data="{StaticResource IconOpen}" />
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditInsuranceCommand}"
+                                                CommandParameter="{Binding Policy}">
+                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                        </Button>
+                                        <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteInsuranceCommand}"
+                                                CommandParameter="{Binding Policy}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Panel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

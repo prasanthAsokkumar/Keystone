@@ -4,10 +4,14 @@ using Keystone.Localization;
 
 namespace Keystone.Models;
 
+/// <remarks>Stored by name, so new values need no migration.</remarks>
 public enum TransactionType
 {
     Income,
     Expense,
+
+    /// <summary>Money moved between two of the household's accounts; neither income nor spending.</summary>
+    Transfer,
 }
 
 /// <remarks>Stored by name, so new values need no migration.</remarks>
@@ -43,6 +47,15 @@ public class Transaction
     /// <summary>The household member this entry belongs to. Null means shared by the household.</summary>
     public int? PersonId { get; set; }
 
+    /// <summary>The account the money goes out of or into. Null means the main account.</summary>
+    public int? AccountId { get; set; }
+
+    /// <summary>For a transfer, the account the money goes to.</summary>
+    public int? ToAccountId { get; set; }
+
+    /// <summary>The bank's reference for an imported booking, so the same statement can't be imported twice.</summary>
+    public string? ExternalId { get; set; }
+
     /// <summary>
     /// Generated from a debt's repayment plan rather than entered by the user. Never stored.
     /// </summary>
@@ -50,6 +63,8 @@ public class Transaction
     public bool IsDebtPayment { get; init; }
 
     public bool IsIncome => Type == TransactionType.Income;
+
+    public bool IsTransfer => Type == TransactionType.Transfer;
 
     /// <summary>Repeats on a schedule: monthly, quarterly or yearly.</summary>
     public bool IsRecurring => Recurrence != Recurrence.OneTime;
@@ -63,7 +78,8 @@ public class Transaction
         _ => 0,
     };
 
-    public decimal SignedAmount => IsIncome ? Amount : -Amount;
+    /// <summary>The effect on the household's cash: transfers move money but don't change it.</summary>
+    public decimal SignedAmount => IsIncome ? Amount : IsTransfer ? 0 : -Amount;
 
     /// <summary>What a recurring entry costs or brings in per month on average, e.g. a yearly 1,200 is 100.</summary>
     public decimal SignedMonthlyAmount => IsRecurring ? SignedAmount / IntervalMonths : 0;

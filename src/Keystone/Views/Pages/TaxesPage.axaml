@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             x:Class="Keystone.Views.Pages.TaxesPage"
+             x:DataType="vm:MainViewModel">
+    <!-- A tax year's figures and the papers to collect for the return. -->
+    <Grid ColumnDefinitions="*,360" ColumnSpacing="16">
+        <ScrollViewer>
+            <StackPanel Spacing="16" Margin="0,0,16,0">
+                <Grid ColumnDefinitions="*,160" ColumnSpacing="12">
+                    <TextBlock Classes="secondary" Text="{Binding TaxPageNote}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding PersonFilters}" SelectedItem="{Binding TaxPersonFilter}" />
+                </Grid>
+
+                <ItemsControl ItemsSource="{Binding TaxSections}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="16" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:TaxSection">
+                            <Border Classes="card">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Classes="sectionTitle" Text="{Binding Title}" />
+                                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Empty}" TextWrapping="Wrap"
+                                               IsVisible="{Binding IsEmpty}" />
+                                    <ItemsControl ItemsSource="{Binding Lines}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:TaxLine">
+                                                <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,0,0,1" Padding="0,10">
+                                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                                        <StackPanel Spacing="2">
+                                                            <TextBlock Text="{Binding Label}" FontWeight="Medium" />
+                                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" TextWrapping="Wrap"
+                                                                       IsVisible="{Binding HasDetail}" />
+                                                            <TextBlock Classes="secondary" FontSize="12" Text="{Binding Note}" TextWrapping="Wrap"
+                                                                       IsVisible="{Binding HasNote}" Classes.warning="{Binding IsWarning}" />
+                                                        </StackPanel>
+                                                        <TextBlock Grid.Column="1" Text="{Binding AmountText}" FontWeight="SemiBold"
+                                                                   VerticalAlignment="Top" TextAlignment="Right" />
+                                                    </Grid>
+                                                </Border>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <Grid ColumnDefinitions="*,Auto" IsVisible="{Binding HasTotal}" Margin="0,2,0,0">
+                                        <TextBlock Classes="label" Text="{l:T 'Total'}" />
+                                        <TextBlock Grid.Column="1" Text="{Binding TotalText}" FontWeight="Bold" />
+                                    </Grid>
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                           Text="{l:T 'A guide, not tax advice. Your letters and your canton’s rules count.'}" />
+            </StackPanel>
+        </ScrollViewer>
+
+        <ScrollViewer Grid.Column="1">
+            <Border Classes="card" VerticalAlignment="Top">
+                <StackPanel Spacing="12">
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Papers to collect'}" />
+                        <TextBlock Classes="muted" FontSize="13" Text="{Binding TaxChecklistSummary}" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding TaxChecklist}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="12" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:TaxChecklistItem">
+                                <Grid ColumnDefinitions="22,*,Auto" ColumnSpacing="8">
+                                    <PathIcon Data="{StaticResource IconCheck}" Width="16" Height="16" VerticalAlignment="Top"
+                                              Margin="0,2,0,0" Foreground="{DynamicResource Brand}" IsVisible="{Binding IsFound}" />
+                                    <Ellipse Width="14" Height="14" Stroke="{DynamicResource TextMuted}" StrokeThickness="1.5"
+                                             VerticalAlignment="Top" Margin="1,3,0,0" IsVisible="{Binding IsMissing}" />
+                                    <StackPanel Grid.Column="1" Spacing="1">
+                                        <TextBlock Text="{Binding Label}" FontSize="13" FontWeight="Medium" TextWrapping="Wrap" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" TextWrapping="Wrap" />
+                                    </StackPanel>
+                                    <Button Grid.Column="2" Classes="icon" ToolTip.Tip="{l:T 'Open'}" IsVisible="{Binding HasDocument}"
+                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenTaxDocumentCommand}"
+                                            CommandParameter="{Binding Document}">
+                                        <PathIcon Data="{StaticResource IconOpen}" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                               Text="{l:T 'Found when a document’s title, sender or notes name it, e.g. “Lohnausweis 2025”.'}" />
+                </StackPanel>
+            </Border>
+        </ScrollViewer>
+    </Grid>
+</UserControl>

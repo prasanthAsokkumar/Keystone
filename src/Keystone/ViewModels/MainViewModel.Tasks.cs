@@ -101,6 +101,7 @@ public partial class MainViewModel
                 t, t.PersonId is { } id && names.TryGetValue(id, out var name) ? name : PersonOption.Shared.ToString(), Today))
             .ToList();
 
+        ScheduleReminders();
         var open = _tasks.Count(t => !t.IsDone);
         TaskCountText = Loc.F("{0} to do", open);
 

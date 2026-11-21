@@ -40,6 +40,26 @@ public partial class ImportItem : ViewModelBase
     [NotifyPropertyChangedFor(nameof(CategoryOptions), nameof(TypeIndex))]
     public partial bool IsIncome { get; set; }
 
+    /// <summary>Money moved to or from another of the household's accounts.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(TypeIndex), nameof(IsNotTransfer))]
+    public partial bool IsTransfer { get; set; }
+
+    public bool IsNotTransfer => !IsTransfer;
+
+    /// <summary>For a transfer: the household's other account.</summary>
+    [ObservableProperty]
+    public partial AccountOption? CounterAccount { get; set; }
+
+    /// <summary>The bank's reference, so the booking isn't imported twice.</summary>
+    public string? ExternalId { get; init; }
+
+    /// <summary>Money left the account (a debit on the statement).</summary>
+    public bool IsOutgoing { get; init; }
+
+    /// <summary>Transfers are offered for bank statements when there are several accounts.</summary>
+    public bool AllowsTransfer { get; init; }
+
     [ObservableProperty]
     public partial DateTime? Date { get; set; }
 
@@ -52,13 +72,19 @@ public partial class ImportItem : ViewModelBase
 
     public bool IsDuplicate { get; }
 
-    public static IReadOnlyList<string> TypeNames => [Loc.T("Expense"), Loc.T("Income")];
+    public IReadOnlyList<string> TypeNames =>
+        AllowsTransfer ? [Loc.T("Expense"), Loc.T("Income"), Loc.T("Transfer")] : [Loc.T("Expense"), Loc.T("Income")];
 
     /// <summary>Index into <see cref="TypeNames"/>.</summary>
     public int TypeIndex
     {
-        get => IsIncome ? 1 : 0;
-        set => IsIncome = value == 1;
+        get => IsTransfer ? 2 : IsIncome ? 1 : 0;
+        set
+        {
+            IsTransfer = value == 2;
+            if (value != 2)
+                IsIncome = value == 1;
+        }
     }
 
     public IReadOnlyList<string> CategoryOptions => Categories.DisplayOptions(IsIncome);
@@ -69,16 +95,25 @@ public partial class ImportItem : ViewModelBase
 
     public bool IsValid => Amount is > 0 && !string.IsNullOrWhiteSpace(Description) && Date is not null;
 
-    public Transaction ToTransaction(int? personId) => new()
+    /// <param name="accountId">The account the statement or document is for; null for the main account.</param>
+    public Transaction ToTransaction(int? personId, int? accountId = null)
     {
-        Date = DateOnly.FromDateTime(Date ?? DateTime.Today),
-        Description = Description.Trim(),
-        Category = Categories.Normalize(Category ?? ""),
-        Amount = Amount ?? 0,
-        Type = IsIncome ? TransactionType.Income : TransactionType.Expense,
-        Recurrence = Recurrence,
-        PersonId = personId,
-    };
+        var transfer = IsTransfer && CounterAccount?.Account is not null;
+        return new Transaction
+        {
+            Date = DateOnly.FromDateTime(Date ?? DateTime.Today),
+            Description = Description.Trim(),
+            Category = transfer ? "" : Categories.Normalize(Category ?? ""),
+            Amount = Amount ?? 0,
+            Type = transfer ? TransactionType.Transfer : IsIncome ? TransactionType.Income : TransactionType.Expense,
+            Recurrence = Recurrence,
+            PersonId = personId,
+            // A transfer goes out of the statement's account, or into it from the other one.
+            AccountId = transfer && !IsOutgoing ? CounterAccount!.Account!.Id : accountId,
+            ToAccountId = transfer ? IsOutgoing ? CounterAccount!.Account!.Id : accountId : null,
+            ExternalId = ExternalId,
+        };
+    }
 
     /// <summary>Uses the app's spelling of a suggested category; keeps anything else as the model wrote it.</summary>
     private static string? MatchCategory(string category, bool isIncome)

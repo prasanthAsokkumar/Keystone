@@ -19,6 +19,10 @@ public static class Categories
         "Subscriptions",
         "Taxes",
         Pillar3a,
+        PensionBuyIn,
+        Childcare,
+        MedicalCosts,
+        Donations,
         "Other",
     ];
 
@@ -34,6 +38,18 @@ public static class Categories
 
     /// <summary>Payments into a 3a account; the Retirement page adds these up against the yearly limit.</summary>
     public const string Pillar3a = "Pillar 3a";
+
+    // Categories the tax return helper adds up as deductions.
+
+    /// <summary>Voluntary payments into the pension fund ("Einkauf").</summary>
+    public const string PensionBuyIn = "Pension fund buy-in";
+
+    public const string Childcare = "Childcare";
+
+    /// <summary>Doctor, dentist and pharmacy costs paid yourself.</summary>
+    public const string MedicalCosts = "Medical costs";
+
+    public const string Donations = "Donations";
 
     public const string DebtRepayment = "Debt repayment";
 

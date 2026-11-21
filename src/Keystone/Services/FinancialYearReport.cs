@@ -61,6 +61,7 @@ public sealed record FinancialYearReport
     public static FinancialYearReport Build(
         IEnumerable<Transaction> transactions, int startYear, int startMonth, DateOnly today)
     {
+        transactions = transactions.Where(t => !t.IsTransfer); // money moved between own accounts
         var start = new DateOnly(startYear, startMonth, 1);
         var end = start.AddYears(1).AddDays(-1);
         var occurrences = Expand(transactions, start, end);

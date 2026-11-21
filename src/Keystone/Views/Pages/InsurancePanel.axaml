@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             x:Class="Keystone.Views.Pages.InsurancePanel"
+             x:DataType="vm:MainViewModel">
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <TextBlock Text="{Binding InsuranceFormTitle}" FontSize="20" FontWeight="Bold" />
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}"
+                    VerticalAlignment="Top">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="28,16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding SaveInsuranceCommand}" />
+                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}" Command="{Binding ClosePanelCommand}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Spacing="18" Margin="28,12,28,20">
+                <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Insurer'}" />
+                        <TextBox Text="{Binding PolicyInsurer}" PlaceholderText="{l:T 'e.g. Helsana, Mobiliar'}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
+                        <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding PolicyPerson}" />
+                    </StackPanel>
+                </Grid>
+
+                <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
+                        <ComboBox ItemsSource="{Binding InsuranceKindNames}" SelectedIndex="{Binding PolicyKindIndex}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Policy number (optional)'}" />
+                        <TextBox Text="{Binding PolicyNumber}" />
+                    </StackPanel>
+                </Grid>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Premium'}" />
+                        <NumericUpDown Value="{Binding PolicyPremium}" Minimum="0" FormatString="N2" PlaceholderText="0.00"
+                                       ShowButtonSpinner="False" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Paid'}" />
+                        <ComboBox ItemsSource="{Binding PremiumRecurrenceNames}" SelectedIndex="{Binding PolicyRecurrenceIndex}" />
+                    </StackPanel>
+                </Grid>
+
+                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Current term ends on'}" />
+                                <CalendarDatePicker SelectedDate="{Binding PolicyContractEnd}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Notice period (months)'}" />
+                                <NumericUpDown Value="{Binding PolicyNoticeMonths}" Minimum="0" Maximum="24" Increment="1"
+                                               FormatString="0" />
+                            </StackPanel>
+                        </Grid>
+                        <CheckBox IsChecked="{Binding PolicyRenews}" Content="{l:T 'Renews every year unless cancelled'}" />
+                        <TextBlock Classes="secondary" FontSize="13" Text="{Binding PolicyCancelByText}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Policy document'}" />
+                    <ComboBox ItemsSource="{Binding PolicyDocumentOptions}" SelectedItem="{Binding PolicyDocument}" />
+                </StackPanel>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
+                    <TextBox Text="{Binding PolicyNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"
+                             PlaceholderText="{l:T 'e.g. deductible, what’s covered, contact'}" />
+                </StackPanel>
+
+                <CheckBox IsChecked="{Binding PolicyAddToExpenses}" IsVisible="{Binding IsNewInsurance}">
+                    <TextBlock Text="{Binding PolicyEntryText}" TextWrapping="Wrap" />
+                </CheckBox>
+
+                <TextBlock Classes="error" Text="{Binding PolicyError}" IsVisible="{Binding HasPolicyError}" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

@@ -28,6 +28,18 @@ public class AppSettings
     /// <summary>Ollama model used for document import. Needs vision support to read photos.</summary>
     public string AiModel { get; set; } = DefaultAiModel;
 
+    /// <summary>Notifications for bills, tasks and deadlines. Asks macOS for permission the first time.</summary>
+    public bool RemindersEnabled { get; set; } = true;
+
+    /// <summary>Hour of the day reminders arrive at.</summary>
+    public int ReminderHour { get; set; } = 8;
+
+    /// <summary>Asks for Touch ID or the Mac's password before showing anything.</summary>
+    public bool LockEnabled { get; set; }
+
+    /// <summary>Minutes away from Keystone after which it locks again; 0 locks as soon as you switch away.</summary>
+    public int LockAfterMinutes { get; set; } = 5;
+
     public const string DefaultAiEndpoint = "http://localhost:11434";
 
     public const string DefaultAiModel = "qwen2.5vl:7b";

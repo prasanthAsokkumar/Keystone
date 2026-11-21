@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Linq;
 using Keystone.Models;
 using Keystone.Localization;
 
@@ -20,7 +21,7 @@ public sealed record PersonOption(int? Id, string Name, bool IsEveryone = false)
 }
 
 /// <summary>One row of the Entries table.</summary>
-public sealed record EntryRow(Transaction Transaction, string PersonName)
+public sealed record EntryRow(Transaction Transaction, string PersonName, string AccountText = "")
 {
     public string DateText => Format.Date(Transaction.Date);
 
@@ -30,12 +31,17 @@ public sealed record EntryRow(Transaction Transaction, string PersonName)
 
     public string ScheduleText => Transaction.IsRecurring ? Transaction.ScheduleText : Loc.T("One-time");
 
-    /// <summary>Category and schedule, shown under the description.</summary>
-    public string DetailText => string.IsNullOrWhiteSpace(Category) ? ScheduleText : $"{Category} · {ScheduleText}";
+    /// <summary>Category (or "Transfer"), schedule and account, shown under the description.</summary>
+    public string DetailText => string.Join(" · ",
+        new[] { Transaction.IsTransfer ? Loc.T("Transfer") : Category, ScheduleText, AccountText }.Where(p => !string.IsNullOrWhiteSpace(p)));
+
+    public bool IsTransfer => Transaction.IsTransfer;
 
     public bool IsIncome => Transaction.IsIncome;
 
-    public string AmountText => Transaction.SignedAmount.ToString("+#,##0.00;-#,##0.00", CultureInfo.CurrentCulture) +
+    public string AmountText => (Transaction.IsTransfer
+                                    ? Transaction.Amount.ToString("#,##0.00", CultureInfo.CurrentCulture)
+                                    : Transaction.SignedAmount.ToString("+#,##0.00;-#,##0.00", CultureInfo.CurrentCulture)) +
         Transaction.Recurrence switch
         {
             Recurrence.Monthly => Loc.T(" / mo"),
