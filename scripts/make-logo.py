@@ -9,7 +9,7 @@ from pathlib import Path
 
 from PIL import Image, ImageChops, ImageDraw, ImageFilter
 
-ASSETS = Path(__file__).resolve().parent.parent / "src" / "Runway" / "Assets"
+ASSETS = Path(__file__).resolve().parent.parent / "src" / "Keystone" / "Assets"
 SCALE = 4  # Draw large and downsample for smooth edges.
 SIZE = 1024
 

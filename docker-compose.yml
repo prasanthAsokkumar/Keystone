@@ -1,4 +1,4 @@
-# Local AI for Runway's document import: an Ollama server on http://localhost:11434.
+# Local AI for Keystone's document import: an Ollama server on http://localhost:11434.
 #   docker compose up -d
 #   docker compose exec ollama ollama pull qwen2.5vl:7b
 # Docker on macOS can't use the GPU, so the model runs on the CPU (slower than the Ollama app).

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="src/Runway/Assets/keystone.png" alt="Keystone logo" width="128">
+  <img src="src/Keystone/Assets/keystone.png" alt="Keystone logo" width="128">
 </p>
 
 <h1 align="center">Keystone</h1>
@@ -15,6 +15,21 @@ documents in your own OneDrive folder, and the optional AI that reads letters ru
 [Ollama](https://ollama.com). Nothing is sent to a cloud service.
 
 The interface is available in English and German (Swiss spelling), and follows the Mac's language by default.
+
+![Overview: how long the money lasts, cash today, daily income and spending, and what's coming up](docs/screenshots/overview.png)
+
+## Screenshots
+
+The screenshots show a made-up family with sample data.
+
+| | |
+| --- | --- |
+| ![Transactions](docs/screenshots/transactions.png) | ![Documents](docs/screenshots/documents.png) |
+| **Transactions:** one-time and repeating income and expenses, per person | **Documents:** bills, letters and notices filed per person, with due dates |
+| ![Tasks](docs/screenshots/tasks.png) | ![Notes](docs/screenshots/notes.png) |
+| **Tasks:** what needs doing and by when | **Notes:** ideas and plans, grouped by project |
+| ![Retirement](docs/screenshots/retirement.png) | ![Overview in German, dark mode](docs/screenshots/overview-german-dark.png) |
+| **Retirement:** AHV, pension fund and pillar 3a, from the yearly letters | **German and dark mode** |
 
 ## Features
 
@@ -62,10 +77,10 @@ The interface is available in English and German (Swiss spelling), and follows t
 Run the app from source:
 
 ```bash
-dotnet run --project src/Runway
+dotnet run --project src/Keystone
 ```
 
-Debug builds use their own database (`runway-dev.db`), so trying things out never touches your real data.
+Debug builds use their own database (`keystone-dev.db`), so trying things out never touches your real data.
 
 Run the tests:
 
@@ -107,7 +122,7 @@ Settings.
 
 | What | Where |
 | --- | --- |
-| Database | `~/Library/Application Support/Runway/runway.db` |
+| Database | `~/Library/Application Support/Keystone/keystone.db` |
 | Documents | `~/OneDrive/PRAS/KeystoneApp`, changeable in Settings |
 | Deleted documents | The `Deleted` folder inside the documents folder, so nothing is lost by accident |
 
@@ -115,37 +130,38 @@ Two environment variables override these locations, which is useful for testing:
 
 | Variable | Effect |
 | --- | --- |
-| `RUNWAY_DB_PATH` | Use a different database file |
-| `RUNWAY_ONEDRIVE_PATH` | Use a different folder as OneDrive |
+| `KEYSTONE_DB_PATH` | Use a different database file |
+| `KEYSTONE_ONEDRIVE_PATH` | Use a different folder as OneDrive |
 
 ## Project structure
 
 ```
-src/Runway/
+src/Keystone/
   Models/         Transactions, debts, people, documents, tasks, notes, retirement accounts
   Services/       Runway calculation, schedules, document filing, local AI, Swiss pension rules
   ViewModels/     MainViewModel, split by page (Documents, Tasks, Notes, Retirement, BulkImport)
   Views/          Avalonia XAML views and styles
   Localization/   English keys with German translations
   Data/           EF Core context, repository and migrations
-tests/Runway.Tests/  xUnit tests
+tests/Keystone.Tests/  xUnit tests
 scripts/          App packaging and logo drawing
 ```
 
 Built with [Avalonia](https://avaloniaui.net), [CommunityToolkit.Mvvm](https://github.com/CommunityToolkit/dotnet),
 [EF Core](https://learn.microsoft.com/ef/core/) with SQLite, and [PdfPig](https://github.com/UglyToad/PdfPig).
 
-The app was first called Runway. Its code, project and data folder still use that name; only what you see in the
-app is called Keystone.
+The app was first called Runway. On its first start, Keystone moves data from that time to the new places: the
+database from `Application Support/Runway` and the documents folder from `OneDrive/PRAS/RunwayApp`. "Your runway"
+is still the name of the Overview's headline figure: how long your money lasts.
 
 ## Contributing
 
-- Every text in the interface needs a German translation in `src/Runway/Localization/German.cs`. A test fails if
+- Every text in the interface needs a German translation in `src/Keystone/Localization/German.cs`. A test fails if
   one is missing.
 - Changes to the data model need a migration:
 
   ```bash
-  dotnet ef migrations add <Name> --project src/Runway --output-dir Data/Migrations
+  dotnet ef migrations add <Name> --project src/Keystone --output-dir Data/Migrations
   ```
 
 - The logo is drawn by `scripts/make-logo.py` (needs Pillow). Run it to regenerate `keystone.png` and `keystone.ico`.

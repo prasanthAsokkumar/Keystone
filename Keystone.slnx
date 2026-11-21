@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/Scripts/">
+    <File Path="scripts\package-mac.sh" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Keystone/Keystone.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Keystone.Tests/Keystone.Tests.csproj" />
+  </Folder>
+</Solution>

@@ -4,7 +4,7 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
-PROJECT="$ROOT/src/Runway/Runway.csproj"
+PROJECT="$ROOT/src/Keystone/Keystone.csproj"
 OUT="$ROOT/artifacts"
 APP="$OUT/Keystone.app"
 VERSION="${VERSION:-$(sed -n "s:.*<Version>\(.*\)</Version>.*:\1:p" "$PROJECT")}"
@@ -27,8 +27,8 @@ cp -R "$OUT/publish/." "$APP/Contents/MacOS/"
 ICONSET="$OUT/Keystone.iconset"
 mkdir -p "$ICONSET"
 for size in 16 32 128 256 512; do
-    sips -z $size $size "$ROOT/src/Runway/Assets/keystone.png" --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
-    sips -z $((size * 2)) $((size * 2)) "$ROOT/src/Runway/Assets/keystone.png" --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
+    sips -z $size $size "$ROOT/src/Keystone/Assets/keystone.png" --out "$ICONSET/icon_${size}x${size}.png" >/dev/null
+    sips -z $((size * 2)) $((size * 2)) "$ROOT/src/Keystone/Assets/keystone.png" --out "$ICONSET/icon_${size}x${size}@2x.png" >/dev/null
 done
 iconutil -c icns "$ICONSET" -o "$APP/Contents/Resources/Keystone.icns"
 rm -rf "$ICONSET"
@@ -40,9 +40,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 <dict>
     <key>CFBundleName</key><string>Keystone</string>
     <key>CFBundleDisplayName</key><string>Keystone</string>
-    <!-- Kept from when the app was called Runway, so macOS keeps its folder permissions. -->
-    <key>CFBundleIdentifier</key><string>ch.runway.app</string>
-    <key>CFBundleExecutable</key><string>Runway</string>
+    <key>CFBundleIdentifier</key><string>ch.keystone.app</string>
+    <key>CFBundleExecutable</key><string>Keystone</string>
     <key>CFBundleIconFile</key><string>Keystone.icns</string>
     <key>CFBundlePackageType</key><string>APPL</string>
     <key>CFBundleVersion</key><string>$VERSION</string>
