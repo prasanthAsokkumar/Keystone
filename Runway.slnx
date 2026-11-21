@@ -1,0 +1,11 @@
+<Solution>
+  <Folder Name="/Scripts/">
+    <File Path="scripts\package-mac.sh" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Runway/Runway.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Runway.Tests/Runway.Tests.csproj" />
+  </Folder>
+</Solution>
