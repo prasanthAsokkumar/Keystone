@@ -1,0 +1,152 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             x:Class="Keystone.Views.Pages.AppointmentsPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Appointments, kept in step with a calendar in the Calendar app. -->
+    <UserControl.Styles>
+        <Style Selector="Border.dateTile">
+            <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Hairline}" />
+        </Style>
+        <Style Selector="Border.dateTile.today">
+            <Setter Property="Background" Value="{DynamicResource BrandSoft}" />
+            <Setter Property="BorderBrush" Value="{DynamicResource Brand}" />
+        </Style>
+    </UserControl.Styles>
+    <Grid RowDefinitions="Auto,*" RowSpacing="16">
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+            <Border Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Next appointment'}" />
+                    <TextBlock Classes="value" Text="{Binding NextAppointmentText}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding NextAppointmentDetail}" TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label" Text="{l:T 'Calendar'}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{StaticResource IconSync}" Width="16" Height="16" Foreground="{DynamicResource Brand}"
+                                      IsVisible="{Binding IsCalendarSyncEnabled}" />
+                            <TextBlock Text="{Binding CalendarSyncSummary}" FontWeight="SemiBold" FontSize="15"
+                                       TextTrimming="CharacterEllipsis" />
+                        </StackPanel>
+                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding !IsCalendarSyncEnabled}"
+                                   Text="{l:T 'Turn on calendar sync to see your appointments in the Calendar app and on your iPhone, and to bring in the ones you add there.'}" />
+                        <TextBlock Classes="error" FontSize="13" TextWrapping="Wrap" Text="{Binding CalendarSyncError}"
+                                   IsVisible="{Binding HasCalendarSyncError}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
+                        <Button Classes="secondary" Command="{Binding SyncCalendarNowCommand}" IsVisible="{Binding ShowsCalendarChoice}"
+                                IsEnabled="{Binding !IsCalendarSyncing}" HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconSync}" />
+                                <TextBlock Text="{l:T 'Sync now'}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="secondary" Command="{Binding OpenCalendarAppCommand}" IsVisible="{Binding ShowsCalendarChoice}"
+                                HorizontalAlignment="Stretch">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconOpen}" />
+                                <TextBlock Text="{l:T 'Open Calendar'}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="secondary" Command="{Binding ShowCalendarSettingsCommand}" IsVisible="{Binding !ShowsCalendarChoice}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconSettings}" />
+                                <TextBlock Text="{l:T 'Set up'}" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
+                </Grid>
+            </Border>
+        </Grid>
+
+        <Border Grid.Row="1" Classes="card" Padding="8">
+            <DockPanel>
+                <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="12,12,12,8">
+                    <WrapPanel ItemSpacing="8" LineSpacing="8">
+                        <TextBox Text="{Binding AppointmentSearch}" PlaceholderText="{l:T 'Search appointments'}" Width="220">
+                            <TextBox.InnerLeftContent>
+                                <PathIcon Data="{StaticResource IconSearch}" Width="16" Height="16"
+                                          Margin="10,0,0,0" Foreground="{DynamicResource TextMuted}" />
+                            </TextBox.InnerLeftContent>
+                        </TextBox>
+                        <ComboBox ItemsSource="{Binding PersonFilters}" SelectedItem="{Binding AppointmentPersonFilter}" Width="140" />
+                        <ComboBox ItemsSource="{Binding AppointmentStatusFilters}" SelectedIndex="{Binding AppointmentStatusFilterIndex}"
+                                  Width="170" />
+                    </WrapPanel>
+                    <TextBlock Grid.Column="1" Classes="muted" Text="{Binding AppointmentCountText}" VerticalAlignment="Center"
+                               Margin="0,0,8,0" />
+                </Grid>
+
+                <Border DockPanel.Dock="Bottom" Padding="16,4,16,4" IsVisible="{Binding HasError}">
+                    <TextBlock Classes="error" Text="{Binding ErrorMessage}" />
+                </Border>
+
+                <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Margin="12,0,12,4" />
+
+                <Panel>
+                    <TextBlock Classes="secondary" Text="{Binding AppointmentsEmptyText}" IsVisible="{Binding !HasAppointmentRows}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                               TextWrapping="Wrap" MaxWidth="400" />
+                    <ListBox Classes="table" ItemsSource="{Binding AppointmentRows}" IsVisible="{Binding HasAppointmentRows}" Margin="12,0">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AppointmentRow">
+                                <Grid ColumnDefinitions="Auto,*,130,72" ColumnSpacing="16" Background="Transparent"
+                                      DoubleTapped="AppointmentRow_DoubleTapped"
+                                      Opacity="{Binding IsPast, Converter={x:Static vm:Format.EndedOpacityConverter}}">
+                                    <Border Classes="dateTile" Width="46" Height="46" CornerRadius="10" BorderThickness="1"
+                                            Classes.today="{Binding IsToday}">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding DayText}" FontSize="16" FontWeight="Bold" HorizontalAlignment="Center" />
+                                            <TextBlock Text="{Binding MonthText}" FontSize="9" FontWeight="SemiBold" Margin="0,-2,0,0"
+                                                       Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center" />
+                                        </StackPanel>
+                                    </Border>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1" ToolTip.Tip="{Binding Title}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                            <PathIcon Data="{StaticResource IconSync}" Width="12" Height="12" Foreground="{DynamicResource TextMuted}"
+                                                      IsVisible="{Binding IsLinked}" ToolTip.Tip="{l:T 'In your calendar'}" />
+                                            <PathIcon Data="{StaticResource IconBell}" Width="12" Height="12" Foreground="{DynamicResource TextMuted}"
+                                                      IsVisible="{Binding HasReminder}" ToolTip.Tip="{l:T 'With a reminder'}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="6">
+                                            <TextBlock FontSize="13" Text="{Binding WhenText}" FontWeight="Medium" Classes="secondary"
+                                                       Classes.warning="{Binding IsToday}" />
+                                            <TextBlock Classes="muted" FontSize="13" Text="·" />
+                                            <TextBlock Classes="muted" FontSize="13" Text="{Binding TimeText}" />
+                                        </StackPanel>
+                                        <StackPanel Orientation="Horizontal" Spacing="4" IsVisible="{Binding HasLocation}">
+                                            <PathIcon Data="{StaticResource IconPlace}" Width="11" Height="11" Foreground="{DynamicResource TextMuted}" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Location}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Border Grid.Column="2" Classes="pill" Classes.brand="{Binding !IsShared}">
+                                        <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                    <Grid Grid.Column="3" ColumnDefinitions="34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditAppointmentCommand}"
+                                                CommandParameter="{Binding Appointment}">
+                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteAppointmentCommand}"
+                                                CommandParameter="{Binding Appointment}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Panel>
+            </DockPanel>
+        </Border>
+    </Grid>
+</UserControl>

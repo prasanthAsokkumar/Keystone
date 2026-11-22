@@ -81,6 +81,20 @@ public partial class MainViewModel
                     EditTaskCommand.Execute(t);
                 })));
 
+        var now = DateTime.Now;
+        results.AddRange(_appointments
+            .Where(a => Has(a.Title, a.Location, a.Notes))
+            // Upcoming ones first, soonest first; then the most recent past ones.
+            .OrderBy(a => a.HasPassed(now))
+            .ThenBy(a => a.HasPassed(now) ? -a.Start.Ticks : a.Start.Ticks)
+            .Take(MaxResultsPerKind)
+            .Select(a => new SearchResult(Loc.T("Appointment"), a.Title, new AppointmentRow(a, PersonName(a.PersonId), now).DetailText,
+                () =>
+                {
+                    CurrentPage = AppPage.Appointments;
+                    EditAppointmentCommand.Execute(a);
+                })));
+
         results.AddRange(_notes
             .Where(n => Has(n.Title, n.Body, n.Project))
             .OrderByDescending(n => n.UpdatedAt)

@@ -39,6 +39,14 @@ namespace Keystone.Data.Migrations
                         .HasColumnType("TEXT")
                         .HasDefaultValue("qwen2.5vl:7b");
 
+                    b.Property<string>("CalendarId")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("CalendarSyncEnabled")
+                        .HasColumnType("INTEGER");
+
                     b.Property<string>("DocumentsFolder")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -85,6 +93,68 @@ namespace Keystone.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Settings");
+                });
+
+            modelBuilder.Entity("Keystone.Models.Appointment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("CalendarEventKey")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("CalendarId")
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("End")
+                        .HasColumnType("TEXT");
+
+                    b.Property<bool>("IsAllDay")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PersonId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int?>("RemindMinutesBefore")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateTime>("Start")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime?>("SyncedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId");
+
+                    b.HasIndex("Start");
+
+                    b.ToTable("Appointments");
                 });
 
             modelBuilder.Entity("Keystone.Models.BankAccount", b =>
@@ -728,6 +798,14 @@ namespace Keystone.Data.Migrations
                     b.HasIndex("PersonId");
 
                     b.ToTable("Warranties");
+                });
+
+            modelBuilder.Entity("Keystone.Models.Appointment", b =>
+                {
+                    b.HasOne("Keystone.Models.Person", null)
+                        .WithMany()
+                        .HasForeignKey("PersonId")
+                        .OnDelete(DeleteBehavior.SetNull);
                 });
 
             modelBuilder.Entity("Keystone.Models.Contract", b =>

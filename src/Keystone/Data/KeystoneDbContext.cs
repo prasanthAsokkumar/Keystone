@@ -44,6 +44,8 @@ public class KeystoneDbContext(string databasePath) : DbContext
 
     public DbSet<DocumentText> DocumentTexts => Set<DocumentText>();
 
+    public DbSet<Appointment> Appointments => Set<Appointment>();
+
     /// <summary>
     /// ~/Library/Application Support/Keystone/keystone.db. A database from when the app was called Runway
     /// is moved there first.
@@ -148,6 +150,7 @@ public class KeystoneDbContext(string databasePath) : DbContext
             entity.Property(s => s.ReminderHour).HasDefaultValue(8);
             entity.Property(s => s.LockAfterMinutes).HasDefaultValue(5);
             entity.Property(s => s.RetirementNeedPercent).HasDefaultValue(80);
+            entity.Property(s => s.CalendarId).HasMaxLength(300);
         });
 
         modelBuilder.Entity<HouseholdDocument>(entity =>
@@ -252,6 +255,18 @@ public class KeystoneDbContext(string databasePath) : DbContext
         {
             entity.Property(g => g.Name).HasMaxLength(200);
             entity.HasOne<BankAccount>().WithMany().HasForeignKey(g => g.AccountId).OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<Appointment>(entity =>
+        {
+            entity.Property(a => a.Title).HasMaxLength(200);
+            entity.Property(a => a.Location).HasMaxLength(300);
+            entity.Property(a => a.Notes).HasMaxLength(4000);
+            entity.Property(a => a.CalendarId).HasMaxLength(300);
+            entity.Property(a => a.CalendarEventKey).HasMaxLength(300);
+            entity.HasIndex(a => a.Start);
+            // Removing a person keeps their appointments as household ones.
+            entity.HasOne<Person>().WithMany().HasForeignKey(a => a.PersonId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<DocumentText>(entity =>

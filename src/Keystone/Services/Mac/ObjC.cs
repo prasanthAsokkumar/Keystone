@@ -32,6 +32,19 @@ internal static unsafe class ObjC
     [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern void SendLong(IntPtr receiver, IntPtr selector, long a, IntPtr b, IntPtr c);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern long SendReturnLong(IntPtr receiver, IntPtr selector);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern byte SendReturnBool(IntPtr receiver, IntPtr selector, long a, IntPtr b);
+    [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern byte SendReturnBool(IntPtr receiver, IntPtr selector);
+    [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern byte SendReturnBool(IntPtr receiver, IntPtr selector, IntPtr a);
+    [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern IntPtr SendWithLong(IntPtr receiver, IntPtr selector, long a);
+    [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern IntPtr SendWithLong(IntPtr receiver, IntPtr selector, long a, IntPtr b);
+    [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern IntPtr SendDouble(IntPtr receiver, IntPtr selector, double a);
+    [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern double SendReturnDouble(IntPtr receiver, IntPtr selector);
+    [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern void SendBool(IntPtr receiver, IntPtr selector, byte a);
+    /// <summary>For saveEvent:span:commit:error: and removeEvent:span:commit:error:.</summary>
+    [DllImport(Objc, EntryPoint = "objc_msgSend")]
+    public static extern byte SendSpanCommit(IntPtr receiver, IntPtr selector, IntPtr item, long span, byte commit, out IntPtr error);
+    /// <summary>For saveCalendar:commit:error:.</summary>
+    [DllImport(Objc, EntryPoint = "objc_msgSend")]
+    public static extern byte SendCommit(IntPtr receiver, IntPtr selector, IntPtr item, byte commit, out IntPtr error);
     [DllImport(Objc, EntryPoint = "objc_msgSend")]
     public static extern IntPtr SendString(IntPtr receiver, IntPtr selector, [MarshalAs(UnmanagedType.LPUTF8Str)] string text);
 

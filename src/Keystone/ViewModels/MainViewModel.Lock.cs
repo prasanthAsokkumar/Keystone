@@ -190,6 +190,7 @@ public partial class MainViewModel
             IsLocked = true;
         _leftAt = null;
         CheckInbox(); // scans may have arrived while away
+        ScheduleCalendarSync(); // appointments may have changed in Calendar meanwhile
         if (IsLocked)
             _ = UnlockAsync();
     }

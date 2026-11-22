@@ -350,6 +350,21 @@ public sealed class KeystoneRepository(string databasePath)
 
     public Task SetScenarioAsync(string json) => UpdateSettingsAsync(s => s.ScenarioJson = json);
 
+    public Task SetCalendarSyncAsync(bool enabled, string calendarId) =>
+        UpdateSettingsAsync(s => (s.CalendarSyncEnabled, s.CalendarId) = (enabled, calendarId));
+
+    /// <summary>Saves what a calendar sync changed, in one go.</summary>
+    public async Task SaveAppointmentsAsync(IEnumerable<Appointment> added, IEnumerable<Appointment> changed, IEnumerable<int> removedIds)
+    {
+        await using var db = CreateContext();
+        db.Appointments.AddRange(added);
+        db.Appointments.UpdateRange(changed.Where(a => a.Id != 0));
+        var removed = removedIds.ToList();
+        if (removed.Count > 0)
+            await db.Appointments.Where(a => removed.Contains(a.Id)).ExecuteDeleteAsync();
+        await db.SaveChangesAsync();
+    }
+
     public Task SetRetirementNeedAsync(int percent) => UpdateSettingsAsync(s => s.RetirementNeedPercent = percent);
 
     public Task SetLanguageAsync(string language) => UpdateSettingsAsync(s => s.Language = language);

@@ -20,6 +20,9 @@ public sealed record DateReminder(int Id, string Title, DateOnly Date, int DaysB
 
 public sealed record WarrantyReminder(int Id, string Item, DateOnly ExpiresOn);
 
+/// <summary>An appointment, reminded at <paramref name="At"/>; <paramref name="When"/> says when it starts.</summary>
+public sealed record AppointmentReminder(int Id, string Title, DateTime At, string When, string Location = "");
+
 /// <summary>Turns bills, tasks, insurance deadlines and 3a room into dated notifications.</summary>
 public static class ReminderPlanner
 {
@@ -33,7 +36,7 @@ public static class ReminderPlanner
         IEnumerable<BillReminder> bills, IEnumerable<TaskReminder> tasks, IEnumerable<DeadlineReminder> deadlines,
         IEnumerable<Pillar3aReminder> pillar3a, DateTime now, int hour,
         IEnumerable<DeadlineReminder>? contracts = null, IEnumerable<DateReminder>? dates = null,
-        IEnumerable<WarrantyReminder>? warranties = null)
+        IEnumerable<WarrantyReminder>? warranties = null, IEnumerable<AppointmentReminder>? appointments = null)
     {
         DateTime At(DateOnly day) => day.ToDateTime(new TimeOnly(Math.Clamp(hour, 0, 23), 0));
         var reminders = new List<Reminder>();
@@ -89,6 +92,13 @@ public static class ReminderPlanner
             reminders.Add(new Reminder($"warranty-{warranty.Id}", At(warranty.ExpiresOn.AddDays(-30)),
                 Loc.F("Warranty ends in a month: {0}", warranty.Item),
                 Loc.F("If something is wrong with it, report it before {0:d}.", warranty.ExpiresOn.ToDateTime(TimeOnly.MinValue))));
+        }
+
+        foreach (var appointment in appointments ?? [])
+        {
+            reminders.Add(new Reminder($"appointment-{appointment.Id}-{appointment.At:yyyyMMddHHmm}", appointment.At,
+                appointment.Title,
+                appointment.Location == "" ? appointment.When : $"{appointment.When} · {appointment.Location}"));
         }
 
         foreach (var room in pillar3a.Where(r => r.Left > 0))

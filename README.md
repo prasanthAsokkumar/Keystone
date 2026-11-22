@@ -60,6 +60,12 @@ The screenshots show a made-up family with sample data.
 - Fills in a document's type, title, sender, date, amount, due date and the person it is for
 - Reads pension fund certificates, 3a statements and AHV projections
 
+**Appointments and calendar**
+- Appointments with a time or all day, a place, notes, a person and a reminder
+- Two-way sync with a calendar in the Mac's Calendar app (iCloud, Google, Exchange…): what you add or change in
+  either place shows in the other, so appointments also reach your iPhone
+- Choose an existing calendar or let Keystone add a "Keystone" calendar of its own
+
 **Tasks and notes**
 - Tasks with due dates and a person, repeating weekly, monthly, quarterly or yearly if needed
 - Notes for projects and ideas that save as you type, grouped by project and pinnable
@@ -84,8 +90,8 @@ The screenshots show a made-up family with sample data.
   interest) and assets on 31 December, plus a checklist of certificates to collect
 
 **Everything else**
-- Search across entries, documents, tasks, notes, insurance and accounts (⌘F)
-- Reminders as macOS notifications for bills, tasks, notice deadlines, important dates, warranties and pillar 3a,
+- Search across entries, documents, tasks, appointments, notes, insurance and accounts (⌘F)
+- Reminders as macOS notifications for bills, tasks, appointments, notice deadlines, important dates, warranties and pillar 3a,
   even when Keystone is closed
 - Daily backups of all data next to your documents in OneDrive, kept for 30 days, with restore
 - App lock with Touch ID or your Mac password

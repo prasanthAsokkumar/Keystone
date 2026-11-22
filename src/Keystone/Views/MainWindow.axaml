@@ -129,6 +129,12 @@
                             <TextBlock Text="{l:T 'Tasks'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsAppointmentsPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconAppointment}" />
+                            <TextBlock Text="{l:T 'Appointments'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
                     <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsNotesPage}">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconNote}" />
@@ -243,6 +249,12 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
+                    <Button Classes="primary" Command="{Binding NewAppointmentCommand}" IsVisible="{Binding IsAppointmentsPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{StaticResource IconPlus}" />
+                            <TextBlock Text="{l:T 'New appointment'}" />
+                        </StackPanel>
+                    </Button>
                     <Button Classes="primary" Command="{Binding AddDeadlineCommand}" IsVisible="{Binding IsContractsPage}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <PathIcon Data="{StaticResource IconPlus}" />
@@ -261,6 +273,13 @@
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <PathIcon Data="{StaticResource IconInbox}" Foreground="{DynamicResource Brand}" />
                                 <TextBlock Text="{Binding InboxText}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="secondary" Command="{Binding ShowAppointmentsCommand}" IsVisible="{Binding HasAppointmentsSoon}"
+                                ToolTip.Tip="{l:T 'Show appointments'}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconAppointment}" Foreground="{DynamicResource TextSecondary}" />
+                                <TextBlock Text="{Binding AppointmentsSoonText}" />
                             </StackPanel>
                         </Button>
                         <Button Classes="secondary" Command="{Binding ShowTasksDueCommand}" IsVisible="{Binding HasTasksDue}"
@@ -835,6 +854,9 @@
                     </Panel>
                 </DockPanel>
             </Border>
+
+            <!-- ═══ Appointments ═══ -->
+            <pages:AppointmentsPage Grid.Row="1" IsVisible="{Binding IsAppointmentsPage}" />
 
             <!-- ═══ Notes ═══ -->
             <Grid Grid.Row="1" ColumnDefinitions="340,*" ColumnSpacing="16" IsVisible="{Binding IsNotesPage}">
@@ -1445,6 +1467,46 @@
                                 <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Send a test reminder'}"
                                         Command="{Binding SendTestReminderCommand}" IsVisible="{Binding CanSendNotifications}" />
                             </Grid>
+                        </StackPanel>
+                    </Border>
+
+                    <!-- Calendar -->
+                    <Border Classes="card" Padding="24">
+                        <StackPanel Spacing="14">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <Border Classes="iconTile">
+                                    <PathIcon Data="{StaticResource IconAppointment}" />
+                                </Border>
+                                <StackPanel Grid.Column="1" Spacing="2">
+                                    <TextBlock Classes="sectionTitle" Text="{l:T 'Calendar sync'}" />
+                                    <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                               Text="{l:T 'Keeps your appointments in step with a calendar in the Calendar app, both ways: what you add or change in Keystone shows there, and what you add or change there shows here. With an iCloud or Google calendar, also on your iPhone.'}" />
+                                </StackPanel>
+                                <ToggleSwitch Grid.Column="2" IsChecked="{Binding IsCalendarSyncEnabled}" IsEnabled="{Binding CanUseCalendar}"
+                                              OnContent="" OffContent="" VerticalAlignment="Top" />
+                            </Grid>
+                            <Grid ColumnDefinitions="*,280" ColumnSpacing="12" IsVisible="{Binding ShowsCalendarChoice}">
+                                <TextBlock Classes="secondary" FontSize="13" Text="{l:T 'Calendar'}" VerticalAlignment="Center" />
+                                <ComboBox Grid.Column="1" ItemsSource="{Binding CalendarOptions}" SelectedItem="{Binding SelectedCalendar}"
+                                          PlaceholderText="{l:T 'Choose a calendar'}" HorizontalAlignment="Stretch" />
+                            </Grid>
+                            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding ShowsCalendarChoice}"
+                                       Text="{l:T 'Appointments from 30 days ago to a year ahead are compared. Deleting an appointment in one place deletes it in the other. A calendar of its own keeps household appointments apart from work.'}" />
+                            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center"
+                                           Text="{Binding CalendarPermissionText}" Classes.warning="{Binding IsCalendarDenied}" />
+                                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Open System Settings'}"
+                                        Command="{Binding OpenCalendarSettingsCommand}" IsVisible="{Binding IsCalendarDenied}" />
+                                <Button Grid.Column="2" Classes="secondary" Command="{Binding CreateKeystoneCalendarCommand}"
+                                        IsVisible="{Binding ShowsCalendarChoice}">
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <PathIcon Data="{StaticResource IconPlus}" />
+                                        <TextBlock Text="{l:T 'New “Keystone” calendar'}" />
+                                    </StackPanel>
+                                </Button>
+                            </Grid>
+                            <TextBlock Classes="error" FontSize="13" TextWrapping="Wrap" Text="{Binding CalendarSyncError}"
+                                       IsVisible="{Binding HasCalendarSyncError}" />
                         </StackPanel>
                     </Border>
 
@@ -2465,6 +2527,9 @@
                 <pages:AccountPanel />
             </Border>
             <pages:DeadlinePanels />
+            <Border Classes="panel" Width="440" HorizontalAlignment="Right" IsVisible="{Binding IsAppointmentPanelOpen}">
+                <pages:AppointmentPanel />
+            </Border>
             <Border Classes="panel" Width="440" HorizontalAlignment="Right" IsVisible="{Binding IsGoalPanelOpen}">
                 <pages:GoalPanel />
             </Border>

@@ -32,6 +32,7 @@ End a piece of work by giving them that command.
 | Accounts | Several accounts (current, savings, credit card, cash) with IBAN, opening balance and overdraft/credit limit. Transfers move money between them without counting as income or spending. "Match my bank balance" adjusts the opening balance. |
 | Documents | Bills, invoices, letters, notices, contracts, policies, statements, payslips per person, filed in OneDrive as `Person/Year/Type/yyyy-MM-dd Title.ext`. Due dates and paid status; bills can be added to expenses. Single and bulk import (drop many files). Swiss QR-bill reading. Inbox folder for phone scans. Search inside PDFs/text. Retention guide ("Past keeping time" filter). Deleted files go to `Deleted/`. |
 | Tasks | Due dates, person, notes; repeating weekly/monthly/quarterly/yearly (ticking a repeating task creates the next one). |
+| Appointments | Timed or all-day appointments with place, person, notes and a reminder. Two-way sync with one chosen calendar in the Calendar app through EventKit (`CalendarSync` logic, `MacCalendar` interop): compares 30 days back to a year ahead, the later change wins, deletions go both ways. Needs the app bundle (Info.plist calendar usage strings). |
 | Notes | Notes with projects and pins, saved as you type. |
 | Debts | Monthly, lump-sum and interest-only debts with extra repayments; payments feed the runway. |
 | Retirement | AHV, pension fund (BVG), vested benefits, pillar 3a/3b accounts per person with yearly statements (balance, projected capital and pension at 65, buy-in). Pillar 3a paid this year vs the legal limit. AI reads pension letters. |
@@ -69,7 +70,7 @@ src/Keystone/
                  LocalAi (Ollama), PersonMatcher, ReminderPlanner, RetentionGuide, RetirementPlanner, Scenario,
                  SwissPension, SwissQrBill, DatabaseBackup
   Services/Mac/  macOS integration through P/Invoke: ObjC (runtime, blocks), TouchId (LocalAuthentication),
-                 MacNotifications (UserNotifications), QrBillScanner (CoreGraphics/ImageIO + ZXing)
+                 MacNotifications (UserNotifications), MacCalendar (EventKit), QrBillScanner (CoreGraphics/ImageIO + ZXing)
   ViewModels/    One MainViewModel split into partial files per area (MainViewModel.<Area>.cs), plus row records
   Views/         MainWindow.axaml (shell, older pages, side panels), Pages/*.axaml (newer pages and forms as
                  UserControls with x:DataType="vm:MainViewModel"), Styles.axaml; icons are StreamGeometry in App.axaml

@@ -100,7 +100,8 @@ public partial class MainViewModel
                 x.Contract.PersonId is null ? "" : PersonName(x.Contract.PersonId))),
         _dates.Where(d => !d.HasPassed(Today))
             .Select(d => new DateReminder(d.Id, d.Title, d.NextDate(Today), d.RemindDaysBefore, d.PersonId is null ? "" : PersonName(d.PersonId))),
-        _warranties.Where(w => !w.HasExpired(Today)).Select(w => new WarrantyReminder(w.Id, w.Item, w.ExpiresOn)));
+        _warranties.Where(w => !w.HasExpired(Today)).Select(w => new WarrantyReminder(w.Id, w.Item, w.ExpiresOn)),
+        AppointmentReminders(ReminderHour));
 
     /// <summary>Re-plans reminders shortly after a change; many changes in a row plan only once.</summary>
     private void ScheduleReminders()

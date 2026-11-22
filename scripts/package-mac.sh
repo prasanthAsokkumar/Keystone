@@ -49,6 +49,8 @@ cat > "$APP/Contents/Info.plist" <<PLIST
     <key>LSMinimumSystemVersion</key><string>12.0</string>
     <key>NSHighResolutionCapable</key><true/>
     <key>LSApplicationCategoryType</key><string>public.app-category.finance</string>
+    <key>NSCalendarsFullAccessUsageDescription</key><string>Keystone keeps your appointments in step with the calendar you choose.</string>
+    <key>NSCalendarsUsageDescription</key><string>Keystone keeps your appointments in step with the calendar you choose.</string>
 </dict>
 </plist>
 PLIST

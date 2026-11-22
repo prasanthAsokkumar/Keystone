@@ -43,6 +43,12 @@ public class AppSettings
     /// <summary>The what-if changes being tried, as JSON.</summary>
     public string ScenarioJson { get; set; } = "";
 
+    /// <summary>Keeps appointments in step with a calendar in the Mac's Calendar app.</summary>
+    public bool CalendarSyncEnabled { get; set; }
+
+    /// <summary>The calendar appointments are kept in; empty until one is chosen.</summary>
+    public string CalendarId { get; set; } = "";
+
     /// <summary>Share of today's living costs needed in retirement, in percent.</summary>
     public int RetirementNeedPercent { get; set; } = 80;
 

@@ -1,0 +1,83 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             x:Class="Keystone.Views.Pages.AppointmentPanel"
+             x:DataType="vm:MainViewModel">
+    <!-- Add or edit an appointment. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <TextBlock Text="{Binding AppointmentFormTitle}" FontSize="20" FontWeight="Bold" />
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="28,16">
+            <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding SaveAppointmentCommand}" />
+                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Delete'}" IsVisible="{Binding IsEditingAppointment}"
+                        Command="{Binding DeleteAppointmentCommand}" CommandParameter="{Binding EditingAppointment}" />
+                <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Cancel'}" Command="{Binding ClosePanelCommand}" />
+            </Grid>
+        </Border>
+        <ScrollViewer>
+            <StackPanel Spacing="18" Margin="28,12,28,20">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'What'}" />
+                    <TextBox Text="{Binding AppointmentTitle}" PlaceholderText="{l:T 'e.g. Dentist check-up'}" />
+                </StackPanel>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Date'}" />
+                        <CalendarDatePicker SelectedDate="{Binding AppointmentDate}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
+                        <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding AppointmentPerson}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Grid>
+                <CheckBox IsChecked="{Binding AppointmentAllDay}" Content="{l:T 'All day'}" />
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsVisible="{Binding !AppointmentAllDay}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'From'}" />
+                        <TimePicker SelectedTime="{Binding AppointmentStartTime}" ClockIdentifier="24HourClock" MinuteIncrement="5" MinWidth="0"
+                                    HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Until'}" />
+                        <TimePicker SelectedTime="{Binding AppointmentEndTime}" ClockIdentifier="24HourClock" MinuteIncrement="5" MinWidth="0"
+                                    HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Grid>
+                <StackPanel Spacing="4" IsVisible="{Binding AppointmentAllDay}">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Last day (if longer than one day)'}" />
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="6">
+                        <CalendarDatePicker SelectedDate="{Binding AppointmentEndDate}" HorizontalAlignment="Stretch" />
+                        <Button Grid.Column="1" Classes="icon" Command="{Binding ClearAppointmentEndDateCommand}" ToolTip.Tip="{l:T 'Clear'}">
+                            <PathIcon Data="{StaticResource IconClose}" />
+                        </Button>
+                    </Grid>
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Where'}" />
+                    <TextBox Text="{Binding AppointmentLocation}" PlaceholderText="{l:T 'e.g. Dental practice, Bahnhofstrasse 12'}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Remind me'}" />
+                    <ComboBox ItemsSource="{Binding AppointmentReminderNames}" SelectedIndex="{Binding AppointmentReminderIndex}"
+                              HorizontalAlignment="Stretch" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
+                    <TextBox Text="{Binding AppointmentNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"
+                             PlaceholderText="{l:T 'e.g. bring the insurance card'}" />
+                </StackPanel>
+                <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding AppointmentLinkText, Converter={x:Static StringConverters.IsNotNullOrEmpty}}">
+                    <PathIcon Data="{StaticResource IconSync}" Width="13" Height="13" Foreground="{DynamicResource TextMuted}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding AppointmentLinkText}" TextWrapping="Wrap" />
+                </StackPanel>
+                <TextBlock Classes="error" Text="{Binding AppointmentError}" IsVisible="{Binding HasAppointmentError}" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

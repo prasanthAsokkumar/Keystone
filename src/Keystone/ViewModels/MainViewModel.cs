@@ -24,6 +24,7 @@ public enum AppPage
     Transactions,
     Documents,
     Tasks,
+    Appointments,
     Notes,
     Debts,
     Insurance,
@@ -80,7 +81,7 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(
-        nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsRetirementPage), nameof(IsInsurancePage), nameof(IsTaxesPage), nameof(IsContractsPage), nameof(IsPlanningPage),
+        nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsAppointmentsPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsRetirementPage), nameof(IsInsurancePage), nameof(IsTaxesPage), nameof(IsContractsPage), nameof(IsPlanningPage),
         nameof(IsYearPage), nameof(IsSettingsPage), nameof(PageTitle), nameof(PageSubtitle), nameof(DropHint),
         nameof(DropFilesAsDocument), nameof(DropDetailText))]
     public partial AppPage CurrentPage { get; set; }
@@ -92,6 +93,8 @@ public partial class MainViewModel : ViewModelBase
     public bool IsDocumentsPage { get => CurrentPage == AppPage.Documents; set { if (value) CurrentPage = AppPage.Documents; } }
 
     public bool IsTasksPage { get => CurrentPage == AppPage.Tasks; set { if (value) CurrentPage = AppPage.Tasks; } }
+
+    public bool IsAppointmentsPage { get => CurrentPage == AppPage.Appointments; set { if (value) CurrentPage = AppPage.Appointments; } }
 
     public bool IsNotesPage { get => CurrentPage == AppPage.Notes; set { if (value) CurrentPage = AppPage.Notes; } }
 
@@ -116,6 +119,7 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Transactions => Loc.T("Transactions"),
         AppPage.Documents => Loc.T("Documents"),
         AppPage.Tasks => Loc.T("Tasks"),
+        AppPage.Appointments => Loc.T("Appointments"),
         AppPage.Notes => Loc.T("Notes"),
         AppPage.Debts => Loc.T("Debts"),
         AppPage.Retirement => Loc.T("Retirement"),
@@ -133,6 +137,7 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Transactions => Loc.T("All your income and expenses in one place"),
         AppPage.Documents => Loc.T("Bills, letters and notices for everyone in the household"),
         AppPage.Tasks => Loc.T("What needs to be done, and by when"),
+        AppPage.Appointments => Loc.T("Doctor’s visits, meetings and everything else with a time, in step with your calendar"),
         AppPage.Notes => Loc.T("Thoughts, ideas and plans for your projects"),
         AppPage.Debts => Loc.T("What you owe and when it’s paid off"),
         AppPage.Retirement => Loc.T("Your Swiss retirement provision: AHV, pension fund and pillar 3a"),
@@ -141,7 +146,7 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Contracts => Loc.T("Contracts, important dates and warranties, with their deadlines"),
         AppPage.Planning => Loc.T("Savings goals, what-if scenarios, retirement and net worth"),
         AppPage.Year => Loc.T("Income and spending month by month"),
-        AppPage.Settings => Loc.T("Accounts, reminders, backup, household and language"),
+        AppPage.Settings => Loc.T("Accounts, reminders, calendar, backup, household and language"),
         _ => Loc.F("How long your money lasts · {0:dddd, d MMMM}", Today),
     };
 
@@ -163,7 +168,7 @@ public partial class MainViewModel : ViewModelBase
     public bool IsPanelOpen => IsEntryPanelOpen || IsDebtPanelOpen || IsImportPanelOpen || IsDocumentPanelOpen || IsTaskPanelOpen ||
                                IsStatementPanelOpen || IsPensionAccountPanelOpen || IsBulkPanelOpen ||
                                IsInsurancePanelOpen || IsAccountPanelOpen || IsContractPanelOpen ||
-                               IsImportantDatePanelOpen || IsWarrantyPanelOpen || IsGoalPanelOpen;
+                               IsImportantDatePanelOpen || IsWarrantyPanelOpen || IsGoalPanelOpen || IsAppointmentPanelOpen;
 
     /// <summary>
     /// A dropped file is filed as a document on the Documents page, or when import is off;
@@ -191,6 +196,7 @@ public partial class MainViewModel : ViewModelBase
         if (IsDocumentPanelOpen)
             CloseDocumentPanel();
         CloseTaskPanel();
+        CloseAppointmentPanel();
         CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
@@ -210,6 +216,7 @@ public partial class MainViewModel : ViewModelBase
         IsImportPanelOpen = false;
         CloseDocumentPanel();
         CloseTaskPanel();
+        CloseAppointmentPanel();
         CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
@@ -231,6 +238,7 @@ public partial class MainViewModel : ViewModelBase
         IsImportPanelOpen = false;
         CloseDocumentPanel();
         CloseTaskPanel();
+        CloseAppointmentPanel();
         CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
@@ -253,6 +261,7 @@ public partial class MainViewModel : ViewModelBase
         CloseImport();
         CloseDocumentPanel();
         CloseTaskPanel();
+        CloseAppointmentPanel();
         CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
@@ -762,6 +771,9 @@ public partial class MainViewModel : ViewModelBase
         var documentFilterId = DocumentPersonFilter?.IsEveryone == true ? (int?)null : DocumentPersonFilter?.Id;
         var documentFilterIsEveryone = DocumentPersonFilter is null or { IsEveryone: true };
         var newTaskPersonId = NewTaskPerson?.Id;
+        var appointmentPersonId = AppointmentPerson?.Id;
+        var appointmentFilterId = AppointmentPersonFilter?.IsEveryone == true ? (int?)null : AppointmentPersonFilter?.Id;
+        var appointmentFilterIsEveryone = AppointmentPersonFilter is null or { IsEveryone: true };
         var taskPersonId = TaskPerson?.Id;
         var taskFilterId = TaskPersonFilter?.IsEveryone == true ? (int?)null : TaskPersonFilter?.Id;
         var taskFilterIsEveryone = TaskPersonFilter is null or { IsEveryone: true };
@@ -792,6 +804,10 @@ public partial class MainViewModel : ViewModelBase
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == filterId) ?? PersonOption.Everyone;
         NewTaskPerson = PersonOptions.FirstOrDefault(o => o.Id == newTaskPersonId) ?? PersonOption.Shared;
         TaskPerson = PersonOptions.FirstOrDefault(o => o.Id == taskPersonId) ?? PersonOption.Shared;
+        AppointmentPerson = PersonOptions.FirstOrDefault(o => o.Id == appointmentPersonId) ?? PersonOption.Shared;
+        AppointmentPersonFilter = appointmentFilterIsEveryone
+            ? PersonOption.Everyone
+            : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == appointmentFilterId) ?? PersonOption.Everyone;
         TaskPersonFilter = taskFilterIsEveryone
             ? PersonOption.Everyone
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == taskFilterId) ?? PersonOption.Everyone;
@@ -921,6 +937,7 @@ public partial class MainViewModel : ViewModelBase
             await LoadDeadlinesAsync();
             await LoadGoalsAsync();
             await LoadTasksAsync();
+            await LoadAppointmentsAsync(settings);
             await LoadNotesAsync();
             await LoadRetirementAsync();
 
@@ -951,6 +968,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshDeadlines();
         RefreshPlanning();
         ScheduleReminders();
+        _ = StartCalendarSyncAsync();
     }
 
     [RelayCommand]
@@ -1047,6 +1065,7 @@ public partial class MainViewModel : ViewModelBase
         IsImportPanelOpen = false;
         CloseDocumentPanel();
         CloseTaskPanel();
+        CloseAppointmentPanel();
         CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
@@ -1499,18 +1518,22 @@ public partial class MainViewModel : ViewModelBase
             DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, TaskStatusFilterIndex,
             NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
             LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
-            ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex);
+            ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex,
+            AppointmentStatusFilterIndex, AppointmentReminderIndex);
         CategoryFilter = AllCategories;
         OnPropertyChanged(string.Empty);
         (TypeFilterIndex, ScheduleFilterIndex, SortIndex, FinancialYearStartIndex,
             DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, TaskStatusFilterIndex,
             NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
             LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
-            ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex) = selections;
+            ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex,
+            AppointmentStatusFilterIndex, AppointmentReminderIndex) = selections;
 
         RefreshPersonOptions();
         RefreshDocumentRows();
         RefreshTaskRows();
+        RefreshAppointmentRows();
+        RefreshCalendarState();
         RefreshNoteProjects();
         RefreshNoteItems();
         foreach (var item in BulkItems)
