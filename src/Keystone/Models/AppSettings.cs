@@ -40,6 +40,12 @@ public class AppSettings
     /// <summary>Minutes away from Keystone after which it locks again; 0 locks as soon as you switch away.</summary>
     public int LockAfterMinutes { get; set; } = 5;
 
+    /// <summary>The what-if changes being tried, as JSON.</summary>
+    public string ScenarioJson { get; set; } = "";
+
+    /// <summary>Share of today's living costs needed in retirement, in percent.</summary>
+    public int RetirementNeedPercent { get; set; } = 80;
+
     public const string DefaultAiEndpoint = "http://localhost:11434";
 
     public const string DefaultAiModel = "qwen2.5vl:7b";

@@ -92,7 +92,15 @@ public partial class MainViewModel
             .Select(x => new DeadlineReminder(x.Policy.Id, x.Policy.Insurer, InsurancePolicy.KindName(x.Policy.Kind), x.Deadline!.Value.CancelBy,
                 x.Policy.PersonId is null ? "" : PersonName(x.Policy.PersonId))),
         Pillar3aRowsForReminders().Select(r => new Pillar3aReminder(r.PersonName, r.Left, Today.Year)),
-        now, ReminderHour);
+        now, ReminderHour,
+        _contracts.Where(c => !c.HasEnded(Today))
+            .Select(c => (Contract: c, Deadline: c.NextDeadline(Today)))
+            .Where(x => x.Deadline is not null)
+            .Select(x => new DeadlineReminder(x.Contract.Id, x.Contract.Provider, Contract.KindName(x.Contract.Kind), x.Deadline!.Value.CancelBy,
+                x.Contract.PersonId is null ? "" : PersonName(x.Contract.PersonId))),
+        _dates.Where(d => !d.HasPassed(Today))
+            .Select(d => new DateReminder(d.Id, d.Title, d.NextDate(Today), d.RemindDaysBefore, d.PersonId is null ? "" : PersonName(d.PersonId))),
+        _warranties.Where(w => !w.HasExpired(Today)).Select(w => new WarrantyReminder(w.Id, w.Item, w.ExpiresOn)));
 
     /// <summary>Re-plans reminders shortly after a change; many changes in a row plan only once.</summary>
     private void ScheduleReminders()

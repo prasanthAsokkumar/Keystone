@@ -298,6 +298,60 @@ public sealed class KeystoneRepository(string databasePath)
         await db.BankAccounts.Where(a => a.Id == id).ExecuteDeleteAsync();
     }
 
+    // ── Simple records: contracts, important dates, warranties, savings goals ──
+
+    public async Task<List<T>> GetAllAsync<T>() where T : class
+    {
+        await using var db = CreateContext();
+        return await db.Set<T>().AsNoTracking().ToListAsync();
+    }
+
+    /// <summary>Adds a new record or saves every field of an existing one.</summary>
+    public async Task<T> SaveAsync<T>(T entity, bool isNew) where T : class
+    {
+        await using var db = CreateContext();
+        if (isNew)
+            db.Set<T>().Add(entity);
+        else
+            db.Set<T>().Update(entity);
+        await db.SaveChangesAsync();
+        return entity;
+    }
+
+    public async Task DeleteAsync<T>(System.Linq.Expressions.Expression<Func<T, bool>> match) where T : class
+    {
+        await using var db = CreateContext();
+        await db.Set<T>().Where(match).ExecuteDeleteAsync();
+    }
+
+    public async Task<Dictionary<int, string>> GetDocumentTextsAsync()
+    {
+        await using var db = CreateContext();
+        return await db.DocumentTexts.AsNoTracking().ToDictionaryAsync(t => t.DocumentId, t => t.Text);
+    }
+
+    public async Task SaveDocumentTextAsync(int documentId, string text)
+    {
+        await using var db = CreateContext();
+        var row = await db.DocumentTexts.FindAsync(documentId);
+        if (row is null)
+            db.DocumentTexts.Add(new DocumentText { DocumentId = documentId, Text = text });
+        else
+            row.Text = text;
+        await db.SaveChangesAsync();
+    }
+
+    public async Task UpdatePersonAsync(Person person)
+    {
+        await using var db = CreateContext();
+        db.People.Update(person);
+        await db.SaveChangesAsync();
+    }
+
+    public Task SetScenarioAsync(string json) => UpdateSettingsAsync(s => s.ScenarioJson = json);
+
+    public Task SetRetirementNeedAsync(int percent) => UpdateSettingsAsync(s => s.RetirementNeedPercent = percent);
+
     public Task SetLanguageAsync(string language) => UpdateSettingsAsync(s => s.Language = language);
 
     public Task SetDocumentsFolderAsync(string folder) => UpdateSettingsAsync(s => s.DocumentsFolder = folder);

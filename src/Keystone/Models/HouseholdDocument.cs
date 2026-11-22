@@ -41,6 +41,12 @@ public class HouseholdDocument
 
     public DateTime AddedAt { get; set; }
 
+    /// <summary>From the bill's QR code: the account to pay to (IBAN or QR-IBAN).</summary>
+    public string PaymentIban { get; set; } = "";
+
+    /// <summary>From the bill's QR code: the payment reference to quote.</summary>
+    public string PaymentReference { get; set; } = "";
+
     /// <summary>The expense entry created for this bill, if any.</summary>
     public int? TransactionId { get; set; }
 

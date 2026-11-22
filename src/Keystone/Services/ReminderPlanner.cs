@@ -15,6 +15,11 @@ public sealed record DeadlineReminder(int Id, string Insurer, string Kind, DateO
 
 public sealed record Pillar3aReminder(string PersonName, decimal Left, int Year);
 
+/// <summary>An important date: reminded <paramref name="DaysBefore"/> days ahead and on the day.</summary>
+public sealed record DateReminder(int Id, string Title, DateOnly Date, int DaysBefore, string Person = "");
+
+public sealed record WarrantyReminder(int Id, string Item, DateOnly ExpiresOn);
+
 /// <summary>Turns bills, tasks, insurance deadlines and 3a room into dated notifications.</summary>
 public static class ReminderPlanner
 {
@@ -26,7 +31,9 @@ public static class ReminderPlanner
 
     public static IReadOnlyList<Reminder> Plan(
         IEnumerable<BillReminder> bills, IEnumerable<TaskReminder> tasks, IEnumerable<DeadlineReminder> deadlines,
-        IEnumerable<Pillar3aReminder> pillar3a, DateTime now, int hour)
+        IEnumerable<Pillar3aReminder> pillar3a, DateTime now, int hour,
+        IEnumerable<DeadlineReminder>? contracts = null, IEnumerable<DateReminder>? dates = null,
+        IEnumerable<WarrantyReminder>? warranties = null)
     {
         DateTime At(DateOnly day) => day.ToDateTime(new TimeOnly(Math.Clamp(hour, 0, 23), 0));
         var reminders = new List<Reminder>();
@@ -53,6 +60,35 @@ public static class ReminderPlanner
                         string.Join(", ", new[] { deadline.Insurer, deadline.Kind, deadline.Person }.Where(p => p != "")),
                         deadline.CancelBy.ToDateTime(TimeOnly.MinValue))));
             }
+        }
+
+        foreach (var contract in contracts ?? [])
+        {
+            foreach (var days in DeadlineWarningDays)
+            {
+                reminders.Add(new Reminder($"contract-{contract.Id}-{contract.CancelBy:yyyyMMdd}-{days}",
+                    At(contract.CancelBy.AddDays(-days)),
+                    Loc.Plural(days, "Contract notice deadline in {0} day", "Contract notice deadline in {0} days"),
+                    Loc.F("{0}: to switch, your cancellation must arrive by {1:d}.",
+                        string.Join(", ", new[] { contract.Insurer, contract.Kind, contract.Person }.Where(p => p != "")),
+                        contract.CancelBy.ToDateTime(TimeOnly.MinValue))));
+            }
+        }
+
+        foreach (var date in dates ?? [])
+        {
+            var what = date.Person == "" ? date.Title : $"{date.Title} · {date.Person}";
+            if (date.DaysBefore > 0)
+                reminders.Add(new Reminder($"date-{date.Id}-{date.Date:yyyyMMdd}-before", At(date.Date.AddDays(-date.DaysBefore)),
+                    Loc.F("Coming up: {0}", what), Loc.F("Due on {0:d}.", date.Date.ToDateTime(TimeOnly.MinValue))));
+            reminders.Add(new Reminder($"date-{date.Id}-{date.Date:yyyyMMdd}", At(date.Date), Loc.F("Today: {0}", what), ""));
+        }
+
+        foreach (var warranty in warranties ?? [])
+        {
+            reminders.Add(new Reminder($"warranty-{warranty.Id}", At(warranty.ExpiresOn.AddDays(-30)),
+                Loc.F("Warranty ends in a month: {0}", warranty.Item),
+                Loc.F("If something is wrong with it, report it before {0:d}.", warranty.ExpiresOn.ToDateTime(TimeOnly.MinValue))));
         }
 
         foreach (var room in pillar3a.Where(r => r.Left > 0))

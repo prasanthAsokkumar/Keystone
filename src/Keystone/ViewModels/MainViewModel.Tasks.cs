@@ -176,6 +176,8 @@ public partial class MainViewModel
         try
         {
             await repository.UpdateTaskAsync(task);
+            if (task.IsDone)
+                await AddNextRepeatAsync(task);
         }
         catch (Exception ex)
         {
@@ -184,6 +186,32 @@ public partial class MainViewModel
         }
 
         RefreshTaskRows();
+    }
+
+    /// <summary>
+    /// A repeating task that is done comes back as a new task, due on its next date. A task done late doesn't
+    /// pile up: the next date is the first one from today on.
+    /// </summary>
+    private async Task AddNextRepeatAsync(TaskItem done)
+    {
+        if (!done.Repeats)
+            return;
+        var due = done.DueDate ?? Today;
+        var next = TaskItem.NextDue(due, done.Repeat);
+        while (next < Today)
+            next = TaskItem.NextDue(next, done.Repeat);
+
+        // Don't add it twice, e.g. when a task is ticked, unticked and ticked again.
+        if (_tasks.Any(t => !t.IsDone && t.Title == done.Title && t.DueDate == next))
+            return;
+
+        var task = new TaskItem
+        {
+            Title = done.Title, Notes = done.Notes, PersonId = done.PersonId, Repeat = done.Repeat,
+            DueDate = next, CreatedAt = DateTime.Now,
+        };
+        await repository.AddTaskAsync(task);
+        _tasks.Add(task);
     }
 
     [RelayCommand]
@@ -229,6 +257,12 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial bool TaskIsDone { get; set; }
 
+    /// <summary>Index into <see cref="TaskRepeatNames"/>, in <see cref="TaskRepeat"/> order.</summary>
+    [ObservableProperty]
+    public partial int TaskRepeatIndex { get; set; }
+
+    public IReadOnlyList<string> TaskRepeatNames => Translate("Never", "Every week", "Every month", "Every 3 months", "Every year");
+
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasTaskError))]
     public partial string? TaskError { get; set; }
@@ -245,6 +279,7 @@ public partial class MainViewModel
         TaskPerson = PersonOptions.FirstOrDefault(o => o.Id == task.PersonId) ?? PersonOption.Shared;
         TaskNotes = task.Notes;
         TaskIsDone = task.IsDone;
+        TaskRepeatIndex = (int)task.Repeat;
         TaskError = null;
         IsTaskPanelOpen = true;
     }
@@ -273,6 +308,7 @@ public partial class MainViewModel
             DueDate = TaskDueDate is { } due ? DateOnly.FromDateTime(due) : null,
             PersonId = TaskPerson.Id,
             CompletedOn = TaskIsDone ? task.CompletedOn ?? Today : null,
+            Repeat = Enum.IsDefined((TaskRepeat)TaskRepeatIndex) ? (TaskRepeat)TaskRepeatIndex : TaskRepeat.Never,
             CreatedAt = task.CreatedAt,
         };
         try
@@ -286,6 +322,17 @@ public partial class MainViewModel
         }
 
         _tasks[_tasks.IndexOf(task)] = updated;
+        if (!task.IsDone && updated.IsDone)
+        {
+            try
+            {
+                await AddNextRepeatAsync(updated);
+            }
+            catch (Exception ex)
+            {
+                ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            }
+        }
         CloseTaskPanel();
         RefreshTaskRows();
     }
@@ -328,4 +375,15 @@ public sealed record TaskRow(TaskItem Task, string PersonName, DateOnly Today)
     };
 
     public bool HasDueText => DueText != "";
+
+    public bool Repeats => Task.Repeats;
+
+    public string RepeatText => Task.Repeat switch
+    {
+        TaskRepeat.Weekly => Loc.T("Every week"),
+        TaskRepeat.Monthly => Loc.T("Every month"),
+        TaskRepeat.Quarterly => Loc.T("Every 3 months"),
+        TaskRepeat.Yearly => Loc.T("Every year"),
+        _ => "",
+    };
 }

@@ -51,6 +51,9 @@ The screenshots show a made-up family with sample data.
 - Filed in OneDrive as `Person / Year / Type / yyyy-MM-dd Title.pdf`, so the folder also makes sense in Finder
 - Due dates and paid status for bills, with an option to add a bill to your expenses
 - Drop one file to file it, or drop many at once to import them in bulk
+- Swiss QR-bills are read exactly: amount, payee, IBAN, reference and due date, with copy buttons for e-banking
+- An inbox folder for phone scans (e.g. with the OneDrive app); Keystone offers to file whatever arrives
+- Search inside PDFs and text files, and a guide to how long each kind of paper should be kept
 
 **Local AI (optional, off by default)**
 - Reads bills, statements and payslips and suggests income and expense entries
@@ -58,12 +61,23 @@ The screenshots show a made-up family with sample data.
 - Reads pension fund certificates, 3a statements and AHV projections
 
 **Tasks and notes**
-- Tasks with due dates and a person, with overdue and upcoming tasks shown on the Overview
+- Tasks with due dates and a person, repeating weekly, monthly, quarterly or yearly if needed
 - Notes for projects and ideas that save as you type, grouped by project and pinnable
 
 **Insurance**
 - Every policy with its premium, the end of its term and the last day to cancel it, e.g. 30 November for
   basic health insurance
+
+**Contracts & dates**
+- Contracts (mobile, internet, gym, leasing, rent…) with yearly cost and notice deadline
+- Important dates such as passport and ID expiry, the car inspection (MFK), tyre changes and the vignette
+- Warranties with their receipt and end date
+
+**Planning**
+- Savings goals, tracked by account or by hand, with the monthly amount needed
+- What-if scenarios (working less, new costs, a big purchase) compared with today, without changing real entries
+- The retirement gap: expected pensions and savings against what you'll need, and a plan for taking out pillar 3a
+- Net worth over the last two years
 
 **Taxes**
 - A tax year's income, deductions (pillar 3a, pension fund buy-ins, childcare, medical costs, donations, debt
@@ -71,7 +85,8 @@ The screenshots show a made-up family with sample data.
 
 **Everything else**
 - Search across entries, documents, tasks, notes, insurance and accounts (⌘F)
-- Reminders as macOS notifications for bills, tasks, insurance deadlines and pillar 3a, even when Keystone is closed
+- Reminders as macOS notifications for bills, tasks, notice deadlines, important dates, warranties and pillar 3a,
+  even when Keystone is closed
 - Daily backups of all data next to your documents in OneDrive, kept for 30 days, with restore
 - App lock with Touch ID or your Mac password
 

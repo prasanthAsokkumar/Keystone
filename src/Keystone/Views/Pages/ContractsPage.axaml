@@ -1,0 +1,207 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             x:Class="Keystone.Views.Pages.ContractsPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Contracts, important dates and warranties: everything with a deadline. -->
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
+        <Border Classes="segments" HorizontalAlignment="Left" Width="480">
+            <Grid ColumnDefinitions="*,*,*">
+                <RadioButton Classes="segment" GroupName="DeadlineTabs" Content="{l:T 'Contracts'}" IsChecked="{Binding IsContractsTab}" />
+                <RadioButton Grid.Column="1" Classes="segment" GroupName="DeadlineTabs" Content="{l:T 'Important dates'}"
+                             IsChecked="{Binding IsDatesTab}" />
+                <RadioButton Grid.Column="2" Classes="segment" GroupName="DeadlineTabs" Content="{l:T 'Warranties'}"
+                             IsChecked="{Binding IsWarrantiesTab}" />
+            </Grid>
+        </Border>
+
+        <!-- Summary -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding IsContractsTab}">
+            <Border Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Contracts per year'}" />
+                    <TextBlock Classes="value" Text="{Binding ContractCostText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding ContractCostDetail}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Next notice deadline'}" />
+                    <TextBlock Classes="value" Text="{Binding ContractDeadlineText}" Classes.warning="{Binding IsContractDeadlineSoon}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding ContractDeadlineDetail}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </Grid>
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding IsDatesTab}">
+            <Border Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Next date'}" />
+                    <TextBlock Classes="value" Text="{Binding NextImportantDateText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding NextImportantDateDetail}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="label" Text="{l:T 'Good to keep track of'}" />
+                    <TextBlock Classes="secondary" FontSize="13" TextWrapping="Wrap"
+                               Text="{l:T 'Passports and ID cards (renewing takes weeks), the driving licence, the car inspection (MFK), tyre changes and the motorway vignette, due every year by 31 January.'}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding IsWarrantiesTab}">
+            <Border Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Under warranty'}" />
+                    <TextBlock Classes="value" Text="{Binding WarrantySummaryText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding WarrantySummaryDetail}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card">
+                <StackPanel Spacing="6">
+                    <TextBlock Classes="label" Text="{l:T 'Warranty in Switzerland'}" />
+                    <TextBlock Classes="secondary" FontSize="13" TextWrapping="Wrap"
+                               Text="{l:T 'New goods have 2 years of warranty by law, unless the shop’s terms say otherwise. Keep the receipt: link it from Documents.'}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <!-- Lists -->
+        <Border Grid.Row="2" Classes="card" Padding="8">
+            <Panel>
+                <!-- Contracts -->
+                <Panel IsVisible="{Binding IsContractsTab}">
+                    <TextBlock Classes="secondary" IsVisible="{Binding !HasContractRows}" HorizontalAlignment="Center"
+                               VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
+                               Text="{l:T 'No contracts yet. Add your mobile, internet, gym or leasing contracts to see what they cost and when to cancel.'}" />
+                    <ListBox Classes="table" ItemsSource="{Binding ContractRows}" IsVisible="{Binding HasContractRows}" Margin="12,4">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ContractRow">
+                                <Grid ColumnDefinitions="*,130,150,190,106" ColumnSpacing="16" Background="Transparent"
+                                      Opacity="{Binding HasEnded, Converter={x:Static vm:Format.EndedOpacityConverter}}">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Provider}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="muted" FontSize="13" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Classes="pill" Classes.brand="{Binding !IsShared}">
+                                        <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding CostText}" FontWeight="SemiBold" TextAlignment="Right" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding YearlyText}" TextAlignment="Right"
+                                                   IsVisible="{Binding HasYearly}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                        <TextBlock Classes="secondary" FontSize="13" Text="{Binding TermText}" TextAlignment="Right"
+                                                   TextWrapping="Wrap" />
+                                        <TextBlock FontSize="12" Text="{Binding CancelByText}" TextAlignment="Right" IsVisible="{Binding HasCancelBy}"
+                                                   Classes="muted" Classes.negative="{Binding IsDeadlineUrgent}" Classes.warning="{Binding IsDeadlineSoon}" />
+                                    </StackPanel>
+                                    <Grid Grid.Column="4" ColumnDefinitions="34,34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Classes="icon" ToolTip.Tip="{l:T 'Open'}" IsVisible="{Binding HasDocument}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).OpenLinkedDocumentCommand}"
+                                                CommandParameter="{Binding Document}">
+                                            <PathIcon Data="{StaticResource IconOpen}" />
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditContractCommand}"
+                                                CommandParameter="{Binding Contract}">
+                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                        </Button>
+                                        <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteContractCommand}"
+                                                CommandParameter="{Binding Contract}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Panel>
+
+                <!-- Important dates -->
+                <Panel IsVisible="{Binding IsDatesTab}">
+                    <TextBlock Classes="secondary" IsVisible="{Binding !HasImportantDateRows}" HorizontalAlignment="Center"
+                               VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
+                               Text="{l:T 'No dates yet. Add when passports and ID cards expire, the car inspection or the vignette.'}" />
+                    <ListBox Classes="table" ItemsSource="{Binding ImportantDateRows}" IsVisible="{Binding HasImportantDateRows}" Margin="12,4">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ImportantDateRow">
+                                <Grid ColumnDefinitions="*,130,190,72" ColumnSpacing="16" Background="Transparent"
+                                      Opacity="{Binding HasPassed, Converter={x:Static vm:Format.EndedOpacityConverter}}">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="muted" FontSize="13" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Classes="pill" Classes.brand="{Binding !IsShared}">
+                                        <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding DateText}" FontWeight="SemiBold" TextAlignment="Right" />
+                                        <TextBlock FontSize="12" Text="{Binding WhenText}" TextAlignment="Right" Classes="muted"
+                                                   Classes.warning="{Binding IsSoon}" />
+                                    </StackPanel>
+                                    <Grid Grid.Column="3" ColumnDefinitions="34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditImportantDateCommand}"
+                                                CommandParameter="{Binding Date}">
+                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteImportantDateCommand}"
+                                                CommandParameter="{Binding Date}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Panel>
+
+                <!-- Warranties -->
+                <Panel IsVisible="{Binding IsWarrantiesTab}">
+                    <TextBlock Classes="secondary" IsVisible="{Binding !HasWarrantyRows}" HorizontalAlignment="Center"
+                               VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
+                               Text="{l:T 'No warranties yet. Add bigger purchases with their receipt, so you know until when they’re covered.'}" />
+                    <ListBox Classes="table" ItemsSource="{Binding WarrantyRows}" IsVisible="{Binding HasWarrantyRows}" Margin="12,4">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:WarrantyRow">
+                                <Grid ColumnDefinitions="*,130,170,106" ColumnSpacing="16" Background="Transparent"
+                                      Opacity="{Binding HasExpired, Converter={x:Static vm:Format.EndedOpacityConverter}}">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Item}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="muted" FontSize="13" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Classes="pill" Classes.brand="{Binding !IsShared}">
+                                        <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                    <TextBlock Grid.Column="2" Text="{Binding EndText}" FontWeight="Medium" TextAlignment="Right"
+                                               VerticalAlignment="Center" Classes.warning="{Binding IsEndingSoon}" />
+                                    <Grid Grid.Column="3" ColumnDefinitions="34,34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Classes="icon" ToolTip.Tip="{l:T 'Open receipt'}" IsVisible="{Binding HasDocument}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).OpenLinkedDocumentCommand}"
+                                                CommandParameter="{Binding Document}">
+                                            <PathIcon Data="{StaticResource IconOpen}" />
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditWarrantyCommand}"
+                                                CommandParameter="{Binding Warranty}">
+                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                        </Button>
+                                        <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteWarrantyCommand}"
+                                                CommandParameter="{Binding Warranty}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Panel>
+            </Panel>
+        </Border>
+    </Grid>
+</UserControl>

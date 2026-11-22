@@ -27,7 +27,7 @@ public partial class MainViewModel
     public IReadOnlyList<string> DocumentKindFilters =>
         [Loc.T("All types"), .. Enum.GetValues<DocumentKind>().Select(HouseholdDocument.KindName)];
 
-    public IReadOnlyList<string> DocumentStatusFilters => Translate("Any status", "To pay", "Paid");
+    public IReadOnlyList<string> DocumentStatusFilters => Translate("Any status", "To pay", "Paid", "Past keeping time");
 
     // ── List and filters ────────────────────────────────────────────────────
 
@@ -95,12 +95,14 @@ public partial class MainViewModel
             {
                 1 => d.IsOpenBill,
                 2 => d.IsPayable && d.IsPaid,
+                3 => RetentionGuide.CanBeThrownAway(d, Today),
                 _ => true,
             })
             .Where(d => search == "" ||
                         d.Title.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
                         d.Sender.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
-                        d.Notes.Contains(search, StringComparison.CurrentCultureIgnoreCase))
+                        d.Notes.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
+                        DocumentContent(d.Id)?.Contains(search, StringComparison.CurrentCultureIgnoreCase) == true)
             .OrderBy(d => d.IsOpenBill ? 0 : 1)
             .ThenBy(d => d.IsOpenBill ? d.DueDate ?? DateOnly.MaxValue : DateOnly.MaxValue)
             .ThenByDescending(d => d.Date)
@@ -128,6 +130,7 @@ public partial class MainViewModel
         foreach (var document in await repository.GetDocumentsAsync())
             Documents.Add(document);
         RefreshDocumentRows();
+        await LoadDocumentTextsAsync();
     }
 
     // ── Documents folder ────────────────────────────────────────────────────
@@ -309,11 +312,13 @@ public partial class MainViewModel
         DocumentPerson = DocumentPersonFilter is { IsEveryone: false } person ? person : PersonOption.Shared;
         IsDocumentPanelOpen = true;
 
+        // The QR code gives exact payment details; the AI fills in the rest.
+        var hasQrBill = await ReadQrBillAsync(path);
         if (IsImportEnabled && DocumentReader.IsSupported(path))
-            await FillDocumentDetailsAsync(path);
+            await FillDocumentDetailsAsync(path, hasQrBill);
     }
 
-    private async Task FillDocumentDetailsAsync(string path)
+    private async Task FillDocumentDetailsAsync(string path, bool hasQrBill = false)
     {
         var cancellation = _detailsCancellation = new CancellationTokenSource();
         var fileTitle = DocumentTitle;
@@ -328,7 +333,7 @@ public partial class MainViewModel
                 return;
 
             // Only fill fields the user hasn't changed in the meantime.
-            if (details.Kind is { } kind && DocumentKindIndex == 0)
+            if (details.Kind is { } kind && DocumentKindIndex == 0 && !hasQrBill)
                 DocumentKindIndex = (int)kind;
             if (details.Title != "" && DocumentTitle == fileTitle)
                 DocumentTitle = details.Title;
@@ -342,7 +347,9 @@ public partial class MainViewModel
                 DocumentAmount = amount;
             if (details.DueDate is { } due && DocumentDueDate is null)
                 DocumentDueDate = due.ToDateTime(TimeOnly.MinValue);
-            DocumentAiStatus = Loc.T("Details filled in by your local AI. Check them before saving.");
+            DocumentAiStatus = hasQrBill
+                ? Loc.T("Payment details from the QR code, the rest by your local AI. Check them before saving.")
+                : Loc.T("Details filled in by your local AI. Check them before saving.");
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -374,6 +381,9 @@ public partial class MainViewModel
         DocumentDueDate = document.DueDate?.ToDateTime(TimeOnly.MinValue);
         DocumentIsPaid = document.IsPaid;
         DocumentNotes = document.Notes;
+        DocumentPaymentIban = document.PaymentIban == "" ? "" : QrBill.FormatIban(document.PaymentIban);
+        DocumentPaymentReference = document.PaymentReference;
+        OnPropertyChanged(nameof(DocumentRetentionText));
         IsDocumentPanelOpen = true;
     }
 
@@ -408,6 +418,8 @@ public partial class MainViewModel
             DueDate = payable && DocumentDueDate is { } due ? DateOnly.FromDateTime(due) : null,
             PaidOn = payable && DocumentIsPaid ? existing?.PaidOn ?? Today : null,
             Notes = DocumentNotes.Trim(),
+            PaymentIban = payable ? DocumentPaymentIban.Replace(" ", "").ToUpperInvariant() : "",
+            PaymentReference = payable ? DocumentPaymentReference.Trim() : "",
             RelativePath = existing?.RelativePath ?? "",
             AddedAt = existing?.AddedAt ?? DateTime.Now,
             TransactionId = existing?.TransactionId,
@@ -448,6 +460,7 @@ public partial class MainViewModel
         Documents.Add(document);
         RefreshDocumentRows();
         CloseDocumentPanel();
+        _ = IndexDocumentAsync(document);
         CurrentPage = AppPage.Documents;
     }
 
@@ -555,6 +568,8 @@ public partial class MainViewModel
         DocumentDueDate = null;
         DocumentIsPaid = false;
         DocumentNotes = "";
+        DocumentPaymentIban = "";
+        DocumentPaymentReference = "";
         DocumentCreateEntry = true;
         DocumentError = null;
         DocumentAiStatus = "";

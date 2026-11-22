@@ -1,6 +1,7 @@
 using System;
 using System.Globalization;
 using Keystone.Models;
+using Keystone.Services;
 using Keystone.Localization;
 
 namespace Keystone.ViewModels;
@@ -36,6 +37,7 @@ public sealed record DocumentRow(HouseholdDocument Document, string PersonName, 
         { IsOverdue: true } => Loc.F("Overdue since {0}", Format.Date(Document.DueDate!.Value)),
         { IsOpen: true } => Document.DueDate is { } due ? Loc.F("Due {0}", Format.Date(due)) : Loc.T("To pay"),
         { IsPaid: true } => Loc.F("Paid {0}", Format.Date(Document.PaidOn!.Value)),
+        _ when RetentionGuide.CanBeThrownAway(Document, Today) => Loc.T("Past keeping time"),
         _ => "",
     };
 

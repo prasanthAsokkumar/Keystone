@@ -189,6 +189,7 @@ public partial class MainViewModel
             now - left >= TimeSpan.FromMinutes(LockDelays[Math.Clamp(LockDelayIndex, 0, LockDelays.Length - 1)]))
             IsLocked = true;
         _leftAt = null;
+        CheckInbox(); // scans may have arrived while away
         if (IsLocked)
             _ = UnlockAsync();
     }

@@ -10,6 +10,7 @@ using CommunityToolkit.Mvvm.Input;
 using Keystone.Localization;
 using Keystone.Models;
 using Keystone.Services;
+using Keystone.Services.Mac;
 
 namespace Keystone.ViewModels;
 
@@ -54,7 +55,8 @@ public partial class MainViewModel
     private IEnumerable<BulkDocumentItem> SavableBulkItems => BulkItems.Where(i => i.IsSelected && !i.IsBusy);
 
     /// <summary>Opens the import list for several files, or adds them to it, and starts reading them.</summary>
-    public async Task StartBulkDocumentsAsync(IEnumerable<string> paths)
+    /// <param name="fromInbox">The files come from the inbox: once filed, they leave it.</param>
+    public async Task StartBulkDocumentsAsync(IEnumerable<string> paths, bool fromInbox = false)
     {
         if (!IsBulkPanelOpen)
         {
@@ -66,7 +68,8 @@ public partial class MainViewModel
         var person = DocumentPersonFilter is { IsEveryone: false } filter ? filter : PersonOption.Shared;
         foreach (var path in paths.Where(p => BulkItems.All(i => i.SourcePath != p)))
         {
-            var item = new BulkDocumentItem(path, person, IsImportEnabled && DocumentReader.IsSupported(path));
+            var item = new BulkDocumentItem(path, person, IsImportEnabled && DocumentReader.IsSupported(path),
+                QrBillScanner.CanScan(path)) { FromInbox = fromInbox };
             item.PropertyChanged += (_, e) =>
             {
                 if (e.PropertyName is nameof(BulkDocumentItem.IsSelected) or nameof(BulkDocumentItem.Status))
@@ -96,11 +99,22 @@ public partial class MainViewModel
                 RefreshBulkTexts();
                 try
                 {
-                    var content = await DocumentReader.ReadAsync(item.SourcePath);
-                    var details = await _ai.ExtractDetailsAsync(content, AiEndpoint, AiModel, Today, HouseholdNames, cancellation.Token);
-                    if (cancellation.IsCancellationRequested)
-                        break;
-                    item.Apply(details, MatchPersonOption(details.Person));
+                    // The QR code first: exact, and quick even without the AI.
+                    if (item.QrWanted)
+                    {
+                        var scan = ScanQrBill;
+                        var path = item.SourcePath;
+                        if (await Task.Run(() => scan(path)) is { } bill)
+                            item.ApplyQrBill(bill);
+                    }
+                    if (item.AiWanted)
+                    {
+                        var content = await DocumentReader.ReadAsync(item.SourcePath);
+                        var details = await _ai.ExtractDetailsAsync(content, AiEndpoint, AiModel, Today, HouseholdNames, cancellation.Token);
+                        if (cancellation.IsCancellationRequested)
+                            break;
+                        item.Apply(details, MatchPersonOption(details.Person));
+                    }
                     item.Status = BulkStatus.Ready;
                 }
                 catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
@@ -127,13 +141,13 @@ public partial class MainViewModel
 
     private void RefreshBulkTexts()
     {
-        var reading = BulkItems.Where(i => i.AiWanted).ToList();
+        var reading = BulkItems.Where(i => i.AiWanted || i.QrWanted).ToList();
         var done = reading.Count(i => !i.IsBusy);
         IsBulkBusy = BulkItems.Any(i => i.IsBusy);
         BulkProgress = reading.Count == 0 ? 100 : 100.0 * done / reading.Count;
         BulkStatusText = IsBulkBusy
             ? Loc.F("Reading {0} of {1} with {2}. Files already read can be checked and saved.", done + 1, reading.Count, AiModel)
-            : reading.Count > 0
+            : BulkItems.Any(i => i.AiWanted)
                 ? Loc.T("All files read. Check the details, then save.")
                 : IsImportEnabled
                     ? Loc.T("These files can’t be read by the AI. Fill in the details, then save.")
@@ -193,7 +207,20 @@ public partial class MainViewModel
 
             Documents.Add(document);
             BulkItems.Remove(item);
+            _ = IndexDocumentAsync(document);
+            if (item.FromInbox)
+            {
+                try
+                {
+                    File.Delete(item.SourcePath); // filed now, so it leaves the inbox
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                }
+            }
         }
+        if (BulkItems.All(i => !i.FromInbox))
+            CheckInbox();
 
         RefreshDocumentRows();
         RefreshBulkTexts();
@@ -233,14 +260,50 @@ public enum BulkStatus
 /// <summary>One file in the bulk import list, with the details it will be filed with.</summary>
 public sealed partial class BulkDocumentItem : ObservableObject
 {
-    public BulkDocumentItem(string sourcePath, PersonOption person, bool aiWanted)
+    public BulkDocumentItem(string sourcePath, PersonOption person, bool aiWanted, bool qrWanted = false)
     {
         SourcePath = sourcePath;
         AiWanted = aiWanted;
+        QrWanted = qrWanted;
         Title = Path.GetFileNameWithoutExtension(sourcePath);
         Person = person;
-        Status = aiWanted ? BulkStatus.Waiting : BulkStatus.Ready;
+        // Unknown until the QR code or the AI says otherwise; "Other" needs no amount to be saved.
+        KindIndex = (int)DocumentKind.Other;
+        Status = aiWanted || qrWanted ? BulkStatus.Waiting : BulkStatus.Ready;
     }
+
+    /// <summary>Whether the file is searched for a QR-bill.</summary>
+    public bool QrWanted { get; }
+
+    /// <summary>The file came from the inbox and leaves it once filed.</summary>
+    public bool FromInbox { get; init; }
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasPaymentDetails))]
+    public partial string PaymentIban { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string PaymentReference { get; set; } = "";
+
+    public bool HasPaymentDetails => PaymentIban != "";
+
+    /// <summary>Takes the exact payment details from the bill's QR code.</summary>
+    public void ApplyQrBill(QrBill bill)
+    {
+        KindIndex = (int)DocumentKind.Bill;
+        _hasQrBill = true;
+        if (Sender == "")
+            Sender = bill.Creditor;
+        Amount = bill.Amount;
+        if (bill.InvoiceDate is { } invoiceDate)
+            Date = invoiceDate.ToDateTime(TimeOnly.MinValue);
+        if (bill.DueDate is { } due)
+            DueDate = due.ToDateTime(TimeOnly.MinValue);
+        PaymentIban = bill.FormattedIban;
+        PaymentReference = bill.FormattedReference;
+    }
+
+    private bool _hasQrBill;
 
     public string SourcePath { get; }
 
@@ -273,6 +336,7 @@ public sealed partial class BulkDocumentItem : ObservableObject
             BulkStatus.Waiting => Loc.T("Waiting…"),
             BulkStatus.Reading => Loc.T("Reading…"),
             BulkStatus.Failed => Loc.F("Couldn’t fill in the details automatically: {0}", Error),
+            _ when _hasQrBill => Loc.T("Payment details from the QR code. Check before saving."),
             _ => AiWanted ? Loc.T("Filled in by AI. Check before saving.") : "",
         };
 
@@ -319,7 +383,8 @@ public sealed partial class BulkDocumentItem : ObservableObject
     /// <summary>Takes what the model read; the fields can't be edited while it reads.</summary>
     public void Apply(DocumentDetails details, PersonOption? person)
     {
-        if (details.Kind is { } kind)
+        // The QR code's payment details are exact; the AI only adds what it doesn't give.
+        if (details.Kind is { } kind && !_hasQrBill)
             KindIndex = (int)kind;
         if (details.Title != "")
             Title = details.Title;
@@ -329,8 +394,10 @@ public sealed partial class BulkDocumentItem : ObservableObject
             Person = person;
         if (details.Date is { } date)
             Date = date.ToDateTime(TimeOnly.MinValue);
-        Amount = details.Amount;
-        DueDate = details.DueDate?.ToDateTime(TimeOnly.MinValue);
+        if (!_hasQrBill || Amount is null)
+            Amount = details.Amount;
+        if (DueDate is null)
+            DueDate = details.DueDate?.ToDateTime(TimeOnly.MinValue);
     }
 
     /// <summary>Texts made in code follow a language change.</summary>
@@ -346,6 +413,8 @@ public sealed partial class BulkDocumentItem : ObservableObject
         Amount = IsPayable && Amount is > 0 ? Amount : null,
         DueDate = IsPayable && DueDate is { } due ? DateOnly.FromDateTime(due) : null,
         PaidOn = IsPayable && IsPaid ? today : null,
+        PaymentIban = IsPayable ? PaymentIban.Replace(" ", "") : "",
+        PaymentReference = IsPayable ? PaymentReference : "",
         AddedAt = DateTime.Now,
     };
 }

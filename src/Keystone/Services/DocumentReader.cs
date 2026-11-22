@@ -31,6 +31,13 @@ public static class DocumentReader
 
     public static string SupportedFilesText => Loc.T("PDF, CSV, text files and photos (PNG, JPG, HEIC)");
 
+    /// <summary>A photo or scan, which has no text to search.</summary>
+    public static bool IsImage(string path)
+    {
+        var extension = Path.GetExtension(path).ToLowerInvariant();
+        return ImageExtensions.Contains(extension) || ConvertedImageExtensions.Contains(extension);
+    }
+
     public static bool IsSupported(string path)
     {
         var extension = Path.GetExtension(path).ToLowerInvariant();

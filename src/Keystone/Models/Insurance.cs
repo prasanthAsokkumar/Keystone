@@ -61,25 +61,8 @@ public class InsurancePolicy
     /// The next term end that can still be cancelled in time, and the last day to cancel for it. For a
     /// policy that renews by itself, a missed deadline moves on to the next year's.
     /// </summary>
-    public (DateOnly End, DateOnly CancelBy)? NextDeadline(DateOnly today)
-    {
-        if (ContractEnd is not { } end)
-            return null;
-
-        DateOnly CancelBy(DateOnly termEnd) => termEnd.AddDays(1).AddMonths(-NoticeMonths).AddDays(-1);
-
-        if (RenewsAutomatically)
-        {
-            while (CancelBy(end) < today)
-                end = end.AddYears(1);
-        }
-        else if (end < today)
-        {
-            return null; // ended
-        }
-
-        return (end, CancelBy(end));
-    }
+    public (DateOnly End, DateOnly CancelBy)? NextDeadline(DateOnly today) =>
+        NoticeDeadline.Next(ContractEnd, RenewsAutomatically, NoticeMonths, today);
 
     public bool HasEnded(DateOnly today) => !RenewsAutomatically && ContractEnd < today;
 

@@ -153,10 +153,22 @@
                             <TextBlock Text="{l:T 'Insurance'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsContractsPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconCalendarClock}" />
+                            <TextBlock Text="{l:T 'Contracts &amp; dates'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
                     <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTaxesPage}">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconReceipt}" />
                             <TextBlock Text="{l:T 'Taxes'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsPlanningPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconChartLine}" />
+                            <TextBlock Text="{l:T 'Planning'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
                     <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsYearPage}">
@@ -231,6 +243,12 @@
                             </StackPanel>
                         </Button>
                     </StackPanel>
+                    <Button Classes="primary" Command="{Binding AddDeadlineCommand}" IsVisible="{Binding IsContractsPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{StaticResource IconPlus}" />
+                            <TextBlock Text="{Binding AddDeadlineText}" />
+                        </StackPanel>
+                    </Button>
                     <Button Classes="primary" Command="{Binding NewInsuranceCommand}" IsVisible="{Binding IsInsurancePage}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <PathIcon Data="{StaticResource IconPlus}" />
@@ -238,6 +256,13 @@
                         </StackPanel>
                     </Button>
                     <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsOverviewPage}">
+                        <Button Classes="secondary" Command="{Binding FileInboxCommand}" IsVisible="{Binding HasInboxFiles}"
+                                ToolTip.Tip="{l:T 'File the scans from your inbox'}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconInbox}" Foreground="{DynamicResource Brand}" />
+                                <TextBlock Text="{Binding InboxText}" />
+                            </StackPanel>
+                        </Button>
                         <Button Classes="secondary" Command="{Binding ShowTasksDueCommand}" IsVisible="{Binding HasTasksDue}"
                                 ToolTip.Tip="{l:T 'Show tasks to do'}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -265,6 +290,13 @@
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <PathIcon Data="{StaticResource IconOpen}" />
                                 <TextBlock Text="{l:T 'Open folder'}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="secondary" Command="{Binding FileInboxCommand}" IsVisible="{Binding HasInboxFiles}"
+                                ToolTip.Tip="{Binding InboxNote}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconInbox}" Foreground="{DynamicResource Brand}" />
+                                <TextBlock Text="{Binding InboxText}" />
                             </StackPanel>
                         </Button>
                         <Button Classes="primary" Click="AddDocument_Click"
@@ -774,10 +806,15 @@
                                         <Border Grid.Column="2" Classes="pill" Classes.brand="{Binding !IsShared}">
                                             <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
                                         </Border>
-                                        <TextBlock Grid.Column="3" FontSize="13" Text="{Binding DueText}" TextAlignment="Right"
-                                                   VerticalAlignment="Center" Classes="secondary"
-                                                   Classes.negative="{Binding IsOverdue}" Classes.warning="{Binding IsDueSoon}"
-                                                   Classes.positive="{Binding IsDone}" />
+                                        <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                            <TextBlock FontSize="13" Text="{Binding DueText}" TextAlignment="Right" Classes="secondary"
+                                                       Classes.negative="{Binding IsOverdue}" Classes.warning="{Binding IsDueSoon}"
+                                                       Classes.positive="{Binding IsDone}" />
+                                            <StackPanel Orientation="Horizontal" Spacing="4" HorizontalAlignment="Right" IsVisible="{Binding Repeats}">
+                                                <PathIcon Data="{StaticResource IconRepeat}" Width="11" Height="11" Foreground="{DynamicResource TextMuted}" />
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding RepeatText}" />
+                                            </StackPanel>
+                                        </StackPanel>
                                         <Grid Grid.Column="4" ColumnDefinitions="34,34" HorizontalAlignment="Right"
                                               VerticalAlignment="Center">
                                             <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
@@ -1176,6 +1213,12 @@
             <!-- ═══ Taxes ═══ -->
             <pages:TaxesPage Grid.Row="1" IsVisible="{Binding IsTaxesPage}" />
 
+            <!-- ═══ Contracts & dates ═══ -->
+            <pages:ContractsPage Grid.Row="1" IsVisible="{Binding IsContractsPage}" />
+
+            <!-- ═══ Planning ═══ -->
+            <pages:PlanningPage Grid.Row="1" IsVisible="{Binding IsPlanningPage}" />
+
             <!-- ═══ Year ═══ -->
             <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="16" IsVisible="{Binding IsYearPage}">
                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
@@ -1525,6 +1568,12 @@
                                 <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Use default'}"
                                         Command="{Binding ResetDocumentsFolderCommand}"
                                         IsVisible="{Binding !IsDefaultDocumentsFolder}" />
+                            </Grid>
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                <PathIcon Data="{StaticResource IconInbox}" Width="18" Height="18" Foreground="{DynamicResource Brand}" />
+                                <TextBlock Grid.Column="1" Classes="secondary" FontSize="13" TextWrapping="Wrap" Text="{Binding InboxNote}"
+                                           VerticalAlignment="Center" />
+                                <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Open inbox'}" Command="{Binding OpenInboxFolderCommand}" />
                             </Grid>
                         </StackPanel>
                     </Border>
@@ -1962,6 +2011,31 @@
                                                                 HorizontalAlignment="Stretch" />
                                         </StackPanel>
                                     </Grid>
+                                    <Border Background="{DynamicResource Surface}" CornerRadius="8" Padding="12,10"
+                                            IsVisible="{Binding HasPaymentDetails}">
+                                        <StackPanel Spacing="8">
+                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                                <PathIcon Data="{StaticResource IconQr}" Width="16" Height="16" Foreground="{DynamicResource Brand}" />
+                                                <TextBlock Grid.Column="1" Classes="fieldLabel" Text="{l:T 'Payment details'}" VerticalAlignment="Center" />
+                                                <Button Grid.Column="2" Classes="link" FontSize="12" Padding="0" Content="{l:T 'Copy all'}"
+                                                        Command="{Binding CopyAllPaymentDetailsCommand}" />
+                                            </Grid>
+                                            <Grid ColumnDefinitions="70,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="6">
+                                                <TextBlock Classes="muted" FontSize="12" Text="{l:T 'Account'}" VerticalAlignment="Center" />
+                                                <TextBox Grid.Column="1" Text="{Binding DocumentPaymentIban}" FontFamily="Menlo, monospace" FontSize="12" />
+                                                <Button Grid.Column="2" Classes="icon" ToolTip.Tip="{l:T 'Copy'}"
+                                                        Command="{Binding CopyPaymentTextCommand}" CommandParameter="{Binding DocumentPaymentIban}">
+                                                    <PathIcon Data="{StaticResource IconCopy}" />
+                                                </Button>
+                                                <TextBlock Grid.Row="1" Classes="muted" FontSize="12" Text="{l:T 'Reference'}" VerticalAlignment="Center" />
+                                                <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DocumentPaymentReference}" FontFamily="Menlo, monospace" FontSize="12" />
+                                                <Button Grid.Row="1" Grid.Column="2" Classes="icon" ToolTip.Tip="{l:T 'Copy'}"
+                                                        Command="{Binding CopyPaymentTextCommand}" CommandParameter="{Binding DocumentPaymentReference}">
+                                                    <PathIcon Data="{StaticResource IconCopy}" />
+                                                </Button>
+                                            </Grid>
+                                        </StackPanel>
+                                    </Border>
                                     <CheckBox IsChecked="{Binding DocumentIsPaid}" Content="{l:T 'Already paid'}" />
                                     <CheckBox IsChecked="{Binding DocumentCreateEntry}" IsVisible="{Binding CanCreateDocumentEntry}"
                                               Content="{l:T 'Add to expenses on the due date, so your runway includes it'}" />
@@ -1973,6 +2047,9 @@
                                 <TextBox Text="{Binding DocumentNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72"
                                          PlaceholderText="{l:T 'Anything to remember, e.g. reference number'}" />
                             </StackPanel>
+
+                            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding DocumentRetentionText}"
+                                       IsVisible="{Binding IsEditingDocument}" />
 
                             <TextBlock Classes="error" Text="{Binding DocumentError}" IsVisible="{Binding HasDocumentError}"
                                        TextWrapping="Wrap" />
@@ -2028,6 +2105,13 @@
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
                                 <TextBox Text="{Binding TaskNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="96"
                                          PlaceholderText="{l:T 'Details, links, phone numbers…'}" />
+                            </StackPanel>
+
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Repeats'}" />
+                                <ComboBox ItemsSource="{Binding TaskRepeatNames}" SelectedIndex="{Binding TaskRepeatIndex}" />
+                                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                           Text="{l:T 'When you tick a repeating task, the next one is added with its new due date.'}" />
                             </StackPanel>
 
                             <CheckBox IsChecked="{Binding TaskIsDone}" Content="{l:T 'Done'}" />
@@ -2340,6 +2424,11 @@
                                                     </StackPanel>
                                                 </Grid>
                                                 <StackPanel Spacing="8" IsVisible="{Binding IsPayable}">
+                                                    <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasPaymentDetails}">
+                                                        <PathIcon Data="{StaticResource IconQr}" Width="13" Height="13" Foreground="{DynamicResource Brand}" />
+                                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding PaymentIban}" FontFamily="Menlo, monospace" />
+                                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding PaymentReference}" FontFamily="Menlo, monospace" />
+                                                    </StackPanel>
                                                     <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                                                         <StackPanel Spacing="4">
                                                             <TextBlock Classes="fieldLabel" Text="{l:T 'Amount to pay'}" />
@@ -2374,6 +2463,10 @@
             </Border>
             <Border Classes="panel" Width="440" HorizontalAlignment="Right" IsVisible="{Binding IsAccountPanelOpen}">
                 <pages:AccountPanel />
+            </Border>
+            <pages:DeadlinePanels />
+            <Border Classes="panel" Width="440" HorizontalAlignment="Right" IsVisible="{Binding IsGoalPanelOpen}">
+                <pages:GoalPanel />
             </Border>
         </Panel>
 

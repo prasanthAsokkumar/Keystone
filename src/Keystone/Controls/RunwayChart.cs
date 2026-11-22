@@ -21,6 +21,10 @@ public class RunwayChart : Control
     public static readonly StyledProperty<IReadOnlyList<BalancePoint>?> ProjectionProperty =
         AvaloniaProperty.Register<RunwayChart, IReadOnlyList<BalancePoint>?>(nameof(Projection));
 
+    /// <summary>A second projection to compare with, e.g. a what-if scenario.</summary>
+    public static readonly StyledProperty<IReadOnlyList<BalancePoint>?> ComparisonProperty =
+        AvaloniaProperty.Register<RunwayChart, IReadOnlyList<BalancePoint>?>(nameof(Comparison));
+
     public static readonly StyledProperty<IBrush?> ForegroundProperty =
         TextElement.ForegroundProperty.AddOwner<RunwayChart>();
 
@@ -29,6 +33,7 @@ public class RunwayChart : Control
     public static readonly IBrush HistoryBrush = new SolidColorBrush(HistoryColor);
     public static readonly IBrush ProjectionBrush = new SolidColorBrush(ProjectionColor);
     public static readonly IBrush ZeroBrush = new SolidColorBrush(Color.Parse("#F04438"));
+    public static readonly IBrush ComparisonBrush = new SolidColorBrush(Color.Parse("#8B5CF6"));
 
     private const double MarginLeft = 64;
     private const double MarginRight = 24;
@@ -37,7 +42,7 @@ public class RunwayChart : Control
 
     static RunwayChart()
     {
-        AffectsRender<RunwayChart>(HistoryProperty, ProjectionProperty, ForegroundProperty);
+        AffectsRender<RunwayChart>(HistoryProperty, ProjectionProperty, ComparisonProperty, ForegroundProperty);
     }
 
     public IReadOnlyList<BalancePoint>? History
@@ -52,6 +57,12 @@ public class RunwayChart : Control
         set => SetValue(ProjectionProperty, value);
     }
 
+    public IReadOnlyList<BalancePoint>? Comparison
+    {
+        get => GetValue(ComparisonProperty);
+        set => SetValue(ComparisonProperty, value);
+    }
+
     public IBrush? Foreground
     {
         get => GetValue(ForegroundProperty);
@@ -62,7 +73,8 @@ public class RunwayChart : Control
     {
         var history = History ?? [];
         var projection = Projection ?? [];
-        var all = history.Concat(projection).ToList();
+        var comparison = Comparison ?? [];
+        var all = history.Concat(projection).Concat(comparison).ToList();
         var foreground = Foreground ?? Brushes.Gray;
         var size = Bounds.Size;
 
@@ -113,6 +125,7 @@ public class RunwayChart : Control
             context.DrawText(todayLabel, new Point(todayX + 4, plot.Top));
         }
 
+        DrawSeries(context, comparison, new Pen(ComparisonBrush, 2, DashStyle.Dash), ComparisonBrush, X, Y);
         DrawSeries(context, projection, new Pen(ProjectionBrush, 2, DashStyle.Dash), ProjectionBrush, X, Y);
         DrawSeries(context, history, new Pen(HistoryBrush, 2.5), HistoryBrush, X, Y);
 

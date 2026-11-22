@@ -55,11 +55,14 @@ public partial class MainViewModel
                 () => EditTransactionCommand.Execute(t))));
 
         results.AddRange(Documents
-            .Where(d => Has(d.Title, d.Sender, d.Notes))
-            .OrderByDescending(d => d.Date)
+            .Where(d => Has(d.Title, d.Sender, d.Notes, DocumentContent(d.Id)))
+            .OrderByDescending(d => Has(d.Title, d.Sender, d.Notes))
+            .ThenByDescending(d => d.Date)
             .Take(MaxResultsPerKind)
             .Select(d => new SearchResult(HouseholdDocument.KindName(d.Kind), d.Title,
-                string.Join(" · ", new[] { d.Sender, Format.Date(d.Date) }.Where(p => p != "")),
+                // Found inside the document: show where.
+                Has(d.Title, d.Sender, d.Notes) ? string.Join(" · ", new[] { d.Sender, Format.Date(d.Date) }.Where(p => p != ""))
+                    : Snippet(DocumentContent(d.Id) ?? "", query),
                 () =>
                 {
                     CurrentPage = AppPage.Documents;
@@ -110,6 +113,50 @@ public partial class MainViewModel
                 {
                     CurrentPage = AppPage.Retirement;
                     EditPensionAccountCommand.Execute(a);
+                })));
+
+        results.AddRange(_contracts
+            .Where(c => Has(c.Provider, c.CustomerNumber, c.Notes, Contract.KindName(c.Kind)))
+            .Take(MaxResultsPerKind)
+            .Select(c => new SearchResult(Loc.T("Contract"), c.Provider, Contract.KindName(c.Kind),
+                () =>
+                {
+                    CurrentPage = AppPage.Contracts;
+                    DeadlinesTab = 0;
+                    EditContractCommand.Execute(c);
+                })));
+
+        results.AddRange(_dates
+            .Where(d => Has(d.Title, d.Notes, ImportantDate.KindName(d.Kind)))
+            .Take(MaxResultsPerKind)
+            .Select(d => new SearchResult(Loc.T("Date"), d.Title, Format.Date(d.NextDate(Today)),
+                () =>
+                {
+                    CurrentPage = AppPage.Contracts;
+                    DeadlinesTab = 1;
+                    EditImportantDateCommand.Execute(d);
+                })));
+
+        results.AddRange(_warranties
+            .Where(w => Has(w.Item, w.Store, w.Notes))
+            .Take(MaxResultsPerKind)
+            .Select(w => new SearchResult(Loc.T("Warranty"), w.Item, Loc.F("Until {0}", Format.Date(w.ExpiresOn)),
+                () =>
+                {
+                    CurrentPage = AppPage.Contracts;
+                    DeadlinesTab = 2;
+                    EditWarrantyCommand.Execute(w);
+                })));
+
+        results.AddRange(_goals
+            .Where(g => Has(g.Name))
+            .Take(MaxResultsPerKind)
+            .Select(g => new SearchResult(Loc.T("Savings goal"), g.Name, Format.Money(g.Target),
+                () =>
+                {
+                    CurrentPage = AppPage.Planning;
+                    PlanningTab = 0;
+                    EditGoalCommand.Execute(g);
                 })));
 
         results.AddRange(BankAccounts

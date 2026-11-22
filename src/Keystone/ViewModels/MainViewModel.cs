@@ -27,8 +27,10 @@ public enum AppPage
     Notes,
     Debts,
     Insurance,
+    Contracts,
     Retirement,
     Taxes,
+    Planning,
     Year,
     Settings,
 }
@@ -78,7 +80,7 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(
-        nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsRetirementPage), nameof(IsInsurancePage), nameof(IsTaxesPage),
+        nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsRetirementPage), nameof(IsInsurancePage), nameof(IsTaxesPage), nameof(IsContractsPage), nameof(IsPlanningPage),
         nameof(IsYearPage), nameof(IsSettingsPage), nameof(PageTitle), nameof(PageSubtitle), nameof(DropHint),
         nameof(DropFilesAsDocument), nameof(DropDetailText))]
     public partial AppPage CurrentPage { get; set; }
@@ -99,6 +101,10 @@ public partial class MainViewModel : ViewModelBase
 
     public bool IsInsurancePage { get => CurrentPage == AppPage.Insurance; set { if (value) CurrentPage = AppPage.Insurance; } }
 
+    public bool IsContractsPage { get => CurrentPage == AppPage.Contracts; set { if (value) CurrentPage = AppPage.Contracts; } }
+
+    public bool IsPlanningPage { get => CurrentPage == AppPage.Planning; set { if (value) CurrentPage = AppPage.Planning; } }
+
     public bool IsTaxesPage { get => CurrentPage == AppPage.Taxes; set { if (value) CurrentPage = AppPage.Taxes; } }
 
     public bool IsYearPage { get => CurrentPage == AppPage.Year; set { if (value) CurrentPage = AppPage.Year; } }
@@ -115,6 +121,8 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Retirement => Loc.T("Retirement"),
         AppPage.Insurance => Loc.T("Insurance"),
         AppPage.Taxes => Loc.T("Taxes"),
+        AppPage.Contracts => Loc.T("Contracts & dates"),
+        AppPage.Planning => Loc.T("Planning"),
         AppPage.Year => Loc.T("Year overview"),
         AppPage.Settings => Loc.T("Settings"),
         _ => Loc.T("Overview"),
@@ -130,6 +138,8 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Retirement => Loc.T("Your Swiss retirement provision: AHV, pension fund and pillar 3a"),
         AppPage.Insurance => Loc.T("What your policies cost, and by when to cancel them"),
         AppPage.Taxes => Loc.T("Everything you need for your tax return, gathered in one place"),
+        AppPage.Contracts => Loc.T("Contracts, important dates and warranties, with their deadlines"),
+        AppPage.Planning => Loc.T("Savings goals, what-if scenarios, retirement and net worth"),
         AppPage.Year => Loc.T("Income and spending month by month"),
         AppPage.Settings => Loc.T("Accounts, reminders, backup, household and language"),
         _ => Loc.F("How long your money lasts · {0:dddd, d MMMM}", Today),
@@ -152,7 +162,8 @@ public partial class MainViewModel : ViewModelBase
 
     public bool IsPanelOpen => IsEntryPanelOpen || IsDebtPanelOpen || IsImportPanelOpen || IsDocumentPanelOpen || IsTaskPanelOpen ||
                                IsStatementPanelOpen || IsPensionAccountPanelOpen || IsBulkPanelOpen ||
-                               IsInsurancePanelOpen || IsAccountPanelOpen;
+                               IsInsurancePanelOpen || IsAccountPanelOpen || IsContractPanelOpen ||
+                               IsImportantDatePanelOpen || IsWarrantyPanelOpen || IsGoalPanelOpen;
 
     /// <summary>
     /// A dropped file is filed as a document on the Documents page, or when import is off;
@@ -183,6 +194,8 @@ public partial class MainViewModel : ViewModelBase
         CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
+        CloseDeadlinePanels();
+        ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
     }
@@ -200,6 +213,8 @@ public partial class MainViewModel : ViewModelBase
         CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
+        CloseDeadlinePanels();
+        ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
         IsEntryPanelOpen = true;
@@ -219,6 +234,8 @@ public partial class MainViewModel : ViewModelBase
         CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
+        CloseDeadlinePanels();
+        ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
         IsDebtPanelOpen = true;
@@ -239,6 +256,8 @@ public partial class MainViewModel : ViewModelBase
         CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
+        CloseDeadlinePanels();
+        ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
     }
@@ -680,6 +699,7 @@ public partial class MainViewModel : ViewModelBase
         People.Insert(index, person);
         NewPersonName = "";
         RefreshPersonOptions();
+        RefreshBirthYearRows();
     }
 
     /// <summary>Removes a person. Their entries become shared, so no money disappears from the plan.</summary>
@@ -707,6 +727,12 @@ public partial class MainViewModel : ViewModelBase
             account.PersonId = null;
         foreach (var policy in _policies.Where(p => p.PersonId == person.Id))
             policy.PersonId = null;
+        foreach (var contract in _contracts.Where(c => c.PersonId == person.Id))
+            contract.PersonId = null;
+        foreach (var date in _dates.Where(d => d.PersonId == person.Id))
+            date.PersonId = null;
+        foreach (var warranty in _warranties.Where(w => w.PersonId == person.Id))
+            warranty.PersonId = null;
         People.Remove(person);
         RefreshPersonOptions();
         RefreshEntryRows();
@@ -715,6 +741,9 @@ public partial class MainViewModel : ViewModelBase
         RefreshRetirement();
         RefreshInsurance();
         RefreshTaxes();
+        RefreshDeadlines();
+        RefreshBirthYearRows();
+        RefreshPlanning();
     }
 
     private IReadOnlyList<string> HouseholdNames => People.Select(p => p.Name).ToList();
@@ -741,6 +770,9 @@ public partial class MainViewModel : ViewModelBase
         var taxFilterId = TaxPersonFilter?.IsEveryone == true ? (int?)null : TaxPersonFilter?.Id;
         var taxFilterIsEveryone = TaxPersonFilter is null or { IsEveryone: true };
         var policyPersonId = PolicyPerson?.Id;
+        var contractPersonId = ContractPerson?.Id;
+        var datePersonId = ImportantDatePerson?.Id;
+        var warrantyPersonId = WarrantyPerson?.Id;
         var retirementFilterId = RetirementPersonFilter?.IsEveryone == true ? (int?)null : RetirementPersonFilter?.Id;
         var retirementFilterIsEveryone = RetirementPersonFilter is null or { IsEveryone: true };
         var newPensionPersonId = NewPensionPerson?.Id;
@@ -768,6 +800,9 @@ public partial class MainViewModel : ViewModelBase
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == retirementFilterId) ?? PersonOption.Everyone;
         NewPensionPerson = PersonOptions.FirstOrDefault(o => o.Id == newPensionPersonId) ?? PersonOption.Shared;
         PolicyPerson = PersonOptions.FirstOrDefault(o => o.Id == policyPersonId) ?? PersonOption.Shared;
+        ContractPerson = PersonOptions.FirstOrDefault(o => o.Id == contractPersonId) ?? PersonOption.Shared;
+        ImportantDatePerson = PersonOptions.FirstOrDefault(o => o.Id == datePersonId) ?? PersonOption.Shared;
+        WarrantyPerson = PersonOptions.FirstOrDefault(o => o.Id == warrantyPersonId) ?? PersonOption.Shared;
         InsurancePersonFilter = insuranceFilterIsEveryone
             ? PersonOption.Everyone
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == insuranceFilterId) ?? PersonOption.Everyone;
@@ -862,6 +897,8 @@ public partial class MainViewModel : ViewModelBase
             var settings = await repository.GetSettingsAsync();
             ApplyLockSettings(settings.LockEnabled, settings.LockAfterMinutes);
             ApplyReminderSettings(settings.RemindersEnabled, settings.ReminderHour);
+            LoadScenario(settings.ScenarioJson);
+            RetirementNeedPercent = settings.RetirementNeedPercent;
             StartingBalance = settings.StartingBalance;
             FinancialYearStartIndex = settings.FinancialYearStartMonth - 1;
             SelectedLanguage = Loc.Find(string.IsNullOrEmpty(settings.Language) ? null : settings.Language);
@@ -881,6 +918,8 @@ public partial class MainViewModel : ViewModelBase
             await LoadAccountsAsync(settings);
             await LoadDocumentsAsync(settings);
             await LoadInsuranceAsync();
+            await LoadDeadlinesAsync();
+            await LoadGoalsAsync();
             await LoadTasksAsync();
             await LoadNotesAsync();
             await LoadRetirementAsync();
@@ -907,7 +946,10 @@ public partial class MainViewModel : ViewModelBase
         }
 
         StartBackups();
+        StartInbox();
         RefreshTaxes();
+        RefreshDeadlines();
+        RefreshPlanning();
         ScheduleReminders();
     }
 
@@ -1008,6 +1050,8 @@ public partial class MainViewModel : ViewModelBase
         CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
+        CloseDeadlinePanels();
+        ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
         IsEntryPanelOpen = true;
@@ -1454,13 +1498,15 @@ public partial class MainViewModel : ViewModelBase
         var selections = (TypeFilterIndex, ScheduleFilterIndex, SortIndex, FinancialYearStartIndex,
             DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, TaskStatusFilterIndex,
             NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
-            LockDelayIndex, ReminderHourIndex);
+            LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
+            ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex);
         CategoryFilter = AllCategories;
         OnPropertyChanged(string.Empty);
         (TypeFilterIndex, ScheduleFilterIndex, SortIndex, FinancialYearStartIndex,
             DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, TaskStatusFilterIndex,
             NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
-            LockDelayIndex, ReminderHourIndex) = selections;
+            LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
+            ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex) = selections;
 
         RefreshPersonOptions();
         RefreshDocumentRows();
@@ -1475,6 +1521,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshBackupStatus();
         Recalculate();
         RefreshTaxes();
+        RefreshDeadlines();
         ScheduleReminders();
     }
 
@@ -1600,6 +1647,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshEntryRows();
         RefreshUpcoming();
         RefreshTaxes();
+        RefreshPlanning();
     }
 
     private void RebuildReport() =>
