@@ -42,7 +42,18 @@ public sealed class DebtPlan
 
     /// <summary>Every payment as an expense, so cash history and projections include it.</summary>
     public IEnumerable<Transaction> ToTransactions() =>
-        Entries.Select(e => new Transaction
+        Entries.Select(e => e.Payment < 0
+            ? new Transaction
+            {
+                // Borrowed money comes in: income for the cash, though not earnings.
+                Date = e.Date,
+                Description = Loc.F("{0} (borrowed)", Debt.Name),
+                Category = Categories.DebtRepayment,
+                Amount = -e.Payment,
+                Type = TransactionType.Income,
+                IsDebtPayment = true,
+            }
+            : new Transaction
         {
             Date = e.Date,
             Description = e.IsExtra ? Loc.F("{0} (extra payment)", Debt.Name)
@@ -75,18 +86,30 @@ public sealed class DebtPlan
 
         void ApplyExtrasUpTo(DateOnly date, bool inclusive = true)
         {
-            while (nextExtra < extras.Count && balance > 0
+            while (nextExtra < extras.Count
                 && (extras[nextExtra].Date < date || inclusive && extras[nextExtra].Date == date))
             {
                 var extra = extras[nextExtra++];
+                if (extra.IsBorrowing)
+                {
+                    // Borrowed more: the debt grows by that amount (a negative payment).
+                    balance += extra.Borrowed;
+                    entries.Add(new DebtPlanEntry(extra.Date, extra.Amount, 0, balance, IsExtra: true));
+                    continue;
+                }
+                if (balance <= 0)
+                    continue;
                 var paid = Math.Min(extra.Amount, balance);
                 balance -= paid;
                 entries.Add(new DebtPlanEntry(extra.Date, paid, 0, balance, IsExtra: true));
             }
         }
 
+        // Once paid off, the plan only goes on if more is borrowed later.
+        bool BorrowsLater() => extras.Skip(nextExtra).Any(e => e.IsBorrowing);
+
         var regularPayments = 0;
-        for (var month = 0; balance > 0 && regularPayments < MaxPayments; month++)
+        for (var month = 0; (balance > 0 || BorrowsLater()) && regularPayments < MaxPayments; month++)
         {
             var due = debt.IsLumpSum ? debt.FirstPaymentDate : debt.FirstPaymentDate.AddMonths(month);
 
@@ -94,7 +117,11 @@ public sealed class DebtPlan
             // except interest-only, where that day's interest is still owed on the earlier balance.
             ApplyExtrasUpTo(due, inclusive: !debt.IsInterestOnly);
             if (balance <= 0)
+            {
+                if (!debt.IsLumpSum && BorrowsLater())
+                    continue;
                 break;
+            }
 
             if (due <= debt.StartDate)
             {

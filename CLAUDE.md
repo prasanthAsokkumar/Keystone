@@ -28,21 +28,21 @@ End a piece of work by giving them that command.
 | Area | What it does |
 | --- | --- |
 | Overview | Runway (months until cash runs out, the cause), cash today per account, overdraft reach, daily earn/spend, saving this financial year, months covered without income, cash chart with projection, next 30 days. Header buttons for inbox scans, tasks due, bills to pay. |
-| Transactions | Income/expense/transfer entries: one-time, monthly, quarterly, yearly, with end dates; per person and account; filters, sort, totals. Import bank statements (camt.053/054/052 XML and CSV). AI import of entries from documents. |
+| Transactions | Income/expense/transfer entries: one-time, monthly, quarterly, yearly, with end dates; per person and account; filters, sort, totals. Change or skip a single time of a repeating entry (`EntryChange`, edited in the entry form). Import bank statements (camt.053/054/052 XML and CSV). AI import of entries from documents. Export the listed entries as CSV. |
 | Accounts | Several accounts (current, savings, credit card, cash) with IBAN, opening balance and overdraft/credit limit. Transfers move money between them without counting as income or spending. "Match my bank balance" adjusts the opening balance. |
-| Documents | Bills, invoices, letters, notices, contracts, policies, statements, payslips per person, filed in OneDrive as `Person/Year/Type/yyyy-MM-dd Title.ext`. Due dates and paid status; bills can be added to expenses. Single and bulk import (drop many files). Swiss QR-bill reading. Inbox folder for phone scans. Search inside PDFs/text. Retention guide ("Past keeping time" filter). Deleted files go to `Deleted/`. |
+| Documents | Bills, invoices, letters, notices, contracts, policies, statements, payslips per person, filed in OneDrive as `Person/Year/Type/yyyy-MM-dd Title.ext`. Due dates and paid status; bills can be added to expenses. Single and bulk import (drop many files). Swiss QR-bill reading. Inbox folder for phone scans. Search inside PDFs/text. Scans (PDFs that are only page pictures, e.g. from the OneDrive app) and photos are read with macOS text recognition (`TextRecognizer`, Vision) for search, the AI import and the inbox. Retention guide ("Past keeping time" filter). Deleted files go to `Deleted/`. Duplicates are noticed (`DuplicateFinder`: same file by SHA-256 `FileHash`, same QR reference, or same sender + amount + date) with "Show it / Skip / File anyway"; in bulk they arrive unticked and inbox copies of filed scans go to `Deleted/`. Follow-ups: a filed policy, contract, ID/passport/MFK notice or purchase receipt offers to add or update the record under Insurance or Contracts & dates (AI fields `record`, `record_kind`… in `DocumentDetailsExtraction`; without AI the type Policy/Contract alone); one document opens the filled-in form, bulk saves records directly. |
 | Tasks | Due dates, person, notes; repeating weekly/monthly/quarterly/yearly (ticking a repeating task creates the next one). |
 | Appointments | Timed or all-day appointments with place, person, notes and a reminder. Two-way sync with one chosen calendar in the Calendar app through EventKit (`CalendarSync` logic, `MacCalendar` interop): compares 30 days back to a year ahead, the later change wins, deletions go both ways. Needs the app bundle (Info.plist calendar usage strings). |
 | Notes | Notes with projects and pins, saved as you type. |
-| Debts | Monthly, lump-sum and interest-only debts with extra repayments; payments feed the runway. |
+| Debts | Monthly, lump-sum and interest-only debts with extra repayments; borrowing more (a `DebtPayment` with a negative amount: the debt grows, the money comes in as income that isn't earnings); edit a debt's terms (the amount stays "owed on" its start date); payments feed the runway. |
 | Retirement | AHV, pension fund (BVG), vested benefits, pillar 3a/3b accounts per person with yearly statements (balance, projected capital and pension at 65, buy-in). Pillar 3a paid this year vs the legal limit. AI reads pension letters. |
 | Insurance | Policies with premium, term end and notice deadline (basic health insurance: by 30 November). |
 | Contracts & dates | Contracts (mobile, internet, gym, leasing, rent…) with notice deadlines; important dates (passport, ID, driving licence, MFK, tyres, vignette) with lead times and repeats; warranties (2 years by default) with receipt. |
 | Taxes | Per tax year: income, deductions (3a capped at the limit, pension buy-ins, childcare, medical costs, donations, debt interest, health premiums), assets and debts on 31 December, checklist of certificates found in Documents, copy as text. |
 | Planning | Savings goals (by account or by hand, monthly amount needed, one-click monthly transfer, emergency fund preset); what-if scenarios saved in settings and compared with today (purple chart line); retirement gap with birth years and a 3a withdrawal plan (one account per year, before 65); net worth over 24 months. |
-| Year | Month-by-month income and spending for a financial year (any start month). |
+| Year | Month-by-month income and spending for a financial year (any start month). Export every booking as CSV or a one-page PDF summary (`YearSummaryPdf`, SkiaSharp). |
 | Settings | Bank accounts, language (English / German), financial year, reminders, app lock, backup, household members, documents folder and inbox, local AI. |
-| Everywhere | Search everything (⌘F), reminders as macOS notifications, daily backups, app lock with Touch ID (⌘L locks), English and German (Swiss) UI, light and dark mode. |
+| Everywhere | Search everything (⌘F), reminders as macOS notifications, daily backups, app lock with Touch ID (⌘L locks), English and German (Swiss) UI, light and dark mode. Deleting an entry or a debt shows a notice with Undo (`ShowNotice`, 12 s); exports report there too. |
 
 ### Swiss rules built in
 
@@ -64,19 +64,21 @@ src/Keystone/
   Models/        EF Core entities and small domain rules (Transaction, BankAccount, HouseholdDocument,
                  InsurancePolicy, Contract/ImportantDate/Warranty/SavingsGoal/DocumentText (Contract.cs),
                  PensionAccount/PensionStatement (Retirement.cs), TaskItem, Note, Debt, Person, AppSettings,
-                 Categories, NoticeDeadline)
+                 Categories, NoticeDeadline, EntryChange (Transaction.cs))
   Services/      Pure logic: RunwayCalculator, Schedule (expands repeating entries), DebtPlan, FinancialYearReport,
                  BankStatementParser, CategoryGuesser, DocumentReader (PdfPig), DocumentStore (OneDrive filing),
                  LocalAi (Ollama), PersonMatcher, ReminderPlanner, RetentionGuide, RetirementPlanner, Scenario,
-                 SwissPension, SwissQrBill, DatabaseBackup
+                 SwissPension, SwissQrBill, DatabaseBackup, DuplicateFinder, Csv (semicolons, BOM, 1234.50), YearSummaryPdf
   Services/Mac/  macOS integration through P/Invoke: ObjC (runtime, blocks), TouchId (LocalAuthentication),
-                 MacNotifications (UserNotifications), MacCalendar (EventKit), QrBillScanner (CoreGraphics/ImageIO + ZXing)
+                 MacNotifications (UserNotifications), MacCalendar (EventKit), QrBillScanner (CoreGraphics/ImageIO + ZXing),
+                 TextRecognizer (Vision text recognition for scans and photos)
   ViewModels/    One MainViewModel split into partial files per area (MainViewModel.<Area>.cs), plus row records
   Views/         MainWindow.axaml (shell, older pages, side panels), Pages/*.axaml (newer pages and forms as
                  UserControls with x:DataType="vm:MainViewModel"), Styles.axaml; icons are StreamGeometry in App.axaml
   Controls/      RunwayChart (history, projection, optional comparison line), MonthlyBarChart
   Localization/  Loc, TExtension ({l:T '...'}), German.cs
-  Data/          KeystoneDbContext, KeystoneRepository (short-lived contexts per call), Migrations
+  Data/          KeystoneDbContext, KeystoneRepository (short-lived contexts per call), Migrations,
+                 SqliteLocking (one save at a time + busy_timeout, so background saves never hit "database is locked")
 tests/Keystone.Tests/   xUnit
 scripts/        package-mac.sh, make-logo.py
 docs/screenshots/       README screenshots (made-up family, never real data)
@@ -126,6 +128,17 @@ docs/screenshots/       README screenshots (made-up family, never real data)
   `LoadAsync()`.
 
 ## Pitfalls already hit (don't repeat them)
+
+- **Background saves and "database is locked".** Indexing a filed document's text saves while the next document
+  in a bulk import is saved. `SqliteLocking` (registered in `KeystoneDbContext.OnConfiguring`) serialises
+  `SaveChanges` and sets `PRAGMA busy_timeout`; keep both. Tests delete their folders with `TestFolder.Delete`,
+  which waits for those background saves.
+- **Test files need different contents.** Documents are recognised by their SHA-256, so two test files that both
+  contain "x" are the same document. Tests can reach `internal` members (`InternalsVisibleTo`).
+
+- **Sum `Occurrence.Amount`/`SignedAmount`, never `o.Source.Amount`.** A single time of a repeating entry can have
+  its own amount (`EntryChange`), and skipped times aren't returned by `Schedule.Expand` at all.
+  `Schedule.RegularDates` gives the dates without changes (for the "change one time" picker).
 
 - **`Dictionary<int?, …>` with a null key throws.** Shared items have `PersonId == null`. Group with
   `GroupBy(...).Select(...)` into lists or use a lookup function, never `ToDictionary` keyed by `PersonId`.

@@ -135,6 +135,16 @@ public sealed class DocumentStore(string rootFolder)
         return target;
     }
 
+    /// <summary>Moves any file, e.g. an inbox scan already filed, into the Deleted folder.</summary>
+    public void Discard(string path)
+    {
+        if (!File.Exists(path))
+            return;
+        var target = FreePath($"{DeletedFolder}/{Path.GetFileName(path)}", current: null);
+        Directory.CreateDirectory(Path.Combine(RootFolder, DeletedFolder));
+        File.Move(path, FullPath(target));
+    }
+
     /// <summary>Moves the file into the Deleted folder.</summary>
     public void Delete(HouseholdDocument document)
     {

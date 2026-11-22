@@ -125,16 +125,17 @@ public static class RunwayCalculator
         var averageOneTimeNet = oneTimeIncome - oneTimeExpenses;
 
         var nextMonth = Expand(transactions.Where(IsScheduled), today.AddDays(1), today.AddMonths(1));
-        var recurringIncome = nextMonth.Where(o => o.Source.IsIncome).Sum(o => o.Source.Amount);
-        var recurringExpenses = nextMonth.Where(o => !o.Source.IsIncome).Sum(o => o.Source.Amount);
+        var recurringIncome = nextMonth.Where(o => o.Source.IsIncome).Sum(o => o.Amount);
+        var recurringExpenses = nextMonth.Where(o => !o.Source.IsIncome).Sum(o => o.Amount);
 
         var projection = Project(transactions, balance, averageOneTimeNet, today, maxProjectionMonths);
 
         // The next 12 months: scheduled entries exactly, plus a year of the one-time averages.
         var yearAhead = Expand(transactions, today.AddDays(1), today.AddYears(1));
-        var yearAheadIncome = yearAhead.Where(o => o.Source.IsIncome).Sum(o => o.Source.Amount) + oneTimeIncome * 12;
-        var yearAheadExpenses = yearAhead.Where(o => !o.Source.IsIncome).Sum(o => o.Source.Amount) + oneTimeExpenses * 12;
-        var yearAheadDebt = yearAhead.Where(o => o.Source.IsDebtPayment).Sum(o => o.Source.Amount);
+        // Borrowed money adds to cash (and so to the runway) but isn't earnings.
+        var yearAheadIncome = yearAhead.Where(o => o.Source.IsIncome && !o.Source.IsBorrowing).Sum(o => o.Amount) + oneTimeIncome * 12;
+        var yearAheadExpenses = yearAhead.Where(o => !o.Source.IsIncome).Sum(o => o.Amount) + oneTimeExpenses * 12;
+        var yearAheadDebt = yearAhead.Where(o => o.Source.IsDebtPayment && !o.Source.IsIncome).Sum(o => o.Amount);
 
         // This financial year: what already happened, plus what is expected until it ends.
         var yearStart = new DateOnly(FinancialYearReport.StartYearContaining(today, financialYearStartMonth), financialYearStartMonth, 1);
@@ -193,8 +194,8 @@ public static class RunwayCalculator
         }
 
         var oneTime = past.Where(o => !IsScheduled(o.Source) && o.Date >= windowStart && o.Date < windowEnd).ToList();
-        var income = oneTime.Where(o => o.Source.IsIncome).Sum(o => o.Source.Amount);
-        var expenses = oneTime.Where(o => !o.Source.IsIncome).Sum(o => o.Source.Amount);
+        var income = oneTime.Where(o => o.Source.IsIncome).Sum(o => o.Amount);
+        var expenses = oneTime.Where(o => !o.Source.IsIncome).Sum(o => o.Amount);
 
         return (income / months, expenses / months, months, usedPartialMonth);
     }
@@ -231,8 +232,8 @@ public static class RunwayCalculator
 
             if (running <= 0)
             {
-                var biggest = due.Select(o => o.Source).Where(t => !t.IsIncome).MaxBy(t => t.Amount);
-                var cause = biggest is not null && biggest.Amount > -dailyOneTime ? biggest.Description : null;
+                var biggest = due.Where(o => !o.Source.IsIncome).Select(o => (Occurrence?)o).MaxBy(o => o!.Value.Amount);
+                var cause = biggest is { } b && b.Amount > -dailyOneTime ? b.Source.Description : null;
                 points.Add(new BalancePoint(day, 0));
                 return new ProjectionResult(points, (day.DayNumber - today.DayNumber) / (double)DaysPerMonth, day, cause);
             }

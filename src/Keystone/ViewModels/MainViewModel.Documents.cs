@@ -235,7 +235,7 @@ public partial class MainViewModel
 
     public string DocumentFormTitle => Loc.T(IsEditingDocument ? "Edit document" : "Add document");
 
-    public string DocumentSubmitText => Loc.T(IsEditingDocument ? "Save changes" : "Save to documents");
+    public string DocumentSubmitText => Loc.T(IsEditingDocument ? "Save changes" : HasDocumentDuplicate ? "File anyway" : "Save to documents");
 
     /// <summary>The file being added; only set for a new document.</summary>
     private string? _documentSourcePath;
@@ -311,9 +311,11 @@ public partial class MainViewModel
         DocumentTitle = Path.GetFileNameWithoutExtension(path);
         DocumentPerson = DocumentPersonFilter is { IsEveryone: false } person ? person : PersonOption.Shared;
         IsDocumentPanelOpen = true;
+        await CheckDocumentFileAsync(path);
 
         // The QR code gives exact payment details; the AI fills in the rest.
         var hasQrBill = await ReadQrBillAsync(path);
+        RefreshDocumentDuplicate();
         if (IsImportEnabled && DocumentReader.IsSupported(path))
             await FillDocumentDetailsAsync(path, hasQrBill);
     }
@@ -347,6 +349,9 @@ public partial class MainViewModel
                 DocumentAmount = amount;
             if (details.DueDate is { } due && DocumentDueDate is null)
                 DocumentDueDate = due.ToDateTime(TimeOnly.MinValue);
+            _documentAiFollowUp = details.FollowUp;
+            RefreshDocumentFollowUp();
+            RefreshDocumentDuplicate();
             DocumentAiStatus = hasQrBill
                 ? Loc.T("Payment details from the QR code, the rest by your local AI. Check them before saving.")
                 : Loc.T("Details filled in by your local AI. Check them before saving.");
@@ -423,7 +428,9 @@ public partial class MainViewModel
             RelativePath = existing?.RelativePath ?? "",
             AddedAt = existing?.AddedAt ?? DateTime.Now,
             TransactionId = existing?.TransactionId,
+            FileHash = existing?.FileHash ?? _documentSourceHash,
         };
+        var followUp = existing is null && DocumentAddFollowUp ? DocumentFollowUp : null;
         var personName = DocumentPerson.Id is null ? null : DocumentPerson.Name;
 
         try
@@ -461,7 +468,11 @@ public partial class MainViewModel
         RefreshDocumentRows();
         CloseDocumentPanel();
         _ = IndexDocumentAsync(document);
-        CurrentPage = AppPage.Documents;
+        // An insurance policy, contract, passport or receipt: its form opens next, filled in, for the reminders.
+        if (followUp is not null)
+            OpenFollowUp(document, followUp);
+        else
+            CurrentPage = AppPage.Documents;
     }
 
     /// <summary>Adds an open bill as a one-time expense on its due date, so the runway includes it.</summary>
@@ -573,5 +584,6 @@ public partial class MainViewModel
         DocumentCreateEntry = true;
         DocumentError = null;
         DocumentAiStatus = "";
+        ResetDocumentChecks();
     }
 }

@@ -49,7 +49,7 @@ public sealed class QrBillTests : IDisposable
 
     public QrBillTests() => Directory.CreateDirectory(_folder);
 
-    public void Dispose() => Directory.Delete(_folder, recursive: true);
+    public void Dispose() => TestFolder.Delete(_folder);
 
     [Fact]
     public void ReadsThePaymentPart()

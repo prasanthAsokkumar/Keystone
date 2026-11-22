@@ -126,8 +126,12 @@ public partial class ImportItem : ViewModelBase
     }
 
     /// <summary>Same amount and direction as an existing entry, on the same date or as the same repeating bill.</summary>
+    /// <summary>
+    /// An entry with the same amount and direction already happens within 3 days of this date (a one-time one,
+    /// or a time of a repeating one), or repeats just as often. Then the document was most likely read before.
+    /// </summary>
     public static bool IsAlreadyRecorded(ExtractedEntry entry, IEnumerable<Transaction> existing) =>
-        existing.Any(t => t.Amount == entry.Amount && t.IsIncome == entry.IsIncome &&
-                          (t.Date == entry.Date || (t.IsRecurring && entry.Recurrence == t.Recurrence &&
-                                                    t.Description.Equals(entry.Description, StringComparison.OrdinalIgnoreCase))));
+        existing.Any(t => !t.IsTransfer && t.Amount == entry.Amount && t.IsIncome == entry.IsIncome &&
+                          ((entry.Recurrence != Recurrence.OneTime && t.Recurrence == entry.Recurrence) ||
+                           Schedule.RegularDates(t, entry.Date.AddDays(-3), entry.Date.AddDays(3)).Any()));
 }

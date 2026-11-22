@@ -216,6 +216,19 @@
                         </Button>
                         <Button Classes="secondary" Content="{l:T 'This year'}" Command="{Binding CurrentYearCommand}"
                                 Margin="6,0,0,0" />
+                        <Button Classes="secondary" Margin="2,0,0,0"
+                                ToolTip.Tip="{l:T 'For your records or a tax advisor'}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconDownload}" />
+                                <TextBlock Text="{l:T 'Export'}" />
+                            </StackPanel>
+                            <Button.Flyout>
+                                <MenuFlyout Placement="BottomEdgeAlignedRight">
+                                    <MenuItem Header="{l:T 'Every booking of the year (CSV)'}" Click="ExportYearCsv_Click" />
+                                    <MenuItem Header="{l:T 'Summary for the year (PDF)'}" Click="ExportYearPdf_Click" />
+                                </MenuFlyout>
+                            </Button.Flyout>
+                        </Button>
                     </StackPanel>
 
                     <!-- Tax year switcher -->
@@ -235,6 +248,13 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsTransactionsPage}">
+                        <Button Classes="secondary" Click="ExportEntries_Click" IsEnabled="{Binding HasEntryRows}"
+                                ToolTip.Tip="{l:T 'Save the entries shown as a CSV file for Excel or Numbers'}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconDownload}" />
+                                <TextBlock Text="{l:T 'Export'}" />
+                            </StackPanel>
+                        </Button>
                         <Button Classes="secondary" Click="ImportBankStatement_Click"
                                 ToolTip.Tip="{l:T 'camt.053 or CSV from your bank. You can also drop it on the window.'}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -1052,6 +1072,28 @@
                                                                 </Flyout>
                                                             </Button.Flyout>
                                                         </Button>
+                                                        <Button Classes="secondary" Content="{l:T 'Borrowed more'}">
+                                                            <Button.Flyout>
+                                                                <Flyout Placement="BottomEdgeAlignedRight">
+                                                                    <StackPanel Spacing="10" Width="260" Margin="4">
+                                                                        <TextBlock Text="{l:T 'Borrowed more today'}" FontWeight="SemiBold" />
+                                                                        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                                                                   Text="{l:T 'The debt grows by this amount and the money counts as cash coming in.'}" />
+                                                                        <NumericUpDown Value="{Binding BorrowAmount}" Minimum="0"
+                                                                                       FormatString="N2" Increment="100"
+                                                                                       ShowButtonSpinner="False"
+                                                                                       PlaceholderText="{l:T 'Amount'}" />
+                                                                        <Button Classes="primary" Content="{l:T 'Record borrowing'}"
+                                                                                HorizontalAlignment="Stretch"
+                                                                                Command="{Binding BorrowMoreCommand}" />
+                                                                    </StackPanel>
+                                                                </Flyout>
+                                                            </Button.Flyout>
+                                                        </Button>
+                                                        <Button Classes="icon" ToolTip.Tip="{l:T 'Edit debt'}"
+                                                                Command="{Binding EditCommand}">
+                                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                                        </Button>
                                                         <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete debt'}"
                                                                 Command="{Binding DeleteCommand}">
                                                             <PathIcon Data="{StaticResource IconDelete}" />
@@ -1812,6 +1854,58 @@
                             </Grid>
 
                             <TextBlock Classes="error" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" />
+
+                            <Border IsVisible="{Binding CanChangeOneTime}" Padding="16,14" CornerRadius="10"
+                                    Background="{DynamicResource SurfaceSunken}">
+                                <StackPanel Spacing="10">
+                                    <StackPanel Spacing="2">
+                                        <TextBlock Text="{l:T 'Change one time only'}" FontWeight="SemiBold" />
+                                        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                                   Text="{l:T 'A 13th salary, a bonus, a smaller bill or a month without it. The other times stay as they are.'}" />
+                                    </StackPanel>
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'When'}" />
+                                            <ComboBox ItemsSource="{Binding ChangeDateOptions}" SelectedItem="{Binding ChangeDate}"
+                                                      HorizontalAlignment="Stretch" MaxDropDownHeight="320" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Amount this time'}" />
+                                            <NumericUpDown Value="{Binding ChangeAmount}" Minimum="0" FormatString="N2"
+                                                           ShowButtonSpinner="False" IsEnabled="{Binding ChangeAmountEnabled}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBox Text="{Binding ChangeNote}" PlaceholderText="{l:T 'Note (optional), e.g. 13th salary'}" />
+                                    <Grid ColumnDefinitions="*,Auto">
+                                        <CheckBox Content="{l:T 'Skip this time'}" IsChecked="{Binding ChangeSkip}" />
+                                        <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Save for this time'}"
+                                                Command="{Binding SaveEntryChangeCommand}" />
+                                    </Grid>
+                                    <TextBlock Classes="error" Text="{Binding ChangeError}" IsVisible="{Binding HasChangeError}"
+                                               TextWrapping="Wrap" />
+                                    <ItemsControl ItemsSource="{Binding EntryChangeRows}" IsVisible="{Binding HasEntryChanges}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:EntryChangeRow">
+                                                <Grid ColumnDefinitions="100,*,Auto" ColumnSpacing="8" Margin="0,2">
+                                                    <TextBlock Classes="secondary" FontSize="13" Text="{Binding DateText}"
+                                                               VerticalAlignment="Center" />
+                                                    <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                        <TextBlock FontSize="13" Text="{Binding AmountText}" TextWrapping="Wrap" />
+                                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding Note}"
+                                                                   IsVisible="{Binding HasNote}" TextTrimming="CharacterEllipsis" />
+                                                    </StackPanel>
+                                                    <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Back to the usual'}"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveEntryChangeCommand}"
+                                                            CommandParameter="{Binding}">
+                                                        <PathIcon Data="{StaticResource IconDelete}" />
+                                                    </Button>
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                </StackPanel>
+                            </Border>
+
                             <TextBlock Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !IsEditing}"
                                        Text="{l:T 'The panel stays open after adding, so you can enter several in a row.'}" />
                         </StackPanel>
@@ -1824,7 +1918,7 @@
                 <DockPanel>
                     <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
                         <StackPanel Spacing="2">
-                            <TextBlock Text="{l:T 'Add debt'}" FontSize="20" FontWeight="Bold" />
+                            <TextBlock Text="{Binding DebtFormTitle}" FontSize="20" FontWeight="Bold" />
                             <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
                                        Text="{l:T 'Payments are added to your expenses automatically. Don’t also enter them as entries.'}" />
                         </StackPanel>
@@ -1837,7 +1931,7 @@
                     <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
                             Padding="28,16">
                         <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                            <Button Classes="primary" Content="{l:T 'Add debt'}" HorizontalAlignment="Stretch"
+                            <Button Classes="primary" Content="{Binding DebtSubmitText}" HorizontalAlignment="Stretch"
                                     Command="{Binding AddDebtCommand}" />
                             <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}"
                                     Command="{Binding ClosePanelCommand}" />
@@ -1851,7 +1945,7 @@
                                 <TextBox Text="{Binding NewDebtName}" PlaceholderText="{l:T 'e.g. Car loan'}" />
                             </StackPanel>
                             <StackPanel Spacing="4">
-                                <TextBlock Classes="fieldLabel" Text="{l:T 'Amount still owed today'}" />
+                                <TextBlock Classes="fieldLabel" Text="{Binding DebtBalanceLabel}" />
                                 <NumericUpDown Value="{Binding NewDebtBalance}" Minimum="0" FormatString="N2"
                                                Increment="100" PlaceholderText="0.00" ShowButtonSpinner="False" />
                             </StackPanel>
@@ -1892,6 +1986,24 @@
                                 <CalendarDatePicker SelectedDate="{Binding NewDebtDate}" />
                             </StackPanel>
 
+                            <StackPanel Spacing="6" IsVisible="{Binding HasDebtPaymentRows}">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Extra payments and borrowing'}" />
+                                <ItemsControl ItemsSource="{Binding DebtPaymentRows}">
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate x:DataType="vm:DebtPaymentRow">
+                                            <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8" Margin="0,2">
+                                                <TextBlock Classes="secondary" FontSize="13" Text="{Binding DateText}" VerticalAlignment="Center" />
+                                                <TextBlock Grid.Column="1" FontSize="13" Text="{Binding Text}" VerticalAlignment="Center" />
+                                                <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Remove'}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveDebtPaymentCommand}"
+                                                        CommandParameter="{Binding}">
+                                                    <PathIcon Data="{StaticResource IconDelete}" />
+                                                </Button>
+                                            </Grid>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                             <TextBlock Classes="error" Text="{Binding DebtError}" IsVisible="{Binding HasDebtError}" />
                         </StackPanel>
                     </ScrollViewer>
@@ -2024,6 +2136,17 @@
 
                     <ScrollViewer>
                         <StackPanel Spacing="18" Margin="28,12,28,20">
+                            <Border Background="{DynamicResource WarningSoft}" CornerRadius="10" Padding="14,12"
+                                    IsVisible="{Binding HasDocumentDuplicate}">
+                                <StackPanel Spacing="10">
+                                    <TextBlock Text="{Binding DocumentDuplicateText}" TextWrapping="Wrap" FontWeight="Medium" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <Button Classes="secondary" Content="{l:T 'Show it'}" Command="{Binding ShowDuplicateDocumentCommand}" />
+                                        <Button Classes="secondary" Content="{l:T 'Skip this file'}" Command="{Binding SkipDuplicateDocumentCommand}" />
+                                    </StackPanel>
+                                </StackPanel>
+                            </Border>
+
                             <StackPanel Spacing="8" IsVisible="{Binding HasDocumentAiStatus}">
                                 <ProgressBar Classes="thin" IsIndeterminate="True" IsVisible="{Binding IsDocumentAiBusy}" />
                                 <TextBlock Classes="muted" Text="{Binding DocumentAiStatus}" TextWrapping="Wrap" />
@@ -2112,6 +2235,17 @@
 
                             <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding DocumentRetentionText}"
                                        IsVisible="{Binding IsEditingDocument}" />
+
+                            <Border Background="{DynamicResource BrandSoft}" CornerRadius="10" Padding="14,12"
+                                    IsVisible="{Binding HasDocumentFollowUp}">
+                                <StackPanel Spacing="4">
+                                    <CheckBox IsChecked="{Binding DocumentAddFollowUp}">
+                                        <TextBlock Text="{Binding DocumentFollowUpText}" TextWrapping="Wrap" FontWeight="Medium" />
+                                    </CheckBox>
+                                    <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0"
+                                               Text="{l:T 'After saving, its form opens filled in, so you can check it and get the reminders.'}" />
+                                </StackPanel>
+                            </Border>
 
                             <TextBlock Classes="error" Text="{Binding DocumentError}" IsVisible="{Binding HasDocumentError}"
                                        TextWrapping="Wrap" />
@@ -2458,6 +2592,11 @@
                                                 </Button>
                                             </Grid>
 
+                                            <Border Background="{DynamicResource WarningSoft}" CornerRadius="8" Padding="10,8"
+                                                    IsVisible="{Binding HasDuplicate}">
+                                                <TextBlock Text="{Binding DuplicateText}" TextWrapping="Wrap" FontSize="12" FontWeight="Medium" />
+                                            </Border>
+
                                             <StackPanel Spacing="10" IsEnabled="{Binding IsEditable}">
                                                 <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
                                                     <StackPanel Spacing="4">
@@ -2507,6 +2646,9 @@
                                                     <CheckBox IsChecked="{Binding CreateEntry}" IsVisible="{Binding CanCreateEntry}"
                                                               Content="{l:T 'Add to expenses on the due date, so your runway includes it'}" />
                                                 </StackPanel>
+                                                <CheckBox IsChecked="{Binding AddFollowUp}" IsVisible="{Binding HasFollowUp}">
+                                                    <TextBlock Text="{Binding FollowUpText}" TextWrapping="Wrap" />
+                                                </CheckBox>
                                             </StackPanel>
                                         </StackPanel>
                                     </Border>
@@ -2534,6 +2676,22 @@
                 <pages:GoalPanel />
             </Border>
         </Panel>
+
+        <!-- Short message with Undo after deleting, or where an export was saved. -->
+        <Border Grid.Column="1" IsVisible="{Binding HasNotice}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,24" Padding="18,10,10,10" CornerRadius="10" MaxWidth="560"
+                Background="{DynamicResource TextPrimary}" BoxShadow="0 6 24 0 #33000000">
+            <StackPanel Orientation="Horizontal" Spacing="14">
+                <TextBlock Text="{Binding NoticeText}" Foreground="{DynamicResource Surface}" VerticalAlignment="Center"
+                           TextTrimming="CharacterEllipsis" MaxWidth="400" />
+                <Button Content="{l:T 'Undo'}" Command="{Binding UndoCommand}" IsVisible="{Binding CanUndo}"
+                        Foreground="{DynamicResource Brand}" Background="Transparent" FontWeight="SemiBold" Padding="8,4" />
+                <Button Classes="icon" Command="{Binding DismissNoticeCommand}" ToolTip.Tip="{l:T 'Close'}"
+                        Foreground="{DynamicResource Surface}">
+                    <PathIcon Data="{StaticResource IconClose}" Width="12" Height="12" />
+                </Button>
+            </StackPanel>
+        </Border>
 
         <!-- Shown while a file is dragged over the window. -->
         <Border x:Name="DropOverlay" Grid.ColumnSpan="2" IsVisible="False" IsHitTestVisible="False"

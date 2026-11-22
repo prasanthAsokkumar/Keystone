@@ -45,6 +45,9 @@ internal static unsafe class ObjC
     /// <summary>For saveCalendar:commit:error:.</summary>
     [DllImport(Objc, EntryPoint = "objc_msgSend")]
     public static extern byte SendCommit(IntPtr receiver, IntPtr selector, IntPtr item, byte commit, out IntPtr error);
+    /// <summary>For methods taking one object and an error out-parameter, e.g. performRequests:error:.</summary>
+    [DllImport(Objc, EntryPoint = "objc_msgSend")]
+    public static extern byte SendWithError(IntPtr receiver, IntPtr selector, IntPtr item, out IntPtr error);
     [DllImport(Objc, EntryPoint = "objc_msgSend")]
     public static extern IntPtr SendString(IntPtr receiver, IntPtr selector, [MarshalAs(UnmanagedType.LPUTF8Str)] string text);
 

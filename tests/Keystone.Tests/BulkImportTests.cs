@@ -20,13 +20,13 @@ public sealed class BulkImportTests : IDisposable
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        Directory.Delete(_folder, recursive: true);
+        TestFolder.Delete(_folder);
     }
 
     private string File(string name)
     {
         var path = Path.Combine(_folder, name);
-        System.IO.File.WriteAllText(path, "x");
+        System.IO.File.WriteAllText(path, $"made-up content of {name}");
         return path;
     }
 

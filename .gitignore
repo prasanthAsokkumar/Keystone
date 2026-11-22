@@ -485,3 +485,10 @@ $RECYCLE.BIN/
 *.db
 *.db-shm
 *.db-wal
+
+# Personal papers dropped into the repo folder for testing must never be committed.
+/*.pdf
+/*.jpg
+/*.jpeg
+/*.png
+/*.heic

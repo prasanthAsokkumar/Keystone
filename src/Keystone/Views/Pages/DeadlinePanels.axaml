@@ -23,6 +23,9 @@
                 </Border>
                 <ScrollViewer>
                     <StackPanel Spacing="18" Margin="28,12,28,20">
+                        <Border Background="{DynamicResource BrandSoft}" CornerRadius="10" Padding="14,10" IsVisible="{Binding HasFollowUpHint}">
+                            <TextBlock Text="{Binding FollowUpHint}" TextWrapping="Wrap" FontSize="13" />
+                        </Border>
                         <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Provider'}" />
@@ -102,6 +105,9 @@
                 </Border>
                 <ScrollViewer>
                     <StackPanel Spacing="18" Margin="28,12,28,20">
+                        <Border Background="{DynamicResource BrandSoft}" CornerRadius="10" Padding="14,10" IsVisible="{Binding HasFollowUpHint}">
+                            <TextBlock Text="{Binding FollowUpHint}" TextWrapping="Wrap" FontSize="13" />
+                        </Border>
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
@@ -157,6 +163,9 @@
                 </Border>
                 <ScrollViewer>
                     <StackPanel Spacing="18" Margin="28,12,28,20">
+                        <Border Background="{DynamicResource BrandSoft}" CornerRadius="10" Padding="14,10" IsVisible="{Binding HasFollowUpHint}">
+                            <TextBlock Text="{Binding FollowUpHint}" TextWrapping="Wrap" FontSize="13" />
+                        </Border>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'What you bought'}" />
                             <TextBox Text="{Binding WarrantyItem}" PlaceholderText="{l:T 'e.g. Washing machine V-ZUG'}" />

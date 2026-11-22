@@ -33,4 +33,8 @@
     <PackageReference Include="PdfPig" Version="0.1.16" />
     <PackageReference Include="ZXing.Net" Version="0.16.11" />
   </ItemGroup>
+  <ItemGroup>
+    <!-- Tests check the duplicate and follow-up rules directly, without the local AI. -->
+    <InternalsVisibleTo Include="Keystone.Tests" />
+  </ItemGroup>
 </Project>

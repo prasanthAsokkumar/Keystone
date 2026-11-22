@@ -33,7 +33,12 @@ public sealed record EntryRow(Transaction Transaction, string PersonName, string
 
     /// <summary>Category (or "Transfer"), schedule and account, shown under the description.</summary>
     public string DetailText => string.Join(" · ",
-        new[] { Transaction.IsTransfer ? Loc.T("Transfer") : Category, ScheduleText, AccountText }.Where(p => !string.IsNullOrWhiteSpace(p)));
+        new[] { Transaction.IsTransfer ? Loc.T("Transfer") : Category, ScheduleText, ChangesText, AccountText }.Where(p => !string.IsNullOrWhiteSpace(p)));
+
+    /// <summary>"1 time changed" when single times differ from the usual.</summary>
+    public string ChangesText => Transaction.IsRecurring && Transaction.Changes.Count > 0
+        ? Loc.Plural(Transaction.Changes.Count, "{0} time changed", "{0} times changed")
+        : "";
 
     public bool IsTransfer => Transaction.IsTransfer;
 

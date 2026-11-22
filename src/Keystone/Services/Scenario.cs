@@ -109,6 +109,8 @@ public static class Scenario
         AccountId = entry.AccountId,
         ToAccountId = entry.ToAccountId,
         IsDebtPayment = entry.IsDebtPayment,
+        // A changed amount for one month gives way to the scenario's new amount; a skipped month stays skipped.
+        Changes = amount is null ? entry.Changes : entry.Changes.Where(c => c.IsSkipped).ToList(),
     };
 
     public static string Describe(ScenarioChange change, IReadOnlyList<Transaction> entries)

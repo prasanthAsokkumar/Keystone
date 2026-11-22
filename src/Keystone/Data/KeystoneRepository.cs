@@ -62,6 +62,7 @@ public sealed class KeystoneRepository(string databasePath)
         await using var db = CreateContext();
         return await db.Transactions
             .AsNoTracking()
+            .Include(t => t.Changes)
             .OrderByDescending(t => t.Date)
             .ThenByDescending(t => t.Id)
             .ToListAsync();
@@ -81,6 +82,24 @@ public sealed class KeystoneRepository(string databasePath)
         await using var db = CreateContext();
         db.Transactions.Update(transaction);
         await db.SaveChangesAsync();
+    }
+
+    /// <summary>Links documents to an entry again, e.g. when its deletion is undone.</summary>
+    public async Task LinkDocumentsAsync(IReadOnlyCollection<int> documentIds, int transactionId)
+    {
+        await using var db = CreateContext();
+        await db.Documents
+            .Where(d => documentIds.Contains(d.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(d => d.TransactionId, transactionId));
+    }
+
+    /// <summary>Keeps only the given single-time changes of an entry, e.g. after its dates were edited.</summary>
+    public async Task KeepEntryChangesAsync(int transactionId, IReadOnlyCollection<int> keepIds)
+    {
+        await using var db = CreateContext();
+        await db.Set<EntryChange>()
+            .Where(c => c.TransactionId == transactionId && !keepIds.Contains(c.Id))
+            .ExecuteDeleteAsync();
     }
 
     public async Task DeleteTransactionAsync(int id)
@@ -330,6 +349,12 @@ public sealed class KeystoneRepository(string databasePath)
         return await db.DocumentTexts.AsNoTracking().ToDictionaryAsync(t => t.DocumentId, t => t.Text);
     }
 
+    public async Task SetDocumentHashAsync(int documentId, string hash)
+    {
+        await using var db = CreateContext();
+        await db.Documents.Where(d => d.Id == documentId).ExecuteUpdateAsync(s => s.SetProperty(d => d.FileHash, hash));
+    }
+
     public async Task SaveDocumentTextAsync(int documentId, string text)
     {
         await using var db = CreateContext();
@@ -387,6 +412,25 @@ public sealed class KeystoneRepository(string databasePath)
         db.Debts.Add(debt);
         await db.SaveChangesAsync();
         return debt;
+    }
+
+    /// <summary>Saves a debt's terms; its extra payments are saved separately.</summary>
+    public async Task UpdateDebtAsync(Debt debt)
+    {
+        await using var db = CreateContext();
+        await db.Debts.Where(d => d.Id == debt.Id).ExecuteUpdateAsync(s => s
+            .SetProperty(d => d.Name, debt.Name)
+            .SetProperty(d => d.Balance, debt.Balance)
+            .SetProperty(d => d.AnnualInterestRate, debt.AnnualInterestRate)
+            .SetProperty(d => d.MonthlyPayment, debt.MonthlyPayment)
+            .SetProperty(d => d.FirstPaymentDate, debt.FirstPaymentDate)
+            .SetProperty(d => d.IsInterestOnly, debt.IsInterestOnly));
+    }
+
+    public async Task DeleteDebtPaymentAsync(int id)
+    {
+        await using var db = CreateContext();
+        await db.Set<DebtPayment>().Where(p => p.Id == id).ExecuteDeleteAsync();
     }
 
     /// <summary>Deletes the debt and its extra payments.</summary>

@@ -188,6 +188,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void CloseOtherPanels()
     {
+        FollowUpHint = "";
         if (EditingTransaction is not null)
             ResetForm();
         IsEntryPanelOpen = false;
@@ -234,6 +235,8 @@ public partial class MainViewModel : ViewModelBase
     private void NewDebt()
     {
         DebtError = null;
+        if (EditingDebt is not null)
+            ResetDebtForm();
         IsEntryPanelOpen = false;
         IsImportPanelOpen = false;
         CloseDocumentPanel();
@@ -252,10 +255,13 @@ public partial class MainViewModel : ViewModelBase
     [RelayCommand]
     private void ClosePanel()
     {
+        FollowUpHint = "";
         if (EditingTransaction is not null)
             ResetForm();
         ErrorMessage = null;
         DebtError = null;
+        if (EditingDebt is not null)
+            ResetDebtForm();
         IsEntryPanelOpen = false;
         IsDebtPanelOpen = false;
         CloseImport();
@@ -338,7 +344,7 @@ public partial class MainViewModel : ViewModelBase
                     o.Date.ToString("MMM", CultureInfo.CurrentCulture).ToUpper(CultureInfo.CurrentCulture),
                     t.Description,
                     string.IsNullOrWhiteSpace(detail) ? t.RecurrenceName : detail,
-                    t.IsTransfer ? Format.Money(t.Amount) : Format.SignedMoney(t.SignedAmount),
+                    t.IsTransfer ? Format.Money(o.Amount) : Format.SignedMoney(o.SignedAmount),
                     t.IsIncome);
             })
             .ToList();
@@ -509,6 +515,29 @@ public partial class MainViewModel : ViewModelBase
         DebtRepayment.InterestOnly => Loc.T("Next interest payment on"),
         _ => Loc.T("First payment on"),
     };
+
+    /// <summary>The debt being changed in the debt form, or null when adding one.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsEditingDebt), nameof(DebtFormTitle), nameof(DebtSubmitText), nameof(DebtBalanceLabel))]
+    public partial DebtItemViewModel? EditingDebt { get; set; }
+
+    public bool IsEditingDebt => EditingDebt is not null;
+
+    public string DebtFormTitle => Loc.T(IsEditingDebt ? "Edit debt" : "Add debt");
+
+    public string DebtSubmitText => Loc.T(IsEditingDebt ? "Save changes" : "Add debt");
+
+    /// <summary>When editing, the amount is what was owed on the day the debt was recorded; payments since then are counted on top.</summary>
+    public string DebtBalanceLabel => EditingDebt is { } item
+        ? Loc.F("Amount owed on {0}", Format.Date(item.Debt.StartDate))
+        : Loc.T("Amount still owed today");
+
+    /// <summary>Extra payments and borrowing recorded for the debt being edited.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDebtPaymentRows))]
+    public partial IReadOnlyList<DebtPaymentRow> DebtPaymentRows { get; set; } = [];
+
+    public bool HasDebtPaymentRows => DebtPaymentRows.Count > 0;
 
     public string DebtPaymentLabel =>
         Loc.T(NewDebtIsInterestOnly ? "Principal repaid each month (optional)" : "Monthly payment");
@@ -854,7 +883,7 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     [NotifyPropertyChangedFor(
         nameof(DateLabel), nameof(NewIsOneTime), nameof(NewIsMonthly), nameof(NewIsQuarterly),
-        nameof(NewIsYearly), nameof(NewIsRecurring), nameof(RecurrenceHint))]
+        nameof(NewIsYearly), nameof(NewIsRecurring), nameof(RecurrenceHint), nameof(CanChangeOneTime))]
     public partial Recurrence NewRecurrence { get; set; }
 
     public bool NewIsOneTime { get => NewRecurrence == Recurrence.OneTime; set { if (value) NewRecurrence = Recurrence.OneTime; } }
@@ -1019,13 +1048,22 @@ public partial class MainViewModel : ViewModelBase
             ToAccountId = NewIsTransfer ? toAccount?.Id : null,
             ExternalId = EditingTransaction?.ExternalId,
         };
+        // Changes to single times stay with the entry while their dates still come up in its schedule.
+        if (EditingTransaction is { Changes.Count: > 0 } previous && transaction.IsRecurring)
+        {
+            var dates = Schedule.RegularDates(transaction, transaction.Date, previous.Changes.Max(c => c.Date)).ToHashSet();
+            transaction.Changes = previous.Changes.Where(c => dates.Contains(c.Date)).ToList();
+        }
 
         try
         {
             if (EditingTransaction is null)
                 await repository.AddTransactionAsync(transaction);
             else
+            {
                 await repository.UpdateTransactionAsync(transaction);
+                await repository.KeepEntryChangesAsync(transaction.Id, transaction.Changes.Select(c => c.Id).ToList());
+            }
         }
         catch (Exception ex)
         {
@@ -1108,10 +1146,12 @@ public partial class MainViewModel : ViewModelBase
         }
 
         if (EditingTransaction == transaction)
-            ResetForm();
+            ClosePanel();
+        var linked = Documents.Where(d => d.TransactionId == transaction.Id).Select(d => d.Id).ToArray();
         Transactions.Remove(transaction);
         UnlinkDocumentsFrom(transaction.Id);
         Recalculate();
+        ShowNotice(Loc.F("Deleted “{0}”", transaction.Description), UndoDeleteTransaction(transaction, linked));
     }
 
     /// <summary>Ends a monthly entry today, keeping its past months in the history.</summary>
@@ -1164,12 +1204,20 @@ public partial class MainViewModel : ViewModelBase
             _ when NewDebtIsInterestOnly && NewDebtInterestPer1000 is not > 0 => Loc.T("Enter the interest per 1,000 per month."),
             _ when NewDebtIsInterestOnly && NewDebtPayment < 0 => Loc.T("The monthly repayment can’t be negative."),
             (_, _, _, not > 0) when NewDebtIsMonthly => Loc.T("Enter the monthly payment."),
-            _ when date <= Today => Loc.F("“{0}” must be after today.", DebtDateLabel),
+            _ when EditingDebt is null && date <= Today => Loc.F("“{0}” must be after today.", DebtDateLabel),
+            _ when EditingDebt is { } editing && date <= editing.Debt.StartDate =>
+                Loc.F("“{0}” must be after {1}.", DebtDateLabel, Format.Date(editing.Debt.StartDate)),
             _ => null,
         };
         if (error is not null)
         {
             DebtError = error;
+            return;
+        }
+
+        if (EditingDebt is { } item)
+        {
+            await SaveDebtChangesAsync(item, date);
             return;
         }
 
@@ -1197,16 +1245,133 @@ public partial class MainViewModel : ViewModelBase
         }
 
         Debts.Add(CreateDebtItem(debt));
+        ResetDebtForm();
+        IsDebtPanelOpen = false;
+        Recalculate();
+    }
+
+    private async Task SaveDebtChangesAsync(DebtItemViewModel item, DateOnly date)
+    {
+        var changed = new Debt
+        {
+            Id = item.Debt.Id,
+            Name = NewDebtName.Trim(),
+            Balance = NewDebtBalance!.Value,
+            StartDate = item.Debt.StartDate,
+            AnnualInterestRate = NewDebtIsInterestOnly
+                ? Debt.AnnualRateFromMonthlyPer1000(NewDebtInterestPer1000!.Value)
+                : NewDebtRate ?? 0m,
+            MonthlyPayment = NewDebtIsLumpSum ? 0m : NewDebtPayment ?? 0m,
+            FirstPaymentDate = date,
+            IsInterestOnly = NewDebtIsInterestOnly,
+            ExtraPayments = item.Debt.ExtraPayments,
+        };
+
+        try
+        {
+            await repository.UpdateDebtAsync(changed);
+        }
+        catch (Exception ex)
+        {
+            DebtError = Loc.F("Could not save: {0}", ex.Message);
+            return;
+        }
+
+        var index = Debts.IndexOf(item);
+        if (index >= 0)
+            Debts[index] = CreateDebtItem(changed);
+        ResetDebtForm();
+        IsDebtPanelOpen = false;
+        Recalculate();
+    }
+
+    private void ResetDebtForm()
+    {
+        EditingDebt = null;
+        DebtPaymentRows = [];
         NewDebtName = "";
         NewDebtBalance = null;
         NewDebtPayment = null;
         NewDebtRate = 0m;
         NewDebtInterestPer1000 = null;
-        IsDebtPanelOpen = false;
+        NewDebtRepayment = DebtRepayment.Monthly;
+        NewDebtDate = DateTime.Today.AddMonths(1);
+    }
+
+    /// <summary>Loads a debt into the form so its amount, terms or dates can be corrected.</summary>
+    private void EditDebt(DebtItemViewModel item)
+    {
+        NewDebt();
+        var debt = item.Debt;
+        EditingDebt = item;
+        NewDebtName = debt.Name;
+        NewDebtBalance = debt.Balance;
+        NewDebtRepayment = debt.IsInterestOnly ? DebtRepayment.InterestOnly
+            : debt.IsLumpSum ? DebtRepayment.AllAtOnce
+            : DebtRepayment.Monthly;
+        NewDebtRate = debt.IsInterestOnly ? 0m : debt.AnnualInterestRate;
+        NewDebtInterestPer1000 = debt.IsInterestOnly ? Math.Round(debt.MonthlyInterestPer1000, 2) : null;
+        NewDebtPayment = debt.MonthlyPayment > 0 ? debt.MonthlyPayment : null;
+        NewDebtDate = debt.FirstPaymentDate.ToDateTime(TimeOnly.MinValue);
+        RefreshDebtPaymentRows();
+    }
+
+    private void RefreshDebtPaymentRows() =>
+        DebtPaymentRows = EditingDebt?.Debt.ExtraPayments
+            .OrderBy(p => p.Date).ThenBy(p => p.Id)
+            .Select(p => new DebtPaymentRow(p, Format.Date(p.Date),
+                p.IsBorrowing ? Loc.F("Borrowed {0}", Format.Money(p.Borrowed)) : Loc.F("Repaid {0}", Format.Money(p.Amount))))
+            .ToList() ?? [];
+
+    /// <summary>Removes an extra payment or borrowing recorded by mistake.</summary>
+    [RelayCommand]
+    private async Task RemoveDebtPaymentAsync(DebtPaymentRow row)
+    {
+        if (EditingDebt is not { } item)
+            return;
+        try
+        {
+            await repository.DeleteDebtPaymentAsync(row.Payment.Id);
+        }
+        catch (Exception ex)
+        {
+            DebtError = Loc.F("Could not delete: {0}", ex.Message);
+            return;
+        }
+
+        item.Debt.ExtraPayments.Remove(row.Payment);
+        RefreshDebtPaymentRows();
         Recalculate();
     }
 
-    private DebtItemViewModel CreateDebtItem(Debt debt) => new(debt, RecordExtraPaymentAsync, DeleteDebtAsync);
+    private DebtItemViewModel CreateDebtItem(Debt debt) =>
+        new(debt, RecordExtraPaymentAsync, BorrowMoreAsync, EditDebt, DeleteDebtAsync);
+
+    /// <summary>Records money borrowed again from the same lender: the debt grows and the money comes in.</summary>
+    private async Task BorrowMoreAsync(DebtItemViewModel item)
+    {
+        DebtError = null;
+        if (item.BorrowAmount is not > 0)
+        {
+            DebtError = Loc.T("Enter the amount you borrowed.");
+            return;
+        }
+
+        var payment = new DebtPayment { DebtId = item.Debt.Id, Date = Today, Amount = -item.BorrowAmount.Value };
+        try
+        {
+            await repository.AddDebtPaymentAsync(payment);
+        }
+        catch (Exception ex)
+        {
+            DebtError = Loc.F("Could not save: {0}", ex.Message);
+            return;
+        }
+
+        item.Debt.ExtraPayments.Add(payment);
+        item.BorrowAmount = null;
+        Recalculate();
+    }
 
     private async Task RecordExtraPaymentAsync(DebtItemViewModel item)
     {
@@ -1241,6 +1406,7 @@ public partial class MainViewModel : ViewModelBase
 
     private async Task DeleteDebtAsync(DebtItemViewModel item)
     {
+        var index = Debts.IndexOf(item);
         try
         {
             await repository.DeleteDebtAsync(item.Debt.Id);
@@ -1252,7 +1418,10 @@ public partial class MainViewModel : ViewModelBase
         }
 
         Debts.Remove(item);
+        if (EditingDebt == item)
+            ClosePanel();
         Recalculate();
+        ShowNotice(Loc.F("Deleted “{0}”", item.Name), UndoDeleteDebt(item.Debt, index));
     }
 
     [RelayCommand]

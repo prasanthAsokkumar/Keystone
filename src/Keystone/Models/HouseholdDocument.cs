@@ -47,6 +47,9 @@ public class HouseholdDocument
     /// <summary>From the bill's QR code: the payment reference to quote.</summary>
     public string PaymentReference { get; set; } = "";
 
+    /// <summary>SHA-256 of the file as it was added, to notice the same file being filed again. Empty for old ones until read.</summary>
+    public string FileHash { get; set; } = "";
+
     /// <summary>The expense entry created for this bill, if any.</summary>
     public int? TransactionId { get; set; }
 

@@ -24,7 +24,7 @@ public sealed class HouseholdFeaturesTests : IDisposable
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        Directory.Delete(_folder, recursive: true);
+        TestFolder.Delete(_folder);
     }
 
     private async Task<MainViewModel> LoadAsync()

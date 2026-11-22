@@ -24,7 +24,7 @@ public sealed class PlanningAndPaperTests : IDisposable
     public void Dispose()
     {
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools();
-        Directory.Delete(_folder, recursive: true);
+        TestFolder.Delete(_folder);
     }
 
     private async Task<MainViewModel> LoadAsync(bool ownDocumentsFolder = true)
@@ -183,7 +183,7 @@ public sealed class PlanningAndPaperTests : IDisposable
         foreach (var name in new[] { "scan-1.pdf", "scan-2.jpg", ".DS_Store" })
         {
             var path = Path.Combine(vm.InboxFolder, name);
-            File.WriteAllText(path, "x");
+            File.WriteAllText(path, $"made-up scan {name}");
             File.SetLastWriteTime(path, DateTime.Now.AddMinutes(-1));
         }
         File.WriteAllText(Path.Combine(vm.InboxFolder, "arriving.pdf"), "x"); // still being written

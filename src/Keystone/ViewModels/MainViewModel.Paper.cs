@@ -111,8 +111,24 @@ public partial class MainViewModel
         _indexing = true;
         try
         {
-            foreach (var document in Documents.Where(d => !_documentTexts.ContainsKey(d.Id)).ToList())
+            // Scans and photos were once stored as empty; they are read again now that their text can be recognised.
+            foreach (var document in Documents.Where(d => !_documentTexts.TryGetValue(d.Id, out var text) || text.Length == 0).ToList())
                 await IndexDocumentAsync(document);
+
+            // Fingerprints for documents filed before they were taken, so filing one again is noticed.
+            foreach (var document in Documents.Where(d => d is { Id: > 0, FileHash: "" } && _documentStore.Exists(d)).ToList())
+            {
+                try
+                {
+                    var path = _documentStore.FullPath(document.RelativePath);
+                    var hash = await Task.Run(() => DuplicateFinder.Hash(path));
+                    await repository.SetDocumentHashAsync(document.Id, hash);
+                    document.FileHash = hash;
+                }
+                catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+                {
+                }
+            }
         }
         finally
         {
@@ -120,24 +136,30 @@ public partial class MainViewModel
         }
     }
 
-    /// <summary>Reads and keeps one document's text. PDFs with text and text files; photos and scans have none.</summary>
+    /// <summary>
+    /// Reads and keeps one document's text: PDFs, text files, and scans and photos through text recognition.
+    /// A file with no text is remembered as a single space, so it isn't read again on every start.
+    /// </summary>
     private async Task IndexDocumentAsync(HouseholdDocument document)
     {
         if (document.Id == 0 || !_documentStore.Exists(document))
             return;
         var path = _documentStore.FullPath(document.RelativePath);
-        if (!DocumentReader.IsSupported(path) || DocumentReader.IsImage(path))
+        if (!DocumentReader.IsSupported(path))
             return;
 
         string text;
         try
         {
-            text = (await DocumentReader.ReadAsync(path)).Text ?? "";
+            text = await DocumentReader.ReadTextAsync(path);
         }
-        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException or NotSupportedException or InvalidOperationException)
+        catch (Exception)
         {
-            text = ""; // e.g. a scan without text: remembered as empty so it isn't read again
+            // A damaged or unusual file is skipped; it mustn't stop the documents after it from being read.
+            text = "";
         }
+        if (string.IsNullOrWhiteSpace(text))
+            text = " ";
 
         try
         {

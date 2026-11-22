@@ -61,7 +61,8 @@ public sealed record FinancialYearReport
     public static FinancialYearReport Build(
         IEnumerable<Transaction> transactions, int startYear, int startMonth, DateOnly today)
     {
-        transactions = transactions.Where(t => !t.IsTransfer); // money moved between own accounts
+        // Money moved between own accounts, and money borrowed, is neither earned nor spent.
+        transactions = transactions.Where(t => !t.IsTransfer && !t.IsBorrowing);
         var start = new DateOnly(startYear, startMonth, 1);
         var end = start.AddYears(1).AddDays(-1);
         var occurrences = Expand(transactions, start, end);
@@ -74,20 +75,20 @@ public sealed record FinancialYearReport
                 var inMonth = occurrences.Where(o => MonthStart(o.Date) == month).ToList();
                 return new MonthTotals(
                     month,
-                    inMonth.Where(o => o.Source.IsIncome).Sum(o => o.Source.Amount),
-                    inMonth.Where(o => !o.Source.IsIncome).Sum(o => o.Source.Amount),
+                    inMonth.Where(o => o.Source.IsIncome).Sum(o => o.Amount),
+                    inMonth.Where(o => !o.Source.IsIncome).Sum(o => o.Amount),
                     IsPlanned: month > currentMonth);
             })
             .ToList();
 
         var expenses = occurrences.Where(o => !o.Source.IsIncome).ToList();
-        var totalExpenses = expenses.Sum(o => o.Source.Amount);
+        var totalExpenses = expenses.Sum(o => o.Amount);
         var byCategory = expenses
             .GroupBy(o => string.IsNullOrWhiteSpace(o.Source.Category) ? Categories.Uncategorized : o.Source.Category.Trim(),
                 StringComparer.CurrentCultureIgnoreCase)
             .Select(g =>
             {
-                var amount = g.Sum(o => o.Source.Amount);
+                var amount = g.Sum(o => o.Amount);
                 return new CategoryTotal(g.Key, amount, totalExpenses == 0 ? 0 : (double)(amount / totalExpenses));
             })
             .OrderByDescending(c => c.Amount)
@@ -99,7 +100,7 @@ public sealed record FinancialYearReport
             StartMonth = startMonth,
             Months = months,
             ExpensesByCategory = byCategory,
-            PlannedExpenses = expenses.Where(o => o.Date > today).Sum(o => o.Source.Amount),
+            PlannedExpenses = expenses.Where(o => o.Date > today).Sum(o => o.Amount),
         };
     }
 }

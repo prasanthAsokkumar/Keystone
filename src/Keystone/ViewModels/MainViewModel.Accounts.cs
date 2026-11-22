@@ -93,13 +93,18 @@ public partial class MainViewModel
         AccountIdOf(transaction) == accountId || (transaction.IsTransfer && transaction.ToAccountId == accountId);
 
     /// <summary>What an entry does to one account's balance.</summary>
-    private decimal EffectOn(Transaction transaction, int accountId)
+    private decimal EffectOn(Transaction transaction, int accountId) =>
+        EffectOn(new Occurrence(transaction.Date, transaction), accountId);
+
+    /// <summary>What one occurrence does to one account's balance, with its own amount.</summary>
+    private decimal EffectOn(Occurrence occurrence, int accountId)
     {
+        var transaction = occurrence.Source;
         var effect = 0m;
         if (AccountIdOf(transaction) == accountId)
-            effect += transaction.IsTransfer ? -transaction.Amount : transaction.SignedAmount;
+            effect += transaction.IsTransfer ? -occurrence.Amount : occurrence.SignedAmount;
         if (transaction.IsTransfer && transaction.ToAccountId == accountId)
-            effect += transaction.Amount;
+            effect += occurrence.Amount;
         return effect;
     }
 
@@ -111,7 +116,7 @@ public partial class MainViewModel
             return account.OpeningBalance;
         var first = entries.Min(t => t.Date);
         return account.OpeningBalance +
-               Schedule.Expand(entries, first, date).Sum(o => EffectOn(o.Source, account.Id));
+               Schedule.Expand(entries, first, date).Sum(o => EffectOn(o, account.Id));
     }
 
     private async Task LoadAccountsAsync(AppSettings settings)

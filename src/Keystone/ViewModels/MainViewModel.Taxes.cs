@@ -89,7 +89,7 @@ public partial class MainViewModel
         var end = new DateOnly(TaxYear, 12, 31);
         return Schedule.Expand(_entries.Where(t => !t.IsTransfer && match(t) && InTaxFilter(t.PersonId)), start, end)
             .GroupBy(o => o.Source.PersonId)
-            .Select(g => (g.Key, g.Sum(o => o.Source.Amount)))
+            .Select(g => (g.Key, g.Sum(o => o.Amount)))
             .ToList();
     }
 
@@ -113,7 +113,7 @@ public partial class MainViewModel
         foreach (var (personId, amount) in salary.OrderBy(s => PersonName(s.PersonId), StringComparer.CurrentCultureIgnoreCase))
             income.Add(new TaxLine(Loc.F("Salary · {0}", PersonName(personId)), Loc.T("Net salary paid out; your salary certificate shows the gross figures."),
                 Format.Money(amount)));
-        var other = SumByPerson(t => t.IsIncome && t.Category != "Salary");
+        var other = SumByPerson(t => t.IsIncome && !t.IsBorrowing && t.Category != "Salary");
         if (other.Count > 0)
             income.Add(new TaxLine(Loc.T("Other income"), ByPersonText(other), Format.Money(other.Sum(o => o.Amount))));
 

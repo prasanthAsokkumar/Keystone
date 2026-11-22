@@ -8,6 +8,8 @@ using UglyToad.PdfPig;
 using UglyToad.PdfPig.DocumentLayoutAnalysis.TextExtractor;
 using Keystone.Localization;
 
+using Keystone.Services.Mac;
+
 namespace Keystone.Services;
 
 /// <summary>What a dropped file contains, ready to hand to the model: text, or one image.</summary>
@@ -77,9 +79,38 @@ public static class DocumentReader
             text.AppendLine($"--- Page {page.Number} ---").AppendLine(ContentOrderTextExtractor.GetText(page));
 
         if (pdf.GetPages().All(p => string.IsNullOrWhiteSpace(p.Text)))
+        {
+            // A scan (e.g. from the OneDrive or Notes app) is only pictures of the pages: read them like Live Text does.
+            var recognized = RecognizeScan(path);
+            if (!string.IsNullOrWhiteSpace(recognized))
+                return recognized;
             throw new NotSupportedException(
-                Loc.T("This PDF is a scan with no text in it. Take a screenshot or photo of it and drop that instead."));
+                Loc.T("This PDF is a scan and Keystone couldn’t read any text in it. Try a sharper scan, or a photo of the page."));
+        }
         return text.ToString();
+    }
+
+    /// <summary>Reads the text in a scanned PDF or a photo on this Mac. Replaceable in tests.</summary>
+    public static Func<string, string> RecognizeScan { get; set; } = TextRecognizer.RecognizePdf;
+
+    public static Func<string, string> RecognizePhoto { get; set; } = TextRecognizer.RecognizeImage;
+
+    /// <summary>
+    /// Just the words in a file, for searching inside documents: PDF text (scans read like Live Text), text files,
+    /// and the text in photos. Empty when there is none.
+    /// </summary>
+    public static async Task<string> ReadTextAsync(string path)
+    {
+        if (IsImage(path))
+            return await Task.Run(() => RecognizePhoto(path));
+        try
+        {
+            return (await ReadAsync(path)).Text ?? "";
+        }
+        catch (NotSupportedException)
+        {
+            return "";
+        }
     }
 
     /// <summary>

@@ -317,6 +317,34 @@ namespace Keystone.Data.Migrations
                     b.ToTable("DocumentTexts");
                 });
 
+            modelBuilder.Entity("Keystone.Models.EntryChange", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal?>("Amount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("TransactionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TransactionId", "Date")
+                        .IsUnique();
+
+                    b.ToTable("EntryChanges", (string)null);
+                });
+
             modelBuilder.Entity("Keystone.Models.HouseholdDocument", b =>
                 {
                     b.Property<int>("Id")
@@ -333,6 +361,10 @@ namespace Keystone.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateOnly?>("DueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("FileHash")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Kind")
@@ -839,6 +871,15 @@ namespace Keystone.Data.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("Keystone.Models.EntryChange", b =>
+                {
+                    b.HasOne("Keystone.Models.Transaction", null)
+                        .WithMany("Changes")
+                        .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Keystone.Models.HouseholdDocument", b =>
                 {
                     b.HasOne("Keystone.Models.Person", null)
@@ -950,6 +991,11 @@ namespace Keystone.Data.Migrations
             modelBuilder.Entity("Keystone.Models.PensionAccount", b =>
                 {
                     b.Navigation("Statements");
+                });
+
+            modelBuilder.Entity("Keystone.Models.Transaction", b =>
+                {
+                    b.Navigation("Changes");
                 });
 #pragma warning restore 612, 618
         }

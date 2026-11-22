@@ -76,6 +76,14 @@ public partial class MainViewModel
                     RefreshBulkTexts();
             };
             BulkItems.Add(item);
+            try
+            {
+                item.Hash = await Task.Run(() => DuplicateFinder.Hash(path));
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+            CheckBulkDuplicate(item);
         }
 
         RefreshBulkTexts();
@@ -106,6 +114,7 @@ public partial class MainViewModel
                         var path = item.SourcePath;
                         if (await Task.Run(() => scan(path)) is { } bill)
                             item.ApplyQrBill(bill);
+                        CheckBulkDuplicate(item);
                     }
                     if (item.AiWanted)
                     {
@@ -114,6 +123,12 @@ public partial class MainViewModel
                         if (cancellation.IsCancellationRequested)
                             break;
                         item.Apply(details, MatchPersonOption(details.Person));
+                        CheckBulkDuplicate(item);
+                        if (details.FollowUp is { } followUp)
+                        {
+                            item.FollowUp = followUp;
+                            item.FollowUpText = FollowUpText(item.ToDocument(Today), followUp);
+                        }
                     }
                     item.Status = BulkStatus.Ready;
                 }
@@ -137,6 +152,35 @@ public partial class MainViewModel
         // Files added after the list was closed and opened again while this was stopping.
         if (IsBulkPanelOpen && BulkItems.Any(i => i.Status == BulkStatus.Waiting))
             await ProcessBulkQueueAsync();
+    }
+
+    /// <summary>
+    /// Marks a file already filed (or in the list twice) and unticks it, so saving all doesn't file copies.
+    /// It can still be ticked to file it anyway.
+    /// </summary>
+    private void CheckBulkDuplicate(BulkDocumentItem item)
+    {
+        var found = DuplicateFinder.Find(Documents, item.Hash, item.Sender, item.Amount,
+            item.Date is { } date ? DateOnly.FromDateTime(date) : null, item.PaymentReference);
+        var text = found is null ? null : DuplicateText(found);
+        var sameFile = found?.Match == DuplicateMatch.SameFile;
+        if (found is null && item.Hash != "" && BulkItems.TakeWhile(i => i != item).Any(i => i.Hash == item.Hash))
+        {
+            text = Loc.T("This file is in the list twice.");
+            sameFile = true;
+        }
+        if (text == item.DuplicateText)
+            return;
+
+        var first = item.DuplicateText is null;
+        item.DuplicateText = text;
+        item.IsSameFile = sameFile;
+        if (text is not null && first)
+        {
+            item.IsSelected = false;
+            if (found?.Document.TransactionId is not null)
+                item.CreateEntry = false;
+        }
     }
 
     private void RefreshBulkTexts()
@@ -173,6 +217,7 @@ public partial class MainViewModel
     {
         BulkError = null;
         var failed = 0;
+        var followed = new List<string>();
         foreach (var item in SavableBulkItems.ToList())
         {
             item.Error = null;
@@ -190,6 +235,7 @@ public partial class MainViewModel
             }
 
             var document = item.ToDocument(Today);
+            document.FileHash = item.Hash;
             try
             {
                 var personName = item.Person.Id is null ? null : item.Person.Name;
@@ -200,7 +246,7 @@ public partial class MainViewModel
             }
             catch (Exception ex)
             {
-                item.Error = Loc.F("Could not save: {0}", ex.Message);
+                item.Error = Loc.F("Could not save: {0}", ex.GetBaseException().Message);
                 failed++;
                 continue;
             }
@@ -208,6 +254,18 @@ public partial class MainViewModel
             Documents.Add(document);
             BulkItems.Remove(item);
             _ = IndexDocumentAsync(document);
+            if (item is { FollowUp: { } followUp, AddFollowUp: true })
+            {
+                try
+                {
+                    if (await ApplyFollowUpAsync(document, followUp) is { } name)
+                        followed.Add(name);
+                }
+                catch (Exception)
+                {
+                    // The document is filed; the record can still be added by hand.
+                }
+            }
             if (item.FromInbox)
             {
                 try
@@ -219,8 +277,30 @@ public partial class MainViewModel
                 }
             }
         }
+        // Scans already filed before don't stay in the inbox to be offered again; they go to Deleted.
+        var discarded = 0;
+        foreach (var copy in BulkItems.Where(i => i is { FromInbox: true, IsSameFile: true, IsSelected: false, IsBusy: false }).ToList())
+        {
+            try
+            {
+                _documentStore.Discard(copy.SourcePath);
+                BulkItems.Remove(copy);
+                discarded++;
+            }
+            catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+            {
+            }
+        }
         if (BulkItems.All(i => !i.FromInbox))
             CheckInbox();
+
+        var notes = new List<string>();
+        if (followed.Count > 0)
+            notes.Add(Loc.F("Also added to Insurance or Contracts & dates: {0}.", string.Join(", ", followed)));
+        if (discarded > 0)
+            notes.Add(Loc.Plural(discarded, "{0} scan already filed was taken out of the inbox.", "{0} scans already filed were taken out of the inbox."));
+        if (notes.Count > 0)
+            ShowNotice(string.Join(" ", notes));
 
         RefreshDocumentRows();
         RefreshBulkTexts();
@@ -274,6 +354,32 @@ public sealed partial class BulkDocumentItem : ObservableObject
 
     /// <summary>Whether the file is searched for a QR-bill.</summary>
     public bool QrWanted { get; }
+
+    /// <summary>The file's fingerprint, to notice it was filed before.</summary>
+    public string Hash { get; set; } = "";
+
+    /// <summary>Why this looks filed already, or null.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasDuplicate))]
+    public partial string? DuplicateText { get; set; }
+
+    public bool HasDuplicate => DuplicateText is not null;
+
+    /// <summary>Byte for byte a file already filed (or listed twice), not just a similar one.</summary>
+    public bool IsSameFile { get; set; }
+
+    /// <summary>Insurance, contract, date or warranty details the AI found in the document.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasFollowUp))]
+    public partial FollowUp? FollowUp { get; set; }
+
+    public bool HasFollowUp => FollowUp is not null;
+
+    [ObservableProperty]
+    public partial string FollowUpText { get; set; } = "";
+
+    [ObservableProperty]
+    public partial bool AddFollowUp { get; set; } = true;
 
     /// <summary>The file came from the inbox and leaves it once filed.</summary>
     public bool FromInbox { get; init; }

@@ -40,11 +40,15 @@ The screenshots show a made-up family with sample data.
 
 **Transactions, accounts and debts**
 - One-time, monthly, quarterly and yearly income and expenses, per household member or shared
+- Change a single time of a repeating entry (a 13th salary, a bonus, a smaller paycheck) or skip it once
 - Several bank accounts, cards and cash, with transfers between them and an overdraft or credit limit
 - Bank statement import: camt.053/054 files and CSV exports from Swiss banks, with categories suggested,
   entries you already have recognised, and the account set to the statement's closing balance
-- Debts with monthly repayment, repayment at once, or interest only, including extra repayments
+- Debts with monthly repayment, repayment at once, or interest only, including extra repayments,
+  borrowing more from the same lender, and corrections to amounts and dates
 - A year view by financial year, with any start month
+- Export the entries or every booking of a year as CSV (for Excel or Numbers), or the year as a one-page PDF
+- Undo after deleting an entry or a debt
 
 **Documents**
 - Bills, invoices, letters, notices, contracts, insurance policies, statements and payslips
@@ -53,7 +57,11 @@ The screenshots show a made-up family with sample data.
 - Drop one file to file it, or drop many at once to import them in bulk
 - Swiss QR-bills are read exactly: amount, payee, IBAN, reference and due date, with copy buttons for e-banking
 - An inbox folder for phone scans (e.g. with the OneDrive app); Keystone offers to file whatever arrives
-- Search inside PDFs and text files, and a guide to how long each kind of paper should be kept
+- Filing the same paper twice is noticed (the same file, the same QR-bill, or same sender, amount and date)
+- A filed insurance policy, contract, passport or purchase receipt is offered for Insurance or Contracts & dates,
+  filled in from the document, so its notice deadline or expiry gets a reminder
+- Search inside PDFs, text files, scans and photos (scans are read on the Mac with macOS text recognition),
+  and a guide to how long each kind of paper should be kept
 
 **Local AI (optional, off by default)**
 - Reads bills, statements and payslips and suggests income and expense entries

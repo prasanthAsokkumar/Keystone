@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.ComponentModel.DataAnnotations.Schema;
 using Keystone.Localization;
 
@@ -56,6 +57,18 @@ public class Transaction
     /// <summary>The bank's reference for an imported booking, so the same statement can't be imported twice.</summary>
     public string? ExternalId { get; set; }
 
+    /// <summary>Single occurrences of a repeating entry that differ from the usual: another amount, or skipped.</summary>
+    public List<EntryChange> Changes { get; set; } = [];
+
+    /// <summary>The change made to the occurrence on <paramref name="date"/>, if any.</summary>
+    public EntryChange? ChangeOn(DateOnly date)
+    {
+        foreach (var change in Changes)
+            if (change.Date == date)
+                return change;
+        return null;
+    }
+
     /// <summary>
     /// Generated from a debt's repayment plan rather than entered by the user. Never stored.
     /// </summary>
@@ -63,6 +76,9 @@ public class Transaction
     public bool IsDebtPayment { get; init; }
 
     public bool IsIncome => Type == TransactionType.Income;
+
+    /// <summary>Money borrowed under a debt: it adds to cash but isn't earned.</summary>
+    public bool IsBorrowing => IsDebtPayment && IsIncome;
 
     public bool IsTransfer => Type == TransactionType.Transfer;
 
@@ -101,4 +117,25 @@ public class Transaction
         (_, null) => RecurrenceName,
         (_, { } end) => Loc.F("{0} until {1:MMM yyyy}", RecurrenceName, end),
     };
+}
+
+/// <summary>
+/// One occurrence of a repeating entry that differs from the usual, e.g. a 13th salary in December,
+/// a smaller paycheck, or a bill skipped once.
+/// </summary>
+public class EntryChange
+{
+    public int Id { get; set; }
+
+    public int TransactionId { get; set; }
+
+    /// <summary>The regular date of the occurrence this changes.</summary>
+    public DateOnly Date { get; set; }
+
+    /// <summary>The amount this time (positive). Null means it doesn't happen this time.</summary>
+    public decimal? Amount { get; set; }
+
+    public string Note { get; set; } = "";
+
+    public bool IsSkipped => Amount is null;
 }

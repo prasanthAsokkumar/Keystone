@@ -307,7 +307,27 @@ public sealed record DocumentDetails(
 {
     /// <summary>Who the document is for, as the model read it; match it with <see cref="PersonMatcher"/>.</summary>
     public string Person { get; init; } = "";
+
+    /// <summary>What else the paper should be kept track of as, e.g. an insurance policy with a notice deadline.</summary>
+    public FollowUp? FollowUp { get; init; }
 }
+
+/// <summary>Where a filed paper belongs besides Documents: Insurance, Contracts, Important dates or Warranties.</summary>
+public enum FollowUpKind { Insurance, Contract, Date, Warranty }
+
+/// <summary>
+/// The details of an insurance policy, contract, important date or purchase found in a document, so it can be
+/// tracked with its reminders. Every field may be missing; <see cref="Subkind"/> is the English enum name, e.g. "HealthBasic".
+/// </summary>
+public sealed record FollowUp(
+    FollowUpKind Kind,
+    string Subkind = "",
+    string Reference = "",
+    decimal? Cost = null,
+    Recurrence? Frequency = null,
+    DateOnly? EndDate = null,
+    int? NoticeMonths = null,
+    string Item = "");
 
 /// <summary>The entries found in a document, and who it is for.</summary>
 public sealed record EntryImport(IReadOnlyList<ExtractedEntry> Entries, string Person);
@@ -367,6 +387,26 @@ public static class DocumentDetailsExtraction
         - amount: for bills and invoices, the total to pay ("Total", "Gesamtbetrag", "zu bezahlen", "Montant") as a
           plain number without thousands separators, e.g. 1'272.35 becomes 1272.35. Otherwise 0.
         - due_date: when a bill or invoice must be paid (YYYY-MM-DD), otherwise empty.
+
+        Whether the household should also keep track of this paper elsewhere:
+        - record: "insurance" for an insurance policy or a yearly policy or premium overview ("Police",
+          "Versicherungsausweis", "Prämienübersicht"); not for a single premium bill. "contract" for a contract or
+          contract confirmation for a service paid regularly (mobile, internet, TV, streaming, gym, leasing, rent,
+          electricity or gas). "date" for an identity document, passport, driving licence, or a car inspection notice
+          ("MFK", "Aufgebot zur Fahrzeugprüfung"). "warranty" for a purchase receipt or invoice for a durable item
+          (electronics, an appliance, furniture, a bike) worth at least 50. Otherwise "none".
+        - record_kind: for insurance one of health_basic (KVG/LAMal basic health insurance), health_supplementary (VVG),
+          household_liability, car, life, legal_protection, travel, building, other; for a contract one of mobile,
+          internet, tv_and_streaming, gym, leasing, rent, subscription, energy, other; for a date one of passport,
+          identity_card, driving_licence, car_inspection, vignette, other. Otherwise empty.
+        - reference: the policy, customer or contract number, otherwise empty.
+        - cost: the premium or price for one period (monthly, quarterly or yearly) as a plain number; for a warranty
+          the item's price. Otherwise 0.
+        - frequency: how often the cost is paid: monthly, quarterly, yearly, or once.
+        - end_date: when the current term ends ("Vertragsende", "Ablauf", "gültig bis", "Laufzeit bis"), or for a date
+          the expiry or appointment date (YYYY-MM-DD). Otherwise empty.
+        - notice_months: the notice period in months ("Kündigungsfrist 3 Monate"), otherwise 0.
+        - item: for a warranty, the product bought, e.g. "Dishwasher Bosch Serie 4". Otherwise empty.
         """;
 
     public static JsonObject Schema() => new()
@@ -380,8 +420,17 @@ public static class DocumentDetailsExtraction
             ["date"] = new JsonObject { ["type"] = "string" },
             ["amount"] = new JsonObject { ["type"] = "number" },
             ["due_date"] = new JsonObject { ["type"] = "string" },
+            ["record"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("none", "insurance", "contract", "date", "warranty") },
+            ["record_kind"] = new JsonObject { ["type"] = "string" },
+            ["reference"] = new JsonObject { ["type"] = "string" },
+            ["cost"] = new JsonObject { ["type"] = "number" },
+            ["frequency"] = new JsonObject { ["type"] = "string", ["enum"] = new JsonArray("monthly", "quarterly", "yearly", "once") },
+            ["end_date"] = new JsonObject { ["type"] = "string" },
+            ["notice_months"] = new JsonObject { ["type"] = "number" },
+            ["item"] = new JsonObject { ["type"] = "string" },
         },
-        ["required"] = new JsonArray("type", "title", "sender", "date", "amount", "due_date"),
+        ["required"] = new JsonArray("type", "title", "sender", "date", "amount", "due_date",
+            "record", "record_kind", "reference", "cost", "frequency", "end_date", "notice_months", "item"),
     };
 
     /// <exception cref="InvalidOperationException">The answer isn't the expected JSON.</exception>
@@ -410,7 +459,47 @@ public static class DocumentDetailsExtraction
             Limit(EntryExtraction.ReadString(answer["sender"]).Trim(), 200),
             ReadDate(answer["date"]),
             amount > 0 ? amount : null,
-            ReadDate(answer["due_date"]));
+            ReadDate(answer["due_date"]))
+        {
+            FollowUp = ReadFollowUp(answer),
+        };
+    }
+
+    /// <summary>The record the paper also belongs to, or null for "none" or an answer without one.</summary>
+    internal static FollowUp? ReadFollowUp(JsonObject answer)
+    {
+        FollowUpKind? kind = EntryExtraction.ReadString(answer["record"]).Trim().ToLowerInvariant() switch
+        {
+            "insurance" => FollowUpKind.Insurance,
+            "contract" => FollowUpKind.Contract,
+            "date" => FollowUpKind.Date,
+            "warranty" => FollowUpKind.Warranty,
+            _ => null,
+        };
+        if (kind is null)
+            return null;
+
+        var cost = Math.Round(Math.Abs(EntryExtraction.ReadDecimal(answer["cost"])), 2);
+        var notice = (int)Math.Round(EntryExtraction.ReadDecimal(answer["notice_months"]));
+        Recurrence? frequency = EntryExtraction.ReadString(answer["frequency"]).Trim().ToLowerInvariant() switch
+        {
+            "monthly" => Recurrence.Monthly,
+            "quarterly" => Recurrence.Quarterly,
+            "yearly" => Recurrence.Yearly,
+            "once" => Recurrence.OneTime,
+            _ => null,
+        };
+        return new FollowUp(
+            kind.Value,
+            // "health_basic" → "HealthBasic", the enum's name
+            string.Concat(EntryExtraction.ReadString(answer["record_kind"]).Trim().Split('_', ' ', '-')
+                .Where(p => p.Length > 0).Select(p => char.ToUpperInvariant(p[0]) + p[1..].ToLowerInvariant())),
+            Limit(EntryExtraction.ReadString(answer["reference"]).Trim(), 100),
+            cost > 0 ? cost : null,
+            frequency,
+            ReadDate(answer["end_date"]),
+            notice is > 0 and <= 24 ? notice : null,
+            Limit(EntryExtraction.ReadString(answer["item"]).Trim(), 200));
     }
 
     private static DateOnly? ReadDate(JsonNode? node) =>

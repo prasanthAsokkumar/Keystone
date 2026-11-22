@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Keystone.Models;
 
@@ -35,6 +36,9 @@ public class Debt
 
     public List<DebtPayment> ExtraPayments { get; set; } = [];
 
+    /// <summary>Everything borrowed: the recorded balance plus later borrowing.</summary>
+    public decimal TotalBorrowed => Balance + ExtraPayments.Where(p => p.Date >= StartDate).Sum(p => p.Borrowed);
+
     public bool IsLumpSum => !IsInterestOnly && MonthlyPayment <= 0;
 
     /// <summary>Monthly interest per 1,000 owed, e.g. 25 for 30% a year.</summary>
@@ -52,5 +56,10 @@ public class DebtPayment
 
     public DateOnly Date { get; set; }
 
+    /// <summary>Paid towards the debt. Negative when more was borrowed from the same lender.</summary>
     public decimal Amount { get; set; }
+
+    public bool IsBorrowing => Amount < 0;
+
+    public decimal Borrowed => IsBorrowing ? -Amount : 0;
 }

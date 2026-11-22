@@ -169,8 +169,8 @@ public partial class MainViewModel
         return personIds.Select(id =>
         {
             var hasPensionFund = _pensionAccounts.Any(a => a.PersonId == id && a.Pillar == PensionPillar.PensionFund);
-            var paid = payments.Where(p => p.Source.PersonId == id).Sum(p => p.Source.Amount);
-            var paidByToday = payments.Where(p => p.Source.PersonId == id && p.Date <= Today).Sum(p => p.Source.Amount);
+            var paid = payments.Where(p => p.Source.PersonId == id).Sum(p => p.Amount);
+            var paidByToday = payments.Where(p => p.Source.PersonId == id && p.Date <= Today).Sum(p => p.Amount);
             return new Pillar3aRow(id, PersonName(id), paid, paidByToday, SwissPension.Pillar3aLimit(year, hasPensionFund), hasPensionFund);
         }).ToList();
     }

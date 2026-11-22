@@ -1,3 +1,4 @@
+using Keystone.Localization;
 using System.Collections.Generic;
 using System.Threading.Tasks;
 using System.ComponentModel;
@@ -186,6 +187,47 @@ public partial class MainWindow : Window
         });
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path && DataContext is MainViewModel vm)
             await vm.AttachStatementLetterAsync(path);
+    }
+
+    /// <summary>Asks where to save an export; null when cancelled.</summary>
+    private async Task<string?> PickSaveFileAsync(string title, string fileName, string typeName, string pattern)
+    {
+        using ((DataContext as MainViewModel)?.OwnWindow())
+        {
+            var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
+            {
+                Title = title,
+                SuggestedFileName = fileName,
+                DefaultExtension = pattern.TrimStart('*', '.'),
+                ShowOverwritePrompt = true,
+                FileTypeChoices = [new FilePickerFileType(typeName) { Patterns = [pattern] }],
+            });
+            return file?.TryGetLocalPath();
+        }
+    }
+
+    private async void ExportEntries_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm)
+            return;
+        if (await PickSaveFileAsync(Loc.T("Export entries"), vm.EntriesExportFileName, "CSV", "*.csv") is { } path)
+            await vm.ExportEntriesCsvAsync(path);
+    }
+
+    private async void ExportYearCsv_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm)
+            return;
+        if (await PickSaveFileAsync(Loc.T("Export the year"), vm.YearExportFileName + ".csv", "CSV", "*.csv") is { } path)
+            await vm.ExportYearCsvAsync(path);
+    }
+
+    private async void ExportYearPdf_Click(object? sender, RoutedEventArgs e)
+    {
+        if (DataContext is not MainViewModel vm)
+            return;
+        if (await PickSaveFileAsync(Loc.T("Export the year"), vm.YearExportFileName + ".pdf", "PDF", "*.pdf") is { } path)
+            await vm.ExportYearPdfAsync(path);
     }
 
     private async void ImportBankStatement_Click(object? sender, RoutedEventArgs e)

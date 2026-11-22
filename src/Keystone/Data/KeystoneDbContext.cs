@@ -117,7 +117,7 @@ public class KeystoneDbContext(string databasePath) : DbContext
     protected override void OnConfiguring(DbContextOptionsBuilder optionsBuilder)
     {
         var connectionString = new SqliteConnectionStringBuilder { DataSource = databasePath }.ToString();
-        optionsBuilder.UseSqlite(connectionString);
+        optionsBuilder.UseSqlite(connectionString).AddInterceptors(OneWriterAtATime.Instance, WaitForLocks.Instance);
     }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
@@ -135,6 +135,14 @@ public class KeystoneDbContext(string databasePath) : DbContext
             entity.HasOne<BankAccount>().WithMany().HasForeignKey(t => t.ToAccountId).OnDelete(DeleteBehavior.SetNull);
             entity.Property(t => t.ExternalId).HasMaxLength(200);
             entity.HasIndex(t => t.ExternalId);
+            entity.HasMany(t => t.Changes).WithOne().HasForeignKey(c => c.TransactionId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<EntryChange>(entity =>
+        {
+            entity.ToTable("EntryChanges");
+            entity.Property(c => c.Note).HasMaxLength(200);
+            entity.HasIndex(c => new { c.TransactionId, c.Date }).IsUnique();
         });
 
         modelBuilder.Entity<Person>().Property(p => p.Name).HasMaxLength(100);

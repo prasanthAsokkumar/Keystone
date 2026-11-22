@@ -13,6 +13,8 @@ namespace Keystone.ViewModels;
 public partial class DebtItemViewModel(
     Debt debt,
     Func<DebtItemViewModel, Task> recordExtraPayment,
+    Func<DebtItemViewModel, Task> borrowMore,
+    Action<DebtItemViewModel> edit,
     Func<DebtItemViewModel, Task> delete) : ViewModelBase
 {
     private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
@@ -31,6 +33,9 @@ public partial class DebtItemViewModel(
 
     [ObservableProperty]
     public partial decimal? ExtraAmount { get; set; }
+
+    [ObservableProperty]
+    public partial decimal? BorrowAmount { get; set; }
 
     public string Name => Debt.Name;
 
@@ -71,7 +76,7 @@ public partial class DebtItemViewModel(
 
     /// <summary>Share of the recorded balance already repaid.</summary>
     public double PaidPercent =>
-        Debt.Balance <= 0 ? 100 : Math.Clamp((double)(1 - Outstanding / Debt.Balance) * 100, 0, 100);
+        Debt.TotalBorrowed <= 0 ? 100 : Math.Clamp((double)(1 - Outstanding / Debt.TotalBorrowed) * 100, 0, 100);
 
     public string PayoffText
     {
@@ -104,5 +109,14 @@ public partial class DebtItemViewModel(
     private Task RecordExtraPaymentAsync() => recordExtraPayment(this);
 
     [RelayCommand]
+    private Task BorrowMoreAsync() => borrowMore(this);
+
+    [RelayCommand]
+    private void Edit() => edit(this);
+
+    [RelayCommand]
     private Task DeleteAsync() => delete(this);
 }
+
+/// <summary>An extra payment or borrowing listed in the debt form, so a mistake can be removed.</summary>
+public sealed record DebtPaymentRow(DebtPayment Payment, string DateText, string Text);
