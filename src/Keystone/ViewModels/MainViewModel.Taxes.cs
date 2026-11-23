@@ -157,6 +157,16 @@ public partial class MainViewModel
             foreach (var account in BankAccounts)
                 assets.Add(new TaxLine(account.Name, account.Iban == "" ? BankAccount.KindName(account.Kind) : BankAccount.FormatIban(account.Iban),
                     Format.Money(AccountBalance(account, yearEnd))));
+            // Investments and other assets at their last value up to 31 December.
+            foreach (var asset in _assets.Where(a => a.ValueOn(yearEnd) != 0).OrderByDescending(a => a.ValueOn(yearEnd)))
+            {
+                var asOf = asset.Values.Where(v => v.Date <= yearEnd).OrderBy(v => v.Date).Last().Date;
+                assets.Add(new TaxLine(asset.Name, $"{Asset.KindName(asset.Kind)} · {Loc.F("value from {0}", Format.Date(asOf))}",
+                    Format.Money(asset.ValueOn(yearEnd)),
+                    asset.Kind == AssetKind.Property ? Loc.T("Declare property at its tax value (Steuerwert), not what it would sell for.")
+                    : asOf.Year < TaxYear ? Loc.T("Enter its value on 31 December for the tax return.") : "",
+                    asOf.Year < TaxYear));
+            }
             foreach (var plan in DebtPlans)
             {
                 var owed = plan.OutstandingOn(yearEnd);
@@ -175,11 +185,12 @@ public partial class MainViewModel
                     Categories.Display(Categories.Childcare), Categories.Display(Categories.MedicalCosts),
                     Categories.Display(Categories.Donations))),
             new TaxSection(Loc.T("Assets and debts on 31 December"), assets,
-                assets.Count > 0 ? Format.Money(BankAccounts.Sum(a => AccountBalance(a, yearEnd)) - DebtPlans.Sum(p => p.OutstandingOn(yearEnd))) : "",
+                assets.Count > 0 ? Format.Money(BankAccounts.Sum(a => AccountBalance(a, yearEnd)) + AssetsOn(yearEnd) - DebtPlans.Sum(p => p.OutstandingOn(yearEnd))) : "",
                 Loc.T("Shown for the whole household.")),
         ];
 
         RefreshTaxChecklist(salary.Select(s => s.PersonId));
+        RefreshTaxEstimate();
     }
 
     /// <summary>Certificates the tax return needs, found in Documents when their title, sender or notes say what they are.</summary>

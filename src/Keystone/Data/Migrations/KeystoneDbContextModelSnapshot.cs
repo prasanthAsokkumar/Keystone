@@ -106,6 +106,13 @@ namespace Keystone.Data.Migrations
                     b.Property<decimal>("StartingBalance")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("TaxAssessments")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("TaxRate")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
                     b.ToTable("Settings");
@@ -171,6 +178,75 @@ namespace Keystone.Data.Migrations
                     b.HasIndex("Start");
 
                     b.ToTable("Appointments");
+                });
+
+            modelBuilder.Entity("Keystone.Models.Asset", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("Institution")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(16)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("PersonId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly?>("SoldOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PersonId");
+
+                    b.ToTable("Assets", (string)null);
+                });
+
+            modelBuilder.Entity("Keystone.Models.AssetValue", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("AssetId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Note")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Value")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AssetId");
+
+                    b.ToTable("AssetValues", (string)null);
                 });
 
             modelBuilder.Entity("Keystone.Models.BankAccount", b =>
@@ -908,6 +984,23 @@ namespace Keystone.Data.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
                 });
 
+            modelBuilder.Entity("Keystone.Models.Asset", b =>
+                {
+                    b.HasOne("Keystone.Models.Person", null)
+                        .WithMany()
+                        .HasForeignKey("PersonId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Keystone.Models.AssetValue", b =>
+                {
+                    b.HasOne("Keystone.Models.Asset", null)
+                        .WithMany("Values")
+                        .HasForeignKey("AssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("Keystone.Models.BillInstalment", b =>
                 {
                     b.HasOne("Keystone.Models.HouseholdDocument", null)
@@ -1063,6 +1156,11 @@ namespace Keystone.Data.Migrations
                         .WithMany()
                         .HasForeignKey("PersonId")
                         .OnDelete(DeleteBehavior.SetNull);
+                });
+
+            modelBuilder.Entity("Keystone.Models.Asset", b =>
+                {
+                    b.Navigation("Values");
                 });
 
             modelBuilder.Entity("Keystone.Models.Debt", b =>

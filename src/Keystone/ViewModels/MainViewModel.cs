@@ -27,6 +27,7 @@ public enum AppPage
     Appointments,
     Notes,
     Debts,
+    Assets,
     Insurance,
     Contracts,
     Retirement,
@@ -81,7 +82,7 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(
-        nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsAppointmentsPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsRetirementPage), nameof(IsInsurancePage), nameof(IsTaxesPage), nameof(IsContractsPage), nameof(IsPlanningPage),
+        nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsAppointmentsPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsAssetsPage), nameof(IsRetirementPage), nameof(IsInsurancePage), nameof(IsTaxesPage), nameof(IsContractsPage), nameof(IsPlanningPage),
         nameof(IsYearPage), nameof(IsSettingsPage), nameof(PageTitle), nameof(PageSubtitle), nameof(DropHint),
         nameof(DropFilesAsDocument), nameof(DropDetailText), nameof(NewEntryText))]
     public partial AppPage CurrentPage { get; set; }
@@ -99,6 +100,8 @@ public partial class MainViewModel : ViewModelBase
     public bool IsNotesPage { get => CurrentPage == AppPage.Notes; set { if (value) CurrentPage = AppPage.Notes; } }
 
     public bool IsDebtsPage { get => CurrentPage == AppPage.Debts; set { if (value) CurrentPage = AppPage.Debts; } }
+
+    public bool IsAssetsPage { get => CurrentPage == AppPage.Assets; set { if (value) CurrentPage = AppPage.Assets; } }
 
     public bool IsRetirementPage { get => CurrentPage == AppPage.Retirement; set { if (value) CurrentPage = AppPage.Retirement; } }
 
@@ -122,6 +125,7 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Appointments => Loc.T("Appointments"),
         AppPage.Notes => Loc.T("Notes"),
         AppPage.Debts => Loc.T("Debts"),
+        AppPage.Assets => Loc.T("Assets"),
         AppPage.Retirement => Loc.T("Retirement"),
         AppPage.Insurance => Loc.T("Insurance"),
         AppPage.Taxes => Loc.T("Taxes"),
@@ -140,6 +144,7 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Appointments => Loc.T("Doctor’s visits, meetings and everything else with a time, in step with your calendar"),
         AppPage.Notes => Loc.T("Thoughts, ideas and plans for your projects"),
         AppPage.Debts => Loc.T("What you owe and when it’s paid off"),
+        AppPage.Assets => Loc.T("Investments, crypto, property and other things of value"),
         AppPage.Retirement => Loc.T("Your Swiss retirement provision: AHV, pension fund and pillar 3a"),
         AppPage.Insurance => Loc.T("What your policies cost, and by when to cancel them"),
         AppPage.Taxes => Loc.T("Everything you need for your tax return, gathered in one place"),
@@ -168,7 +173,8 @@ public partial class MainViewModel : ViewModelBase
     public bool IsPanelOpen => IsEntryPanelOpen || IsDebtPanelOpen || IsImportPanelOpen || IsDocumentPanelOpen || IsTaskPanelOpen ||
                                IsStatementPanelOpen || IsPensionAccountPanelOpen || IsBulkPanelOpen ||
                                IsInsurancePanelOpen || IsAccountPanelOpen || IsContractPanelOpen ||
-                               IsImportantDatePanelOpen || IsWarrantyPanelOpen || IsGoalPanelOpen || IsAppointmentPanelOpen;
+                               IsImportantDatePanelOpen || IsWarrantyPanelOpen || IsGoalPanelOpen || IsAppointmentPanelOpen ||
+                               IsAssetPanelOpen;
 
     /// <summary>
     /// A dropped file is filed as a document on the Documents page, or when import is off;
@@ -1025,6 +1031,7 @@ public partial class MainViewModel : ViewModelBase
             LoadListSorts(settings.ListSorts);
             LoadHiddenCover(settings.HiddenCover);
             LoadPageLayout(settings.PageLayout);
+            LoadTaxSettings(settings.TaxAssessments, settings.TaxRate);
             _checkedPapers = settings.CheckedPapers.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(id => int.TryParse(id, out var n) ? n : 0).Where(n => n > 0).ToHashSet();
             ApplyLockSettings(settings.LockEnabled, settings.LockAfterMinutes);
@@ -1050,6 +1057,7 @@ public partial class MainViewModel : ViewModelBase
             await LoadAccountsAsync(settings);
             await LoadDocumentsAsync(settings);
             await LoadInsuranceAsync();
+            await LoadAssetsAsync();
             await LoadDeadlinesAsync();
             await LoadGoalsAsync();
             await LoadTasksAsync();
@@ -1819,7 +1827,7 @@ public partial class MainViewModel : ViewModelBase
             NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
             LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
             ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex,
-            AppointmentStatusFilterIndex, AppointmentReminderIndex);
+            AppointmentStatusFilterIndex, AppointmentReminderIndex, AssetKindIndex);
         CategoryFilter = AllCategories;
         OnPropertyChanged(string.Empty);
         (TransactionsTab, ScheduleFilterIndex, FinancialYearStartIndex,
@@ -1827,7 +1835,7 @@ public partial class MainViewModel : ViewModelBase
             NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
             LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
             ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex,
-            AppointmentStatusFilterIndex, AppointmentReminderIndex) = selections;
+            AppointmentStatusFilterIndex, AppointmentReminderIndex, AssetKindIndex) = selections;
 
         RefreshPersonOptions();
         RefreshDocumentRows();

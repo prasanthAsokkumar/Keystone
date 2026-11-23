@@ -30,6 +30,15 @@ public class AppSettings
     /// </summary>
     public string PageLayout { get; set; } = "";
 
+    /// <summary>
+    /// Total tax per year from the assessment or final bill (canton, commune and federal together), e.g.
+    /// {"2025":18400}. With Keystone's own figures for that year it gives the rate the estimate uses.
+    /// </summary>
+    public string TaxAssessments { get; set; } = "";
+
+    /// <summary>A tax rate set by hand (percent of income after deductions), used when no assessment is entered.</summary>
+    public decimal? TaxRate { get; set; }
+
     /// <summary>Where household documents are filed. Empty means the default OneDrive folder.</summary>
     public string DocumentsFolder { get; set; } = "";
 

@@ -1,0 +1,88 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             x:Class="Keystone.Views.Pages.AssetPanel"
+             x:DataType="vm:MainViewModel">
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <TextBlock Text="{Binding AssetFormTitle}" FontSize="20" FontWeight="Bold" />
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="28,16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding SaveAssetCommand}" />
+                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}" Command="{Binding ClosePanelCommand}" />
+            </Grid>
+        </Border>
+        <ScrollViewer>
+            <StackPanel Spacing="18" Margin="28,12,28,20">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Name'}" />
+                    <TextBox Text="{Binding AssetName}" PlaceholderText="{l:T 'e.g. ETF depot, Bitcoin, Flat in Riehen, Car'}" />
+                </StackPanel>
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
+                        <ComboBox ItemsSource="{Binding AssetKindNames}" SelectedIndex="{Binding AssetKindIndex}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
+                        <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding AssetPerson}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Grid>
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Bank, broker or exchange (optional)'}" />
+                    <TextBox Text="{Binding AssetInstitution}" PlaceholderText="{l:T 'e.g. Swissquote, PostFinance'}" />
+                </StackPanel>
+
+                <!-- The value: today's, or from a statement on its date -->
+                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14">
+                    <StackPanel Spacing="10">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'What it is worth'}" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <NumericUpDown Value="{Binding AssetValueAmount}" FormatString="N2" PlaceholderText="0.00" ShowButtonSpinner="False" />
+                            <CalendarDatePicker Grid.Column="1" SelectedDate="{Binding AssetValueDate}" HorizontalAlignment="Stretch" />
+                        </Grid>
+                        <TextBox Text="{Binding AssetValueNote}" PlaceholderText="{l:T 'Note, e.g. depot statement Q3 (optional)'}" />
+                        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding IsEditingAsset}"
+                                   Text="{l:T 'Enter a new value to add it to the history; leave it empty to keep the values as they are.'}" />
+                        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding AssetIsProperty}"
+                                   Text="{l:T 'For the tax return, property counts at its tax value (Steuerwert) from your assessment.'}" />
+                        <ItemsControl ItemsSource="{Binding AssetValueRows}" IsVisible="{Binding HasAssetValueRows}" Margin="0,4,0,0">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:AssetValueRow">
+                                    <Grid ColumnDefinitions="*,Auto,Auto,34" ColumnSpacing="10" Margin="0,2">
+                                        <StackPanel VerticalAlignment="Center">
+                                            <TextBlock Classes="secondary" FontSize="13" Text="{Binding DateText}" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Note}" IsVisible="{Binding HasNote}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="1" Classes="muted" FontSize="12" Text="{Binding ChangeText}" VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" FontWeight="SemiBold" FontSize="13" Text="{Binding ValueText}" VerticalAlignment="Center" />
+                                        <Button Grid.Column="3" Classes="icon danger" ToolTip.Tip="{l:T 'Delete this value'}"
+                                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteAssetValueCommand}"
+                                                CommandParameter="{Binding}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Sold on (optional)'}" />
+                    <CalendarDatePicker SelectedDate="{Binding AssetSoldOn}" HorizontalAlignment="Stretch" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
+                    <TextBox Text="{Binding AssetNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" />
+                </StackPanel>
+                <TextBlock Classes="error" Text="{Binding AssetError}" IsVisible="{Binding HasAssetError}" TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

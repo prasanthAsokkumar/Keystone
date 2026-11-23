@@ -111,6 +111,8 @@ The screenshots show a made-up family with sample data.
 **Taxes**
 - A tax year's income, deductions (pillar 3a, pension fund buy-ins, childcare, medical costs, donations, debt
   interest) and assets on 31 December, plus a checklist of certificates to collect
+- A rough tax estimate from your own rate (last year's tax, or a rate you set) and whether your instalments
+  are enough
 
 **Everything else**
 - Search across entries, documents, tasks, appointments, notes, insurance and accounts (⌘F)
@@ -118,6 +120,10 @@ The screenshots show a made-up family with sample data.
   even when Keystone is closed
 - Daily backups of all data next to your documents in OneDrive, kept for 30 days, with restore
 - App lock with Touch ID or your Mac password; it locks when your Mac locks, not every time you switch apps
+
+**Assets**
+- Securities accounts, crypto, property, vehicles and other things of value, with their value over time
+- Counted in your net worth, and listed with the assets for the tax return on 31 December
 
 **Retirement provision (Swiss three pillars)**
 - AHV, pension fund (BVG), vested benefits, pillar 3a and 3b accounts per person

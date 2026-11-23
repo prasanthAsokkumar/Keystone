@@ -1,0 +1,85 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.AssetsPage"
+             x:DataType="vm:MainViewModel">
+    <!-- What the household owns besides cash and retirement savings, and what it is worth. -->
+    <ScrollViewer>
+    <StackPanel Spacing="16" Margin="0,0,14,0">
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
+            <Border Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Assets today'}" />
+                    <TextBlock Classes="value" Text="{Binding AssetsTotalText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding AssetsChangeText}" TextWrapping="Wrap"
+                               Classes.negative="{Binding AssetsAreDown}" />
+                    <TextBlock Classes="muted" FontSize="12" Text="{Binding AssetsByKindText}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Net worth'}" />
+                    <TextBlock Classes="value" Text="{Binding NetWorthWithAssetsText}" />
+                    <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                               Text="{l:T 'Cash, retirement savings and these assets, minus debts. Its history is under Planning.'}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Border Classes="card" Padding="8">
+            <StackPanel Spacing="4">
+                <TextBlock Classes="sectionTitle" Text="{l:T 'Your assets'}" Margin="16,12,12,4" />
+                <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasAssetRows}"
+                           Text="{l:T 'No assets yet. Add a securities account, crypto, a flat or a car with what it is worth today, and update the value when a statement comes.'}" />
+                <Grid ColumnDefinitions="*,120,200,72" ColumnSpacing="16" Margin="28,4,28,6" IsVisible="{Binding HasAssetRows}">
+                    <controls:SortHeader Label="{l:T 'Asset'}" List="assets" Key="name" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="1" Label="{l:T 'Person'}" List="assets" Key="person" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="2" Label="{l:T 'Value'}" List="assets" Key="value" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding AssetRows}" Margin="12,0,12,8" IsVisible="{Binding HasAssetRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:AssetRow">
+                            <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,10">
+                                <Grid ColumnDefinitions="*,120,200,72" ColumnSpacing="16" Background="Transparent"
+                                      controls:Drag.Item="{Binding}" controls:Drag.Target="reorder:assets" controls:Drag.TargetItem="{Binding}"
+                                      Opacity="{Binding IsSold, Converter={x:Static vm:Format.EndedOpacityConverter}}">
+                                    <StackPanel VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Classes="pill" Classes.brand="{Binding !IsShared}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                    <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding ValueText}" FontWeight="SemiBold" TextAlignment="Right" />
+                                        <TextBlock FontSize="12" Text="{Binding ChangeText}" TextAlignment="Right" IsVisible="{Binding HasChange}"
+                                                   Classes="muted" Classes.positive="{Binding IsUp}" Classes.negative="{Binding IsDown}" />
+                                        <TextBlock FontSize="12" Text="{Binding AsOfText}" TextAlignment="Right" TextWrapping="Wrap"
+                                                   Classes="muted" Classes.warning="{Binding IsStale}" />
+                                    </StackPanel>
+                                    <Grid Grid.Column="3" ColumnDefinitions="34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Classes="icon" ToolTip.Tip="{l:T 'Update the value or edit'}"
+                                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).EditAssetCommand}"
+                                                CommandParameter="{Binding Asset}">
+                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteAssetCommand}"
+                                                CommandParameter="{Binding Asset}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="4,0"
+                   Text="{l:T 'Values are what you enter, e.g. from a depot statement. They count in net worth and in the Taxes page’s assets on 31 December. A guide, not advice.'}" />
+    </StackPanel>
+    </ScrollViewer>
+</UserControl>

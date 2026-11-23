@@ -55,7 +55,7 @@ public partial class MainViewModel
                 };
             default:
                 return kind == "reorder" && targetItem is not null && targetItem != item && targetItem.GetType() == item.GetType() &&
-                       value is "policies" or "contracts" or "tasks" or "goals" or "debts";
+                       value is "policies" or "contracts" or "tasks" or "goals" or "debts" or "assets";
         }
     }
 
@@ -191,6 +191,9 @@ public partial class MainViewModel
                 break;
             case "goals":
                 await SaveOrderAsync<GoalRow, SavingsGoal>(GoalRows, item, target, r => r.Goal, g => g.Id, (g, o) => g.SortOrder = o);
+                break;
+            case "assets":
+                await SaveOrderAsync<AssetRow, Asset>(AssetRows, item, target, r => r.Asset, a => a.Id, (a, o) => a.SortOrder = o);
                 break;
             case "debts":
                 await SaveOrderAsync<DebtItemViewModel, Debt>(Debts.ToList(), item, target, d => d.Debt, d => d.Id, (d, o) => d.SortOrder = o);

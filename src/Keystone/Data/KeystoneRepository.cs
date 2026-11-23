@@ -333,6 +333,13 @@ public sealed class KeystoneRepository(string databasePath)
 
     // ── Simple records: contracts, important dates, warranties, savings goals ──
 
+    /// <summary>Assets with their values over time.</summary>
+    public async Task<List<Asset>> GetAssetsAsync()
+    {
+        await using var db = CreateContext();
+        return await db.Set<Asset>().AsNoTracking().Include(a => a.Values).ToListAsync();
+    }
+
     public async Task<List<T>> GetAllAsync<T>() where T : class
     {
         await using var db = CreateContext();
@@ -415,6 +422,10 @@ public sealed class KeystoneRepository(string databasePath)
     public Task SetCheckedPapersAsync(string ids) => UpdateSettingsAsync(s => s.CheckedPapers = ids);
 
     public Task SetPageLayoutAsync(string json) => UpdateSettingsAsync(s => s.PageLayout = json);
+
+    public Task SetTaxAssessmentsAsync(string json) => UpdateSettingsAsync(s => s.TaxAssessments = json);
+
+    public Task SetTaxRateAsync(decimal? rate) => UpdateSettingsAsync(s => s.TaxRate = rate);
 
     /// <summary>Saves where rows were dragged to, for one kind of record.</summary>
     public async Task SetSortOrdersAsync<T>(IReadOnlyDictionary<int, int> orders) where T : class

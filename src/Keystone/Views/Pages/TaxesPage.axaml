@@ -222,7 +222,38 @@
         </ScrollViewer>
 
         <ScrollViewer Grid.Column="1">
-            <Border Classes="card" VerticalAlignment="Top">
+            <StackPanel Spacing="16" VerticalAlignment="Top">
+            <!-- A rough estimate of the year's tax, from the household's own rate, against the instalments paid -->
+            <Border Classes="card">
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="sectionTitle" Text="{l:T 'Tax estimate'}" />
+                    <TextBlock Classes="value" Text="{Binding TaxEstimateText}" IsVisible="{Binding HasTaxEstimate}" />
+                    <TextBlock Classes="muted" FontSize="12" Text="{Binding TaxEstimateDetail}" TextWrapping="Wrap" />
+                    <TextBlock Classes="secondary" FontSize="13" Text="{Binding TaxPaidText}" TextWrapping="Wrap" />
+                    <TextBlock FontSize="14" FontWeight="SemiBold" Text="{Binding TaxBalanceText}" TextWrapping="Wrap"
+                               IsVisible="{Binding HasTaxBalance}" Classes.warning="{Binding TaxBalanceIsOwed}"
+                               Classes.positive="{Binding !TaxBalanceIsOwed}" />
+                    <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="12" Margin="0,4,0,0">
+                        <StackPanel Spacing="8">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{Binding TaxReferenceLabel}" />
+                                <NumericUpDown Value="{Binding TaxReferenceAmount}" Minimum="0" FormatString="N0" PlaceholderText="0"
+                                               ShowButtonSpinner="False" />
+                                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                           Text="{l:T 'From the assessment or final bill: canton, commune, church and federal tax together.'}" />
+                            </StackPanel>
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Or a rate by hand (%)'}" />
+                                <NumericUpDown Value="{Binding TaxRateInput}" Minimum="0" Maximum="60" FormatString="0.#" Increment="0.5"
+                                               PlaceholderText="{l:T 'e.g. 15'}" ShowButtonSpinner="False" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                               Text="{l:T 'A rough estimate: Keystone uses your own rate, not your canton’s tariffs. A big change in income or deductions makes it rougher. A guide, not tax advice.'}" />
+                </StackPanel>
+            </Border>
+            <Border Classes="card">
                 <StackPanel Spacing="12">
                     <StackPanel Spacing="2">
                         <TextBlock Classes="sectionTitle" Text="{l:T 'Papers to collect'}" />
@@ -258,6 +289,7 @@
                                Text="{l:T 'Found when a document’s title, sender or notes name it, e.g. “Lohnausweis 2025”.'}" />
                 </StackPanel>
             </Border>
+            </StackPanel>
         </ScrollViewer>
     </Grid>
 </UserControl>

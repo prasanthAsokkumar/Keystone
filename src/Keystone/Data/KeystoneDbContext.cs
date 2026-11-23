@@ -188,6 +188,24 @@ public class KeystoneDbContext(string databasePath) : DbContext
             entity.HasOne<Transaction>().WithMany().HasForeignKey(i => i.TransactionId).OnDelete(DeleteBehavior.SetNull);
         });
 
+        modelBuilder.Entity<Asset>(entity =>
+        {
+            entity.ToTable("Assets");
+            entity.Property(a => a.Name).HasMaxLength(200);
+            entity.Property(a => a.Kind).HasConversion<string>().HasMaxLength(16);
+            entity.Property(a => a.Institution).HasMaxLength(200);
+            entity.Property(a => a.Notes).HasMaxLength(2000);
+            entity.Ignore(a => a.Latest);
+            entity.HasOne<Person>().WithMany().HasForeignKey(a => a.PersonId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasMany(a => a.Values).WithOne().HasForeignKey(v => v.AssetId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<AssetValue>(entity =>
+        {
+            entity.ToTable("AssetValues");
+            entity.Property(v => v.Note).HasMaxLength(200);
+        });
+
         modelBuilder.Entity<Note>(entity =>
         {
             entity.Property(n => n.Title).HasMaxLength(200);

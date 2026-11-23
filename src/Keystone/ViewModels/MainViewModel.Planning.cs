@@ -551,8 +551,8 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial IReadOnlyList<TaxLine> NetWorthParts { get; set; } = [];
 
-    /// <summary>Cash in all accounts, retirement savings (as of each account's latest letter) minus debts.</summary>
-    public decimal NetWorthOn(DateOnly date) => CashOn(date) + RetirementSavingsOn(date) - DebtsOn(date);
+    /// <summary>Cash in all accounts, retirement savings (as of each account's latest letter), other assets, minus debts.</summary>
+    public decimal NetWorthOn(DateOnly date) => CashOn(date) + RetirementSavingsOn(date) + AssetsOn(date) - DebtsOn(date);
 
     private decimal CashOn(DateOnly date) => BankAccounts.Sum(a => AccountBalance(a, date));
 
@@ -583,6 +583,7 @@ public partial class MainViewModel
         [
             new TaxLine(Loc.T("Cash in accounts"), Loc.Plural(BankAccounts.Count, "{0} account", "{0} accounts"), Format.Money(CashOn(Today))),
             new TaxLine(Loc.T("Retirement savings"), Loc.T("Pension fund, vested benefits, pillar 3a and 3b"), Format.Money(RetirementSavingsOn(Today))),
+            new TaxLine(Loc.T("Investments and other assets"), Loc.T("Securities, crypto, property, vehicles…"), Format.Money(AssetsOn(Today))),
             new TaxLine(Loc.T("Debts"), "", Format.SignedMoney(-DebtsOn(Today))),
         ];
     }
@@ -591,6 +592,7 @@ public partial class MainViewModel
     {
         IsGoalPanelOpen = false;
         EditingGoal = null;
+        CloseAssetPanel();
     }
 }
 
