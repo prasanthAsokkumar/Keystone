@@ -15,7 +15,9 @@ namespace Keystone.ViewModels;
 /// </summary>
 public partial class MainViewModel
 {
-    public string EntriesExportFileName => $"Keystone {Loc.T("Entries")} {Today:yyyy-MM-dd}.csv";
+    /// <summary>"Keystone Expenses 2026-11-23.csv": the export holds the open tab.</summary>
+    public string EntriesExportFileName =>
+        $"Keystone {Loc.T(TransactionsTab switch { 0 => "Income", 2 => "Transfers", _ => "Expenses" })} {Today:yyyy-MM-dd}.csv";
 
     public string YearExportFileName => $"Keystone {Report.Label.Replace('/', '-')}";
 
@@ -28,7 +30,7 @@ public partial class MainViewModel
     private static string TypeName(Transaction t) =>
         Loc.T(t.IsTransfer ? "Transfer" : t.IsIncome ? "Income" : "Expense");
 
-    /// <summary>The entries shown on the Transactions page, with the current filters and sort.</summary>
+    /// <summary>The entries shown on the Transactions page: the open tab, with the current filters and sort.</summary>
     public string BuildEntriesCsv() => Csv.Build(
         [Loc.T("Date"), Loc.T("Description"), Loc.T("Category"), Loc.T("Type"), Loc.T("Amount"),
          Loc.T("Repeats"), Loc.T("Ends on"), Loc.T("Person"), Loc.T("Account"), Loc.T("To account")],

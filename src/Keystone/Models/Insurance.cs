@@ -22,6 +22,9 @@ public class InsurancePolicy
 {
     public int Id { get; set; }
 
+    /// <summary>Where the row was put by dragging; 0 for rows never moved by hand.</summary>
+    public int SortOrder { get; set; }
+
     public string Insurer { get; set; } = "";
 
     public InsuranceKind Kind { get; set; }

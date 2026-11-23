@@ -2,10 +2,12 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:l="using:Keystone.Localization"
              xmlns:vm="using:Keystone.ViewModels"
+             xmlns:controls="using:Keystone.Controls"
              x:Class="Keystone.Views.Pages.InsurancePage"
              x:DataType="vm:MainViewModel">
     <!-- What each policy costs, and by when it must be cancelled to switch. -->
-    <Grid RowDefinitions="Auto,*" RowSpacing="16">
+    <ScrollViewer>
+    <StackPanel Spacing="16" Margin="0,0,14,0">
         <Grid ColumnDefinitions="*,*" ColumnSpacing="16">
             <Border Classes="card">
                 <StackPanel Spacing="4">
@@ -23,7 +25,7 @@
             </Border>
         </Grid>
 
-        <Border Grid.Row="1" Classes="card" Padding="8">
+        <Border Classes="card" Padding="8">
             <DockPanel>
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,160" Margin="16,12,12,8">
                     <TextBlock Classes="sectionTitle" Text="{l:T 'Policies'}" VerticalAlignment="Center" />
@@ -35,20 +37,20 @@
                 <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,0,0,1"
                         Padding="28,6,28,10" Margin="0,0,0,4">
                     <Grid ColumnDefinitions="*,130,150,190,106" ColumnSpacing="16">
-                        <TextBlock Classes="columnHeader" Text="{l:T 'Insurer'}" />
-                        <TextBlock Grid.Column="1" Classes="columnHeader" Text="{l:T 'Person'}" />
-                        <TextBlock Grid.Column="2" Classes="columnHeader" Text="{l:T 'Premium'}" TextAlignment="Right" />
-                        <TextBlock Grid.Column="3" Classes="columnHeader" Text="{l:T 'Term and notice'}" TextAlignment="Right" />
+                        <controls:SortHeader Label="{l:T 'Insurer'}" List="policies" Key="insurer" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Grid.Column="1" Label="{l:T 'Person'}" List="policies" Key="person" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Grid.Column="2" Label="{l:T 'Premium'}" List="policies" Key="premium" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
+                        <controls:SortHeader Grid.Column="3" Label="{l:T 'Term and notice'}" List="policies" Key="deadline" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
                     </Grid>
                 </Border>
-                <Panel>
+                <Panel MinHeight="120">
                     <TextBlock Classes="secondary" Text="{Binding InsuranceEmptyText}" IsVisible="{Binding !HasInsuranceRows}"
                                HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                                TextWrapping="Wrap" MaxWidth="420" />
                     <ListBox Classes="table" ItemsSource="{Binding InsuranceRows}" IsVisible="{Binding HasInsuranceRows}" Margin="12,0">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:InsuranceRow">
-                                <Grid ColumnDefinitions="*,130,150,190,106" ColumnSpacing="16" Background="Transparent"
+                                <Grid ColumnDefinitions="*,130,150,190,106" ColumnSpacing="16" Background="Transparent" controls:Drag.Item="{Binding}" controls:Drag.Target="reorder:policies" controls:Drag.TargetItem="{Binding}"
                                       Opacity="{Binding HasEnded, Converter={x:Static vm:Format.EndedOpacityConverter}}">
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Insurer}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
@@ -92,5 +94,115 @@
                 </Panel>
             </DockPanel>
         </Border>
-    </Grid>
+
+        <Border Classes="card" Padding="8">
+            <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Premiums'}" />
+                        <TextBlock Classes="muted" FontSize="13" Text="{Binding InsuranceEntriesTotal}" IsVisible="{Binding HasInsuranceEntryRows}" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="secondary" Command="{Binding NewInsuranceEntryCommand}" VerticalAlignment="Top">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{StaticResource IconPlus}" />
+                            <TextBlock Text="{l:T 'Add premium'}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+                <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasInsuranceEntryRows}"
+                           Text="{l:T 'No premiums yet. Add what you pay for health and other insurance, so your runway includes it.'}" />
+                <Grid ColumnDefinitions="*,120,110,140,108" ColumnSpacing="16" Margin="28,4,28,6" IsVisible="{Binding HasInsuranceEntryRows}">
+                    <controls:SortHeader Label="{l:T 'Description'}" List="premiums" Key="description" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="1" Label="{l:T 'Person'}" List="premiums" Key="person" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="2" Label="{l:T 'Date'}" List="premiums" Key="date" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="3" Label="{l:T 'Amount'}" List="premiums" Key="amount" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding InsuranceEntryRows}" Margin="12,0,12,8" IsVisible="{Binding HasInsuranceEntryRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:EntryRow">
+                            <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,8">
+                                <Grid ColumnDefinitions="*,120,110,140,108" ColumnSpacing="16" Background="Transparent" controls:Drag.Item="{Binding}">
+                                    <StackPanel VerticalAlignment="Center" ToolTip.Tip="{Binding Description}">
+                                        <TextBlock Text="{Binding Description}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Classes="pill" Classes.brand="{Binding !IsShared}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                    <TextBlock Grid.Column="2" Classes="secondary" FontSize="13" Text="{Binding DateText}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="3" Text="{Binding AmountText}" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+                                    <Grid Grid.Column="4" ColumnDefinitions="34,34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).EditTransactionCommand}"
+                                                CommandParameter="{Binding Transaction}">
+                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Stop repeating from today'}" IsVisible="{Binding CanStop}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).StopTransactionCommand}"
+                                                CommandParameter="{Binding Transaction}">
+                                            <PathIcon Data="{StaticResource IconStop}" />
+                                        </Button>
+                                        <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Delete (removes every repeat)'}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteTransactionCommand}"
+                                                CommandParameter="{Binding Transaction}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+        <Border Classes="card" Padding="8">
+            <StackPanel Spacing="4">
+                <TextBlock Classes="sectionTitle" Text="{l:T 'Insurance papers'}" Margin="16,12,12,4" />
+                <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasInsuranceDocumentRows}"
+                           Text="{l:T 'No insurance papers yet. Policies, premium bills and letters from your insurers appear here once filed under Documents.'}" />
+                <Grid ColumnDefinitions="*,120,110,140,72" ColumnSpacing="16" Margin="28,4,28,6" IsVisible="{Binding HasInsuranceDocumentRows}">
+                    <controls:SortHeader Label="{l:T 'Document'}" List="insurancePapers" Key="title" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="1" Label="{l:T 'Person'}" List="insurancePapers" Key="person" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="2" Label="{l:T 'Date'}" List="insurancePapers" Key="date" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="3" Label="{l:T 'To pay'}" List="insurancePapers" Key="amount" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding InsuranceDocumentRows}" Margin="12,0,12,8" IsVisible="{Binding HasInsuranceDocumentRows}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DocumentRow">
+                            <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,8">
+                                <Grid ColumnDefinitions="*,120,110,140,72" ColumnSpacing="16" Background="Transparent" controls:Drag.Item="{Binding}">
+                                    <StackPanel VerticalAlignment="Center" ToolTip.Tip="{Binding Title}">
+                                        <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <Border Grid.Column="1" Classes="pill" Classes.brand="{Binding !IsShared}" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                    <TextBlock Grid.Column="2" Classes="secondary" FontSize="13" Text="{Binding DateText}" VerticalAlignment="Center" />
+                                    <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                        <TextBlock Text="{Binding AmountText}" FontWeight="SemiBold" TextAlignment="Right" IsVisible="{Binding HasAmount}" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding StatusText}" TextAlignment="Right"
+                                                   IsVisible="{Binding HasStatus}" Classes.negative="{Binding IsOverdue}" />
+                                    </StackPanel>
+                                    <Grid Grid.Column="4" ColumnDefinitions="34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Classes="icon" ToolTip.Tip="{l:T 'Open'}" IsEnabled="{Binding !IsMissing}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenDocumentCommand}"
+                                                CommandParameter="{Binding Document}">
+                                            <PathIcon Data="{StaticResource IconOpen}" />
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).EditDocumentCommand}"
+                                                CommandParameter="{Binding Document}">
+                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+    </StackPanel>
+    </ScrollViewer>
 </UserControl>

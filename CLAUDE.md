@@ -28,7 +28,7 @@ End a piece of work by giving them that command.
 | Area | What it does |
 | --- | --- |
 | Overview | Runway (months until cash runs out, the cause), cash today per account, overdraft reach, daily earn/spend, saving this financial year, months covered without income, cash chart with projection, next 30 days. Header buttons for inbox scans, tasks due, bills to pay. |
-| Transactions | Income/expense/transfer entries: one-time, monthly, quarterly, yearly, with end dates; per person and account; filters, sort, totals. Change or skip a single time of a repeating entry (`EntryChange`, edited in the entry form). Import bank statements (camt.053/054/052 XML and CSV). AI import of entries from documents. Export the listed entries as CSV. |
+| Transactions | Income/expense/transfer entries: one-time, monthly, quarterly, yearly, with end dates; per person and account. Income, Expenses and Transfers are separate tabs (`TransactionsTab`; Transfers only with several accounts), each with its own headline total, filters, sort, totals and CSV export; "New income/expense/transfer" follows the tab, and a saved or edited entry opens its tab. Change or skip a single time of a repeating entry (`EntryChange`, edited in the entry form). Import bank statements (camt.053/054/052 XML, CSV, and Revolut PDF statements via `PdfStatementParser`: CHF part only, direction from the balance change, reference = date+amount+balance). AI import of entries from documents. Export the listed entries as CSV. |
 | Accounts | Several accounts (current, savings, credit card, cash) with IBAN, opening balance and overdraft/credit limit. Transfers move money between them without counting as income or spending. "Match my bank balance" adjusts the opening balance. |
 | Documents | Bills, invoices, letters, notices, contracts, policies, statements, payslips per person, filed in OneDrive as `Person/Year/Type/yyyy-MM-dd Title.ext`. Due dates and paid status; bills can be added to expenses. Single and bulk import (drop many files). Swiss QR-bill reading. Inbox folder for phone scans. Search inside PDFs/text. Scans (PDFs that are only page pictures, e.g. from the OneDrive app) and photos are read with macOS text recognition (`TextRecognizer`, Vision) for search, the AI import and the inbox. Retention guide ("Past keeping time" filter). Deleted files go to `Deleted/`. Duplicates are noticed (`DuplicateFinder`: same file by SHA-256 `FileHash`, same QR reference, or same sender + amount + date) with "Show it / Skip / File anyway"; in bulk they arrive unticked and inbox copies of filed scans go to `Deleted/`. Follow-ups: a filed policy, contract, ID/passport/MFK notice or purchase receipt offers to add or update the record under Insurance or Contracts & dates (AI fields `record`, `record_kind`… in `DocumentDetailsExtraction`; without AI the type Policy/Contract alone); one document opens the filled-in form, bulk saves records directly. |
 | Tasks | Due dates, person, notes; repeating weekly/monthly/quarterly/yearly (ticking a repeating task creates the next one). |
@@ -36,13 +36,14 @@ End a piece of work by giving them that command.
 | Notes | Notes with projects and pins, saved as you type. |
 | Debts | Monthly, lump-sum and interest-only debts with extra repayments; borrowing more (a `DebtPayment` with a negative amount: the debt grows, the money comes in as income that isn't earnings); edit a debt's terms (the amount stays "owed on" its start date); payments feed the runway. |
 | Retirement | AHV, pension fund (BVG), vested benefits, pillar 3a/3b accounts per person with yearly statements (balance, projected capital and pension at 65, buy-in). Pillar 3a paid this year vs the legal limit. AI reads pension letters. |
-| Insurance | Policies with premium, term end and notice deadline (basic health insurance: by 30 November). |
+| Insurance | Policies with premium, term end and notice deadline (basic health insurance: by 30 November). Premiums (expenses in Health insurance / Other insurance) and insurance papers (policies, papers from a policy's insurer, or naming insurance) are listed here, not on the Expenses tab (`MainViewModel.OwnPages.cs`, `HasOwnPage`). |
 | Contracts & dates | Contracts (mobile, internet, gym, leasing, rent…) with notice deadlines; important dates (passport, ID, driving licence, MFK, tyres, vignette) with lead times and repeats; warranties (2 years by default) with receipt. |
-| Taxes | Per tax year: income, deductions (3a capped at the limit, pension buy-ins, childcare, medical costs, donations, debt interest, health premiums), assets and debts on 31 December, checklist of certificates found in Documents, copy as text. |
+| Taxes | Per tax year: income, deductions (3a capped at the limit, pension buy-ins, childcare, medical costs, donations, debt interest, health premiums), assets and debts on 31 December, checklist of certificates found in Documents, copy as text. Tax payments (expenses in Taxes) and tax papers (naming tax/Steuer/impôt) are listed here instead of the Expenses tab. |
 | Planning | Savings goals (by account or by hand, monthly amount needed, one-click monthly transfer, emergency fund preset); what-if scenarios saved in settings and compared with today (purple chart line); retirement gap with birth years and a 3a withdrawal plan (one account per year, before 65); net worth over 24 months. |
 | Year | Month-by-month income and spending for a financial year (any start month). Export every booking as CSV or a one-page PDF summary (`YearSummaryPdf`, SkiaSharp). |
+| Widget | macOS desktop/Notification Centre widget (small, medium, large): open tasks, bills to pay, next appointments (14 days). Swift WidgetKit extension in `src/KeystoneWidget/` (sandboxed, may only read `~/Library/Application Support/Keystone/`), built and signed into `Keystone.app/Contents/PlugIns/KeystoneWidget.appex` by `package-mac.sh` (needs Xcode tools). Keystone writes `widget.json` next to the database with each reminder update (`WidgetSnapshot`, `MainViewModel.Widget.cs`): texts in the app's language, raw dates (the widget says Today/Overdue itself), titles left out while the app lock is on. The widget re-reads every 15 minutes and at midnight. |
 | Settings | Bank accounts, language (English / German), financial year, reminders, app lock, backup, household members, documents folder and inbox, local AI. |
-| Everywhere | Search everything (⌘F), reminders as macOS notifications, daily backups, app lock with Touch ID (⌘L locks), English and German (Swiss) UI, light and dark mode. Deleting an entry or a debt shows a notice with Undo (`ShowNotice`, 12 s); exports report there too. |
+| Everywhere | Search everything (⌘F), reminders as macOS notifications, daily backups, app lock with Touch ID (⌘L locks), English and German (Swiss) UI, light and dark mode. Deleting an entry or a debt shows a notice with Undo (`ShowNotice`, 12 s); exports report there too. Every list sorts by clicking its column titles (or a "Sort by" row for card lists), remembered per list in `AppSettings.ListSorts` (`MainViewModel.Sorting.cs`, `Controls/SortHeader`). Drag and drop (`Controls/Drag`: `Drag.Item` on a row, `Drag.Target`/`Drag.TargetItem` on a drop place; decisions in `MainViewModel.DragDrop.cs`): entries onto Insurance/Taxes/Income/Expenses change category or type; documents onto Insurance/Taxes/Documents set `HouseholdDocument.Section`, onto a person (strip shown while dragging) change the person and refile; policies, contracts, tasks, goals and debts reorder by dropping on each other (`SortOrder`, list sort "manual"). |
 
 ### Swiss rules built in
 
@@ -66,7 +67,7 @@ src/Keystone/
                  PensionAccount/PensionStatement (Retirement.cs), TaskItem, Note, Debt, Person, AppSettings,
                  Categories, NoticeDeadline, EntryChange (Transaction.cs))
   Services/      Pure logic: RunwayCalculator, Schedule (expands repeating entries), DebtPlan, FinancialYearReport,
-                 BankStatementParser, CategoryGuesser, DocumentReader (PdfPig), DocumentStore (OneDrive filing),
+                 BankStatementParser, PdfStatementParser (Revolut PDF), CategoryGuesser, DocumentReader (PdfPig), DocumentStore (OneDrive filing),
                  LocalAi (Ollama), PersonMatcher, ReminderPlanner, RetentionGuide, RetirementPlanner, Scenario,
                  SwissPension, SwissQrBill, DatabaseBackup, DuplicateFinder, Csv (semicolons, BOM, 1234.50), YearSummaryPdf
   Services/Mac/  macOS integration through P/Invoke: ObjC (runtime, blocks), TouchId (LocalAuthentication),
@@ -80,6 +81,7 @@ src/Keystone/
   Data/          KeystoneDbContext, KeystoneRepository (short-lived contexts per call), Migrations,
                  SqliteLocking (one save at a time + busy_timeout, so background saves never hit "database is locked")
 tests/Keystone.Tests/   xUnit
+src/KeystoneWidget/     Swift WidgetKit extension (KeystoneWidget.swift, entitlements)
 scripts/        package-mac.sh, make-logo.py
 docs/screenshots/       README screenshots (made-up family, never real data)
 ```
@@ -136,6 +138,10 @@ docs/screenshots/       README screenshots (made-up family, never real data)
 - **Test files need different contents.** Documents are recognised by their SHA-256, so two test files that both
   contain "x" are the same document. Tests can reach `internal` members (`InternalsVisibleTo`).
 
+- **Drags inside the app** use the in-process format `Drag.Format`; target handlers mark the event handled so the
+  window's file-drop handler (Finder files) never sees them. A drag starts only after 6 px of movement, so clicks
+  and double-clicks on rows still work.
+
 - **Sum `Occurrence.Amount`/`SignedAmount`, never `o.Source.Amount`.** A single time of a repeating entry can have
   its own amount (`EntryChange`), and skipped times aren't returned by `Schedule.Expand` at all.
   `Schedule.RegularDates` gives the dates without changes (for the "change one time" picker).
@@ -158,6 +164,8 @@ docs/screenshots/       README screenshots (made-up family, never real data)
   `vm.OwnWindow()` (pickers go through `PickFilesAsync`/`PickFolderAsync` in MainWindow) so the lock neither
   relocks nor re-prompts. Drops are refused while locked (`CanAcceptDrop`).
 - Backups: one at a time (`_backupGate`); `Restore` backs up the current data first.
+- **Widget labels** are passed as a list (`WidgetLabels()`), which the translation test can't see: add their German
+  texts by hand. The widget's date words come from these labels; only date formats are done in Swift.
 - Pushing large files over HTTPS needed `git config http.postBuffer 157286400` (set in this repo).
 
 ## Data and files

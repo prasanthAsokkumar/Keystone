@@ -123,6 +123,23 @@
         <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
     </Style>
 
+    <!-- Column titles that sort their list when clicked -->
+    <Style Selector="Button.sortHeader">
+        <Setter Property="Background" Value="Transparent" />
+        <Setter Property="BorderThickness" Value="0" />
+        <Setter Property="Padding" Value="0" />
+        <Setter Property="MinHeight" Value="0" />
+    </Style>
+    <Style Selector="Button.sortHeader:pointerover /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="Button.sortHeader:pointerover TextBlock.columnHeader">
+        <Setter Property="Foreground" Value="{DynamicResource TextPrimary}" />
+    </Style>
+    <Style Selector="Button.sortHeader:pressed /template/ ContentPresenter">
+        <Setter Property="Background" Value="Transparent" />
+    </Style>
+
     <!-- ── Sidebar navigation ─────────────────────────────────────────────── -->
 
     <Style Selector="RadioButton.nav">
@@ -154,6 +171,23 @@
     </Style>
 
     <!-- Segmented choice (Expense / Income, One-time / Monthly). -->
+    <!-- Where a dragged row can be dropped, while it is over it -->
+    <Style Selector="RadioButton.nav.dropHover /template/ Border#Background">
+        <Setter Property="Background" Value="{DynamicResource BrandSoft}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brand}" />
+        <Setter Property="BorderThickness" Value="1.5" />
+    </Style>
+    <Style Selector="RadioButton.segment.dropHover /template/ Border#Background">
+        <Setter Property="Background" Value="{DynamicResource BrandSoft}" />
+    </Style>
+    <Style Selector="Grid.dropHover">
+        <Setter Property="Background" Value="{DynamicResource BrandSoft}" />
+    </Style>
+    <Style Selector="Border.dropHover">
+        <Setter Property="Background" Value="{DynamicResource BrandSoft}" />
+        <Setter Property="BorderBrush" Value="{DynamicResource Brand}" />
+    </Style>
+
     <Style Selector="RadioButton.segment">
         <Setter Property="HorizontalAlignment" Value="Stretch" />
         <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />

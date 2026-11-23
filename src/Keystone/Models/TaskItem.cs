@@ -10,6 +10,9 @@ public class TaskItem
 {
     public int Id { get; set; }
 
+    /// <summary>Where the row was put by dragging; 0 for rows never moved by hand.</summary>
+    public int SortOrder { get; set; }
+
     public string Title { get; set; } = "";
 
     public string Notes { get; set; } = "";

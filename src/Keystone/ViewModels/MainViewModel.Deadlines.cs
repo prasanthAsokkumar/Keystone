@@ -99,13 +99,17 @@ public partial class MainViewModel
     private void RefreshContracts()
     {
         var documents = Documents.ToDictionary(d => d.Id);
-        ContractRows = _contracts
+        ContractRows = Sorted("contracts", _contracts
             .OrderBy(c => c.HasEnded(Today))
             .ThenBy(c => c.NextDeadline(Today)?.CancelBy ?? DateOnly.MaxValue)
             .ThenBy(c => c.Provider, StringComparer.CurrentCultureIgnoreCase)
             .Select(c => new ContractRow(c, PersonName(c.PersonId),
-                c.DocumentId is { } id && documents.TryGetValue(id, out var d) ? d : null, Today))
-            .ToList();
+                c.DocumentId is { } id && documents.TryGetValue(id, out var d) ? d : null, Today)),
+            r => r.Contract.SortOrder,
+            new SortKey<ContractRow>("provider", r => r.Contract.Provider),
+            new SortKey<ContractRow>("person", r => r.PersonName),
+            new SortKey<ContractRow>("cost", r => r.Contract.YearlyCost, DescendingFirst: true),
+            new SortKey<ContractRow>("deadline", r => r.Contract.NextDeadline(Today)?.CancelBy));
 
         var running = _contracts.Where(c => !c.HasEnded(Today)).ToList();
         var yearly = running.Sum(c => c.YearlyCost);
@@ -339,11 +343,13 @@ public partial class MainViewModel
 
     private void RefreshImportantDates()
     {
-        ImportantDateRows = _dates
+        ImportantDateRows = Sorted("dates", _dates
             .OrderBy(d => d.HasPassed(Today))
             .ThenBy(d => d.NextDate(Today))
-            .Select(d => new ImportantDateRow(d, PersonName(d.PersonId), Today))
-            .ToList();
+            .Select(d => new ImportantDateRow(d, PersonName(d.PersonId), Today)), null,
+            new SortKey<ImportantDateRow>("title", r => r.Date.Title),
+            new SortKey<ImportantDateRow>("person", r => r.PersonName),
+            new SortKey<ImportantDateRow>("date", r => r.Date.NextDate(Today)));
         var next = _dates.Where(d => !d.HasPassed(Today)).OrderBy(d => d.NextDate(Today)).FirstOrDefault();
         NextImportantDateText = next is null ? "–" : Format.Date(next.NextDate(Today));
         NextImportantDateDetail = next is null
@@ -500,12 +506,15 @@ public partial class MainViewModel
     private void RefreshWarranties()
     {
         var documents = Documents.ToDictionary(d => d.Id);
-        WarrantyRows = _warranties
+        WarrantyRows = Sorted("warranties", _warranties
             .OrderBy(w => w.HasExpired(Today))
             .ThenBy(w => w.ExpiresOn)
             .Select(w => new WarrantyRow(w, PersonName(w.PersonId),
-                w.DocumentId is { } id && documents.TryGetValue(id, out var d) ? d : null, Today))
-            .ToList();
+                w.DocumentId is { } id && documents.TryGetValue(id, out var d) ? d : null, Today)), null,
+            new SortKey<WarrantyRow>("item", r => r.Warranty.Item),
+            new SortKey<WarrantyRow>("person", r => r.PersonName),
+            new SortKey<WarrantyRow>("price", r => r.Warranty.Price, DescendingFirst: true),
+            new SortKey<WarrantyRow>("expires", r => r.Warranty.ExpiresOn));
         var running = _warranties.Count(w => !w.HasExpired(Today));
         var soon = _warranties.Count(w => !w.HasExpired(Today) && w.ExpiresOn.DayNumber - Today.DayNumber <= 60);
         WarrantySummaryText = running.ToString(Loc.Instance.Culture);

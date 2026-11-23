@@ -128,6 +128,8 @@ public partial class MainViewModel
 
     private async Task ApplyRemindersAsync()
     {
+        // The desktop widget shows the same tasks, bills and appointments the reminders are about.
+        WriteWidgetSnapshot();
         var plan = PlanReminders(DateTime.Now);
         UpcomingReminders = plan.Take(5)
             .Select(r => new ReminderRow(FormatReminderTime(r.At), r.Title, r.Body))

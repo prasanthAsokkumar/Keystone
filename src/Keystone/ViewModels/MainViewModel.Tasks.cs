@@ -81,7 +81,7 @@ public partial class MainViewModel
         var search = TaskSearch.Trim();
         var person = TaskPersonFilter ?? PersonOption.Everyone;
 
-        TaskRows = _tasks
+        TaskRows = Sorted("tasks", _tasks
             .Where(t => person.IsEveryone || t.PersonId == person.Id)
             .Where(t => TaskStatusFilterIndex switch
             {
@@ -98,8 +98,11 @@ public partial class MainViewModel
             .ThenByDescending(t => t.CompletedOn ?? DateOnly.MinValue)
             .ThenBy(t => t.CreatedAt)
             .Select(t => new TaskRow(
-                t, t.PersonId is { } id && names.TryGetValue(id, out var name) ? name : PersonOption.Shared.ToString(), Today))
-            .ToList();
+                t, t.PersonId is { } id && names.TryGetValue(id, out var name) ? name : PersonOption.Shared.ToString(), Today)),
+            r => r.Task.SortOrder,
+            new SortKey<TaskRow>("title", r => r.Task.Title),
+            new SortKey<TaskRow>("person", r => r.PersonName),
+            new SortKey<TaskRow>("due", r => r.Task.DueDate));
 
         ScheduleReminders();
         var open = _tasks.Count(t => !t.IsDone);

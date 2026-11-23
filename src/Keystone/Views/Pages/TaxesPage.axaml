@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:l="using:Keystone.Localization"
              xmlns:vm="using:Keystone.ViewModels"
+             xmlns:controls="using:Keystone.Controls"
              x:Class="Keystone.Views.Pages.TaxesPage"
              x:DataType="vm:MainViewModel">
     <!-- A tax year's figures and the papers to collect for the return. -->
@@ -54,6 +55,120 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+
+
+                <Border Classes="card" Padding="8">
+                    <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
+                            <StackPanel Spacing="2">
+                                <TextBlock Classes="sectionTitle" Text="{l:T 'Tax payments'}" />
+                                <TextBlock Classes="muted" FontSize="13" Text="{Binding TaxEntriesTotal}" IsVisible="{Binding HasTaxEntryRows}" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="secondary" Command="{Binding NewTaxEntryCommand}" VerticalAlignment="Top">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <PathIcon Data="{StaticResource IconPlus}" />
+                                    <TextBlock Text="{l:T 'Add tax payment'}" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasTaxEntryRows}"
+                                   Text="{l:T 'No tax payments yet. Add your provisional instalments or the final bill, so your runway includes them.'}" />
+                        <Grid ColumnDefinitions="*,140,108" ColumnSpacing="12" Margin="28,4,28,6" IsVisible="{Binding HasTaxEntryRows}">
+                            <StackPanel Orientation="Horizontal" Spacing="14">
+                                <controls:SortHeader Label="{l:T 'Description'}" List="taxPayments" Key="description" Sorts="{Binding ListSorts}" />
+                                <controls:SortHeader Label="{l:T 'Date'}" List="taxPayments" Key="date" Sorts="{Binding ListSorts}" />
+                            </StackPanel>
+                            <controls:SortHeader Grid.Column="1" Label="{l:T 'Amount'}" List="taxPayments" Key="amount" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding TaxEntryRows}" Margin="12,0,12,8" IsVisible="{Binding HasTaxEntryRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EntryRow">
+                                    <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,8">
+                                        <Grid ColumnDefinitions="*,140,108" ColumnSpacing="12" Background="Transparent" controls:Drag.Item="{Binding}">
+                                            <StackPanel VerticalAlignment="Center" ToolTip.Tip="{Binding Description}">
+                                                <TextBlock Text="{Binding Description}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding DateText}" />
+                                                    <TextBlock Classes="muted" FontSize="12" Text="·" />
+                                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding PersonName}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="{Binding AmountText}" FontWeight="SemiBold" TextAlignment="Right" VerticalAlignment="Center" />
+                                            <Grid Grid.Column="2" ColumnDefinitions="34,34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).EditTransactionCommand}"
+                                                        CommandParameter="{Binding Transaction}">
+                                                    <PathIcon Data="{StaticResource IconEdit}" />
+                                                </Button>
+                                                <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Stop repeating from today'}" IsVisible="{Binding CanStop}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).StopTransactionCommand}"
+                                                        CommandParameter="{Binding Transaction}">
+                                                    <PathIcon Data="{StaticResource IconStop}" />
+                                                </Button>
+                                                <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Delete (removes every repeat)'}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteTransactionCommand}"
+                                                        CommandParameter="{Binding Transaction}">
+                                                    <PathIcon Data="{StaticResource IconDelete}" />
+                                                </Button>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+                <Border Classes="card" Padding="8">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Tax papers'}" Margin="16,12,12,4" />
+                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasTaxDocumentRows}"
+                                   Text="{l:T 'No tax papers yet. Tax returns, assessments and bills from the tax office appear here once filed under Documents.'}" />
+                        <Grid ColumnDefinitions="*,140,72" ColumnSpacing="12" Margin="28,4,28,6" IsVisible="{Binding HasTaxDocumentRows}">
+                            <StackPanel Orientation="Horizontal" Spacing="14">
+                                <controls:SortHeader Label="{l:T 'Document'}" List="taxPapers" Key="title" Sorts="{Binding ListSorts}" />
+                                <controls:SortHeader Label="{l:T 'Date'}" List="taxPapers" Key="date" Sorts="{Binding ListSorts}" />
+                            </StackPanel>
+                            <controls:SortHeader Grid.Column="1" Label="{l:T 'To pay'}" List="taxPapers" Key="amount" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding TaxDocumentRows}" Margin="12,0,12,8" IsVisible="{Binding HasTaxDocumentRows}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:DocumentRow">
+                                    <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,8">
+                                        <Grid ColumnDefinitions="*,140,72" ColumnSpacing="12" Background="Transparent" controls:Drag.Item="{Binding}">
+                                            <StackPanel VerticalAlignment="Center" ToolTip.Tip="{Binding Title}">
+                                                <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                                <StackPanel Orientation="Horizontal" Spacing="4">
+                                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding DateText}" />
+                                                    <TextBlock Classes="muted" FontSize="12" Text="·" />
+                                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding PersonName}" />
+                                                </StackPanel>
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding AmountText}" FontWeight="SemiBold" TextAlignment="Right" IsVisible="{Binding HasAmount}" />
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding StatusText}" TextAlignment="Right"
+                                                           IsVisible="{Binding HasStatus}" Classes.negative="{Binding IsOverdue}" />
+                                            </StackPanel>
+                                            <Grid Grid.Column="2" ColumnDefinitions="34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                                <Button Classes="icon" ToolTip.Tip="{l:T 'Open'}" IsEnabled="{Binding !IsMissing}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenDocumentCommand}"
+                                                        CommandParameter="{Binding Document}">
+                                                    <PathIcon Data="{StaticResource IconOpen}" />
+                                                </Button>
+                                                <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).EditDocumentCommand}"
+                                                        CommandParameter="{Binding Document}">
+                                                    <PathIcon Data="{StaticResource IconEdit}" />
+                                                </Button>
+                                            </Grid>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
 
                 <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
                            Text="{l:T 'A guide, not tax advice. Your letters and your canton’s rules count.'}" />

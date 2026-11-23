@@ -50,6 +50,12 @@ public class HouseholdDocument
     /// <summary>SHA-256 of the file as it was added, to notice the same file being filed again. Empty for old ones until read.</summary>
     public string FileHash { get; set; } = "";
 
+    /// <summary>
+    /// Where it was put by dragging: "Insurance" or "Taxes" to show it there, "None" for Documents only, and ""
+    /// to let Keystone decide from the type, sender and title.
+    /// </summary>
+    public string Section { get; set; } = "";
+
     /// <summary>The expense entry created for this bill, if any.</summary>
     public int? TransactionId { get; set; }
 

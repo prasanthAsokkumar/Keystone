@@ -11,6 +11,9 @@ public class Contract
 {
     public int Id { get; set; }
 
+    /// <summary>Where the row was put by dragging; 0 for rows never moved by hand.</summary>
+    public int SortOrder { get; set; }
+
     /// <summary>The provider, e.g. "Swisscom".</summary>
     public string Provider { get; set; } = "";
 
@@ -173,6 +176,9 @@ public class Warranty
 public class SavingsGoal
 {
     public int Id { get; set; }
+
+    /// <summary>Where the row was put by dragging; 0 for rows never moved by hand.</summary>
+    public int SortOrder { get; set; }
 
     public string Name { get; set; } = "";
 

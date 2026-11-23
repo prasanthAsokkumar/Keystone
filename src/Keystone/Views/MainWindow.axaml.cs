@@ -237,7 +237,7 @@ public partial class MainWindow : Window
             Title = "Import a bank statement",
             FileTypeFilter =
             [
-                new FilePickerFileType("Bank statements (camt.053, CSV)") { Patterns = ["*.xml", "*.camt", "*.csv", "*.txt", "*.tsv"] },
+                new FilePickerFileType("Bank statements (camt.053, CSV, Revolut PDF)") { Patterns = ["*.xml", "*.camt", "*.csv", "*.txt", "*.tsv", "*.pdf"] },
             ],
         });
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path && DataContext is MainViewModel vm)

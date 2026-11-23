@@ -66,17 +66,22 @@ public partial class MainViewModel
 
     private void RefreshInsurance()
     {
+        RefreshOwnPageLists();
         var filter = InsurancePersonFilter ?? PersonOption.Everyone;
         var policies = _policies.Where(p => filter.IsEveryone || p.PersonId == filter.Id).ToList();
         var documents = Documents.ToDictionary(d => d.Id);
 
-        InsuranceRows = policies
+        InsuranceRows = Sorted("policies", policies
             .OrderBy(p => p.HasEnded(Today))
             .ThenBy(p => p.NextDeadline(Today)?.CancelBy ?? DateOnly.MaxValue)
             .ThenBy(p => p.Insurer, StringComparer.CurrentCultureIgnoreCase)
             .Select(p => new InsuranceRow(p, PersonName(p.PersonId),
-                p.DocumentId is { } id && documents.TryGetValue(id, out var document) ? document : null, Today))
-            .ToList();
+                p.DocumentId is { } id && documents.TryGetValue(id, out var document) ? document : null, Today)),
+            r => r.Policy.SortOrder,
+            new SortKey<InsuranceRow>("insurer", r => r.Policy.Insurer),
+            new SortKey<InsuranceRow>("person", r => r.PersonName),
+            new SortKey<InsuranceRow>("premium", r => r.Policy.YearlyPremium, DescendingFirst: true),
+            new SortKey<InsuranceRow>("deadline", r => r.Policy.NextDeadline(Today)?.CancelBy));
         OnPropertyChanged(nameof(InsuranceEmptyText));
 
         var running = policies.Where(p => !p.HasEnded(Today)).ToList();

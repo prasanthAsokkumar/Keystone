@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:l="using:Keystone.Localization"
              xmlns:vm="using:Keystone.ViewModels"
+             xmlns:controls="using:Keystone.Controls"
              x:Class="Keystone.Views.Pages.AppointmentsPage"
              x:DataType="vm:MainViewModel">
     <!-- Appointments, kept in step with a calendar in the Calendar app. -->
@@ -93,7 +94,13 @@
                     <TextBlock Classes="secondary" Text="{Binding AppointmentsEmptyText}" IsVisible="{Binding !HasAppointmentRows}"
                                HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                                TextWrapping="Wrap" MaxWidth="400" />
-                    <ListBox Classes="table" ItemsSource="{Binding AppointmentRows}" IsVisible="{Binding HasAppointmentRows}" Margin="12,0">
+                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,6" IsVisible="{Binding HasAppointmentRows}" VerticalAlignment="Top">
+                        <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
+                        <controls:SortHeader Label="{l:T 'Title'}" List="appointments" Key="title" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Person'}" List="appointments" Key="person" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Date'}" List="appointments" Key="date" Sorts="{Binding ListSorts}" />
+                    </StackPanel>
+                    <ListBox Classes="table" ItemsSource="{Binding AppointmentRows}" IsVisible="{Binding HasAppointmentRows}" Margin="12,30,12,0">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:AppointmentRow">
                                 <Grid ColumnDefinitions="Auto,*,130,72" ColumnSpacing="16" Background="Transparent"

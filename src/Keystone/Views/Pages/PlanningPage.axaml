@@ -36,6 +36,15 @@
                                TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
                                Text="{l:T 'No savings goals yet. Save for a holiday, a car or an emergency fund, and see what to put aside each month.'}" />
                     <ScrollViewer IsVisible="{Binding HasGoalRows}">
+<StackPanel>
+<StackPanel Orientation="Horizontal" Spacing="18" Margin="4,0,0,10" IsVisible="{Binding HasGoalRows}" VerticalAlignment="Top">
+                            <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
+                            <controls:SortHeader Label="{l:T 'Name'}" List="goals" Key="name" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Label="{l:T 'Target'}" List="goals" Key="target" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Label="{l:T 'Saved'}" List="goals" Key="saved" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Label="{l:T 'By'}" List="goals" Key="date" Sorts="{Binding ListSorts}" />
+                        </StackPanel>
+
                         <ItemsControl ItemsSource="{Binding GoalRows}" Margin="0,0,12,0">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -44,7 +53,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:GoalRow">
-                                    <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="16,14">
+                                    <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="16,14" controls:Drag.Item="{Binding}" controls:Drag.Target="reorder:goals" controls:Drag.TargetItem="{Binding}">
                                         <StackPanel Spacing="8">
                                             <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
                                                 <StackPanel>
@@ -78,7 +87,8 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </ScrollViewer>
+                    </StackPanel>
+</ScrollViewer>
                 </Panel>
             </DockPanel>
         </Border>

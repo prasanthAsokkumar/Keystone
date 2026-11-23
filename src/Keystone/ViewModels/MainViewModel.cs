@@ -83,7 +83,7 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(
         nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsAppointmentsPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsRetirementPage), nameof(IsInsurancePage), nameof(IsTaxesPage), nameof(IsContractsPage), nameof(IsPlanningPage),
         nameof(IsYearPage), nameof(IsSettingsPage), nameof(PageTitle), nameof(PageSubtitle), nameof(DropHint),
-        nameof(DropFilesAsDocument), nameof(DropDetailText))]
+        nameof(DropFilesAsDocument), nameof(DropDetailText), nameof(NewEntryText))]
     public partial AppPage CurrentPage { get; set; }
 
     public bool IsOverviewPage { get => CurrentPage == AppPage.Overview; set { if (value) CurrentPage = AppPage.Overview; } }
@@ -134,7 +134,7 @@ public partial class MainViewModel : ViewModelBase
 
     public string PageSubtitle => CurrentPage switch
     {
-        AppPage.Transactions => Loc.T("All your income and expenses in one place"),
+        AppPage.Transactions => Loc.T("What comes in and what goes out, each on its own tab"),
         AppPage.Documents => Loc.T("Bills, letters and notices for everyone in the household"),
         AppPage.Tasks => Loc.T("What needs to be done, and by when"),
         AppPage.Appointments => Loc.T("Doctor’s visits, meetings and everything else with a time, in step with your calendar"),
@@ -225,6 +225,12 @@ public partial class MainViewModel : ViewModelBase
         ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
+        // On the Transactions page, a new entry is of the open tab's kind.
+        if (IsTransactionsPage)
+        {
+            NewIsTransfer = TransactionsTab == 2 && HasSeveralAccounts;
+            NewIsIncome = TransactionsTab == 0;
+        }
         IsEntryPanelOpen = true;
     }
 
@@ -550,13 +556,44 @@ public partial class MainViewModel : ViewModelBase
 
     // ── Entries table ───────────────────────────────────────────────────────
 
-    public IReadOnlyList<string> TypeFilters => Translate("All types", "Income", "Expenses", "Transfers");
+    /// <summary>Income, expenses and transfers are kept apart, each on its own tab with its own totals.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(IsIncomeTab), nameof(IsExpensesTab), nameof(IsTransfersTab), nameof(NewEntryText), nameof(HasMovedExpenses))]
+    public partial int TransactionsTab { get; set; }
+
+    public bool IsIncomeTab { get => TransactionsTab == 0; set { if (value) TransactionsTab = 0; } }
+
+    public bool IsExpensesTab { get => TransactionsTab == 1; set { if (value) TransactionsTab = 1; } }
+
+    public bool IsTransfersTab { get => TransactionsTab == 2; set { if (value) TransactionsTab = 2; } }
+
+    /// <summary>Transfers only matter with more than one account, or once there are some.</summary>
+    public bool ShowTransfersTab => HasSeveralAccounts || Transactions.Any(t => t.IsTransfer);
+
+    public string NewEntryText => Loc.T(!IsTransactionsPage ? "New entry"
+        : TransactionsTab switch { 0 => "New income", 2 => "New transfer", _ => "New expense" });
+
+    /// <summary>The headline of the open tab, e.g. "CHF 12'050 a month coming in".</summary>
+    [ObservableProperty]
+    public partial string TransactionsTabTotal { get; set; } = "";
+
+    [ObservableProperty]
+    public partial string TransactionsTabDetail { get; set; } = "";
+
+    partial void OnTransactionsTabChanged(int value)
+    {
+        CategoryFilter = AllCategories; // income and expense categories differ
+        RefreshEntryRows();
+    }
+
+    private static int TabOf(Transaction transaction) => transaction.IsIncome ? 0 : transaction.IsTransfer ? 2 : 1;
+
+    /// <summary>Premiums and tax payments are on the Insurance and Taxes pages, not the Expenses tab.</summary>
+    private bool IsOnTab(Transaction transaction) => TabOf(transaction) == TransactionsTab && !HasOwnPage(transaction);
 
     public IReadOnlyList<string> ScheduleFilters =>
         Translate("Any schedule", "Repeating", "Monthly", "Every 3 months", "Yearly", "One-time");
 
-    public IReadOnlyList<string> SortOptions =>
-        Translate("Newest first", "Oldest first", "Largest amount", "Smallest amount", "Description A–Z");
 
     private static string AllCategories => Loc.T("All categories");
 
@@ -565,14 +602,10 @@ public partial class MainViewModel : ViewModelBase
     [ObservableProperty]
     public partial string SearchText { get; set; } = "";
 
-    [ObservableProperty]
-    public partial int TypeFilterIndex { get; set; }
 
     [ObservableProperty]
     public partial int ScheduleFilterIndex { get; set; }
 
-    [ObservableProperty]
-    public partial int SortIndex { get; set; }
 
     [ObservableProperty]
     public partial PersonOption PersonFilter { get; set; } = PersonOption.Everyone;
@@ -592,15 +625,19 @@ public partial class MainViewModel : ViewModelBase
 
     public bool HasEntryRows => EntryRows.Count > 0;
 
-    public string EntriesEmptyText => Transactions.Count == 0
-        ? Loc.T("No entries yet. Add income and expenses with the form on the right.")
+    public string EntriesEmptyText => !Transactions.Any(IsOnTab)
+        ? Loc.T(TransactionsTab switch
+        {
+            0 => "No income yet. Add your salary and other money coming in with New income.",
+            2 => "No transfers yet. Add money moved between your own accounts with New transfer.",
+            _ => "No expenses yet. Add rent, insurance and other costs with New expense.",
+        })
         : Loc.T("No entries match these filters.");
 
     [RelayCommand]
     private void ClearFilters()
     {
         SearchText = "";
-        TypeFilterIndex = 0;
         ScheduleFilterIndex = 0;
         PersonFilter = PersonOption.Everyone;
         CategoryFilter = AllCategories;
@@ -608,11 +645,9 @@ public partial class MainViewModel : ViewModelBase
 
     partial void OnSearchTextChanged(string value) => RefreshEntryRows();
 
-    partial void OnTypeFilterIndexChanged(int value) => RefreshEntryRows();
 
     partial void OnScheduleFilterIndexChanged(int value) => RefreshEntryRows();
 
-    partial void OnSortIndexChanged(int value) => RefreshEntryRows();
 
     partial void OnPersonFilterChanged(PersonOption value) => RefreshEntryRows();
 
@@ -620,7 +655,7 @@ public partial class MainViewModel : ViewModelBase
 
     private void RefreshEntryRows()
     {
-        var categories = Transactions.Select(t => Categories.Display(t.Category)).Where(c => c.Length > 0)
+        var categories = Transactions.Where(IsOnTab).Select(t => Categories.Display(t.Category)).Where(c => c.Length > 0)
             .Distinct(StringComparer.CurrentCultureIgnoreCase).Order(StringComparer.CurrentCultureIgnoreCase);
         CategoryFilters = [AllCategories, .. categories];
         if (!CategoryFilters.Contains(CategoryFilter))
@@ -629,7 +664,7 @@ public partial class MainViewModel : ViewModelBase
         var names = People.ToDictionary(p => p.Id, p => p.Name);
         var search = SearchText.Trim();
         var matches = Transactions.Where(t =>
-            (TypeFilterIndex switch { 1 => t.IsIncome, 2 => t.Type == TransactionType.Expense, 3 => t.IsTransfer, _ => true }) &&
+            IsOnTab(t) &&
             (ScheduleFilterIndex switch
             {
                 1 => t.IsRecurring,
@@ -647,29 +682,41 @@ public partial class MainViewModel : ViewModelBase
                 t.Description.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
                 t.Category.Contains(search, StringComparison.CurrentCultureIgnoreCase)));
 
-        matches = SortIndex switch
-        {
-            1 => matches.OrderBy(t => t.Date).ThenBy(t => t.Id),
-            2 => matches.OrderByDescending(t => t.Amount).ThenByDescending(t => t.Date),
-            3 => matches.OrderBy(t => t.Amount).ThenByDescending(t => t.Date),
-            4 => matches.OrderBy(t => t.Description, StringComparer.CurrentCultureIgnoreCase).ThenByDescending(t => t.Date),
-            _ => matches.OrderByDescending(t => t.Date).ThenByDescending(t => t.Id),
-        };
-
-        EntryRows = matches
+        // Newest first unless a column header says otherwise.
+        EntryRows = Sorted("transactions", matches
+            .OrderByDescending(t => t.Date).ThenByDescending(t => t.Id)
             .Select(t => new EntryRow(t, t.PersonId is { } id && names.TryGetValue(id, out var name) ? name : Loc.T(PersonOption.SharedName),
-                AccountText(t)))
-            .ToList();
+                AccountText(t))), null, EntrySortKeys);
 
         // Recurring and one-time amounts can't be added up meaningfully, so they're totalled apart.
         // Quarterly and yearly entries count as their monthly share, e.g. a yearly 1,200 as 100 a month.
-        var monthlyNet = EntryRows.Where(r => r.Transaction.CanStop).Sum(r => r.Transaction.SignedMonthlyAmount);
-        var oneTime = EntryRows.Where(r => !r.Transaction.IsRecurring).ToList();
-        var count = Loc.Plural(Transactions.Count, "{1} of {0} entry", "{1} of {0} entries", EntryRows.Count);
-        EntriesSummaryText = Loc.F("{0}   ·   Active repeating: {1} / month   ·   One-time: {2} in, {3} out",
-            count, Format.SignedMoney(monthlyNet),
-            Format.Money(oneTime.Where(r => r.IsIncome).Sum(r => r.Transaction.Amount)),
-            Format.Money(oneTime.Where(r => r.Transaction.Type == TransactionType.Expense).Sum(r => r.Transaction.Amount)));
+        static decimal Monthly(IEnumerable<Transaction> entries) =>
+            entries.Where(t => t.CanStop).Sum(t => t.Amount / t.IntervalMonths);
+        var onTab = Transactions.Where(IsOnTab).ToList();
+        var count = Loc.Plural(onTab.Count, "{1} of {0} entry", "{1} of {0} entries", EntryRows.Count);
+        EntriesSummaryText = Loc.F("{0}   ·   Repeating: {1} / month   ·   One-time: {2}",
+            count, Format.Money(Monthly(EntryRows.Select(r => r.Transaction))),
+            Format.Money(EntryRows.Where(r => !r.Transaction.IsRecurring).Sum(r => r.Transaction.Amount)));
+
+        // The headline counts every entry on the tab, whatever the filters, for this financial year.
+        var yearOneTime = onTab.Where(t => !t.IsRecurring && t.Date >= Summary.YearStart && t.Date <= Summary.YearEnd)
+            .Sum(t => t.Amount);
+        TransactionsTabTotal = Loc.F(TransactionsTab switch
+        {
+            0 => "{0} a month coming in",
+            2 => "{0} a month moved between accounts",
+            _ => "{0} a month going out",
+        }, Format.Money(Monthly(onTab)));
+        TransactionsTabDetail = Loc.F(TransactionsTab switch
+        {
+            0 => "Repeating income now running, plus {0} one-time in {1}",
+            2 => "Repeating transfers now running, plus {0} one-time in {1}",
+            _ => "Repeating costs now running, plus {0} one-time in {1}",
+        }, Format.Money(yearOneTime), FinancialYearReport.LabelFor(Summary.YearStart));
+        OnPropertyChanged(nameof(ShowTransfersTab));
+        RefreshOwnPageLists();
+        if (TransactionsTab == 2 && !ShowTransfersTab)
+            TransactionsTab = 0;
     }
 
     /// <summary>"Savings → Main account" for a transfer, the account for others, when there are several.</summary>
@@ -940,6 +987,7 @@ public partial class MainViewModel : ViewModelBase
         try
         {
             var settings = await repository.GetSettingsAsync();
+            LoadListSorts(settings.ListSorts);
             ApplyLockSettings(settings.LockEnabled, settings.LockAfterMinutes);
             ApplyReminderSettings(settings.RemindersEnabled, settings.ReminderHour);
             LoadScenario(settings.ScenarioJson);
@@ -1074,6 +1122,7 @@ public partial class MainViewModel : ViewModelBase
         if (EditingTransaction is not null)
             Transactions.Remove(EditingTransaction);
         InsertSorted(transaction);
+        TransactionsTab = TabOf(transaction); // so the entry just saved is in view
         var wasEditing = EditingTransaction is not null;
         ResetForm();
         Recalculate();
@@ -1087,6 +1136,7 @@ public partial class MainViewModel : ViewModelBase
     {
         ErrorMessage = null;
         EditingTransaction = transaction;
+        TransactionsTab = TabOf(transaction);
         NewIsIncome = transaction.IsIncome;
         NewIsTransfer = transaction.IsTransfer;
         NewAccount = AccountOptions.FirstOrDefault(o => o.Account!.Id == AccountIdOf(transaction)) ?? NewAccount;
@@ -1640,7 +1690,8 @@ public partial class MainViewModel : ViewModelBase
 
     private void ImportItem_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
-        if (e.PropertyName == nameof(ImportItem.IsSelected))
+        if (e.PropertyName is nameof(ImportItem.IsSelected) or nameof(ImportItem.IsIncome) or nameof(ImportItem.IsTransfer)
+            or nameof(ImportItem.Amount))
             OnImportSelectionChanged();
     }
 
@@ -1649,6 +1700,46 @@ public partial class MainViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasImportItems));
         OnPropertyChanged(nameof(CanAddImported));
         OnPropertyChanged(nameof(AddImportedText));
+        OnPropertyChanged(nameof(ImportSelectionText));
+        OnPropertyChanged(nameof(ImportExpensesOnlyText));
+        OnPropertyChanged(nameof(ImportIncomeOnlyText));
+    }
+
+    private static bool IsImportExpense(ImportItem item) => !item.IsIncome && !item.IsTransfer;
+
+    private static bool IsImportIncome(ImportItem item) => item.IsIncome && !item.IsTransfer;
+
+    public string ImportExpensesOnlyText => Loc.F("Expenses only ({0})", ImportItems.Count(i => IsImportExpense(i) && !i.IsDuplicate));
+
+    public string ImportIncomeOnlyText => Loc.F("Income only ({0})", ImportItems.Count(i => IsImportIncome(i) && !i.IsDuplicate));
+
+    /// <summary>"52 of 68 ticked · CHF 2'782 out · CHF 0 in".</summary>
+    public string ImportSelectionText
+    {
+        get
+        {
+            var selected = ImportItems.Where(i => i.IsSelected).ToList();
+            return Loc.F("{0} of {1} ticked · {2} out · {3} in", selected.Count, ImportItems.Count,
+                Format.Money(selected.Where(IsImportExpense).Sum(i => i.Amount ?? 0)),
+                Format.Money(selected.Where(IsImportIncome).Sum(i => i.Amount ?? 0)));
+        }
+    }
+
+    /// <summary>
+    /// Ticks a whole group at once: all, only the expenses, only the income, or none. Bookings already in
+    /// Keystone stay unticked, and transfers count as neither income nor expense.
+    /// </summary>
+    [RelayCommand]
+    private void SelectImported(string which)
+    {
+        foreach (var item in ImportItems)
+            item.IsSelected = !item.IsDuplicate && which switch
+            {
+                "all" => true,
+                "expenses" => IsImportExpense(item),
+                "income" => IsImportIncome(item),
+                _ => false,
+            };
     }
 
     // ── Language ────────────────────────────────────────────────────────────
@@ -1683,7 +1774,7 @@ public partial class MainViewModel : ViewModelBase
     private void OnLanguageChanged(object? sender, EventArgs e)
     {
         // Lists of choices are rebuilt, which can clear their selection; keep what was chosen.
-        var selections = (TypeFilterIndex, ScheduleFilterIndex, SortIndex, FinancialYearStartIndex,
+        var selections = (TransactionsTab, ScheduleFilterIndex, FinancialYearStartIndex,
             DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, TaskStatusFilterIndex,
             NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
             LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
@@ -1691,7 +1782,7 @@ public partial class MainViewModel : ViewModelBase
             AppointmentStatusFilterIndex, AppointmentReminderIndex);
         CategoryFilter = AllCategories;
         OnPropertyChanged(string.Empty);
-        (TypeFilterIndex, ScheduleFilterIndex, SortIndex, FinancialYearStartIndex,
+        (TransactionsTab, ScheduleFilterIndex, FinancialYearStartIndex,
             DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, TaskStatusFilterIndex,
             NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
             LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,

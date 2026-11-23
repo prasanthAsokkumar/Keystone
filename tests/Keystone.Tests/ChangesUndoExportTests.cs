@@ -304,10 +304,12 @@ public sealed class ChangesUndoExportTests : IDisposable
         var vm = await LoadAsync();
         vm.CurrentYearCommand.Execute(null);
 
+        // The entries export holds the open tab: here the expenses.
+        vm.IsExpensesTab = true;
         var entries = vm.BuildEntriesCsv().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal("Date;Description;Category;Type;Amount;Repeats;Ends on;Person;Account;To account", entries[0]);
         Assert.Contains(entries, l => l.StartsWith($"{Today.Year}-03-04;\"Migros; weekly shop\";Groceries;Expense;-123.45;One-time;"));
-        Assert.Equal(3, entries.Length);
+        Assert.Equal(2, entries.Length);
 
         var year = vm.BuildYearCsv().Split(Environment.NewLine, StringSplitOptions.RemoveEmptyEntries);
         Assert.Equal(1 + 12 + 1, year.Length); // header, 12 salaries, 1 shop

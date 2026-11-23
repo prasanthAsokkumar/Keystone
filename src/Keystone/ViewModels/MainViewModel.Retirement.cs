@@ -108,7 +108,11 @@ public partial class MainViewModel
             .ThenBy(a => PersonName(a.PersonId), StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
-        PensionAccountRows = accounts.Select(a => new PensionAccountRow(a, PersonName(a.PersonId))).ToList();
+        PensionAccountRows = Sorted("pensionAccounts", accounts.Select(a => new PensionAccountRow(a, PersonName(a.PersonId))), null,
+            new SortKey<PensionAccountRow>("name", r => r.Name),
+            new SortKey<PensionAccountRow>("person", r => r.PersonName),
+            new SortKey<PensionAccountRow>("pillar", r => (int)r.Account.Pillar),
+            new SortKey<PensionAccountRow>("balance", r => r.Latest?.Balance, DescendingFirst: true));
         OnPropertyChanged(nameof(RetirementEmptyText));
 
         // Savings: the latest letter of each account that holds money.
@@ -689,7 +693,7 @@ public partial class MainViewModel
 /// <summary>One account on the Retirement page, with its latest letter.</summary>
 public sealed record PensionAccountRow(PensionAccount Account, string PersonName)
 {
-    private PensionStatement? Latest => Account.Statements.Count > 0 ? Account.Statements[^1] : null;
+    internal PensionStatement? Latest => Account.Statements.Count > 0 ? Account.Statements[^1] : null;
 
     private PensionStatement? Previous => Account.Statements.Count > 1 ? Account.Statements[^2] : null;
 

@@ -125,9 +125,13 @@ public partial class MainViewModel
 
     private void RefreshGoals()
     {
-        GoalRows = _goals.OrderBy(g => g.TargetDate ?? DateOnly.MaxValue).ThenBy(g => g.CreatedAt)
-            .Select(g => new GoalRow(g, GoalSaved(g), BankAccounts.FirstOrDefault(a => a.Id == g.AccountId)?.Name ?? "", Today))
-            .ToList();
+        GoalRows = Sorted("goals", _goals.OrderBy(g => g.TargetDate ?? DateOnly.MaxValue).ThenBy(g => g.CreatedAt)
+            .Select(g => new GoalRow(g, GoalSaved(g), BankAccounts.FirstOrDefault(a => a.Id == g.AccountId)?.Name ?? "", Today)),
+            r => r.Goal.SortOrder,
+            new SortKey<GoalRow>("name", r => r.Goal.Name),
+            new SortKey<GoalRow>("target", r => r.Goal.Target, DescendingFirst: true),
+            new SortKey<GoalRow>("saved", r => r.Saved, DescendingFirst: true),
+            new SortKey<GoalRow>("date", r => r.Goal.TargetDate));
         OnPropertyChanged(nameof(EmergencyFundText));
     }
 

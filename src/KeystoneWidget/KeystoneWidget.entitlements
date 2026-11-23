@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Widgets must run sandboxed. -->
+    <key>com.apple.security.app-sandbox</key>
+    <true/>
+    <!-- It may read only the summary Keystone writes next to its database (~/Library/Application Support/Keystone). -->
+    <key>com.apple.security.temporary-exception.files.home-relative-path.read-only</key>
+    <array>
+        <string>/Library/Application Support/Keystone/</string>
+    </array>
+</dict>
+</plist>

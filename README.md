@@ -49,6 +49,7 @@ The screenshots show a made-up family with sample data.
 - A year view by financial year, with any start month
 - Export the entries or every booking of a year as CSV (for Excel or Numbers), or the year as a one-page PDF
 - Undo after deleting an entry or a debt
+- A desktop widget (small, medium, large) with open tasks, bills to pay and the next appointments
 
 **Documents**
 - Bills, invoices, letters, notices, contracts, insurance policies, statements and payslips

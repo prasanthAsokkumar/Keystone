@@ -24,9 +24,9 @@ public sealed record BankStatement(string? Iban, decimal? ClosingBalance, DateOn
 /// </summary>
 public static class BankStatementParser
 {
-    public static readonly string[] Extensions = [".xml", ".camt", ".csv", ".txt", ".tsv"];
+    public static readonly string[] Extensions = [".xml", ".camt", ".csv", ".txt", ".tsv", ".pdf"];
 
-    public static string SupportedFilesText => "camt.053 (XML), CSV";
+    public static string SupportedFilesText => "camt.053 (XML), CSV, Revolut PDF";
 
     /// <summary>A file that may be a bank statement, judged by its name and first bytes.</summary>
     public static bool LooksLikeStatement(string path)
@@ -34,6 +34,8 @@ public static class BankStatementParser
         var extension = Path.GetExtension(path).ToLowerInvariant();
         if (extension is ".xml" or ".camt")
             return Head(path).Contains("camt.05", StringComparison.Ordinal);
+        if (extension == ".pdf")
+            return PdfStatementParser.IsStatement(PdfStatementParser.ReadText(path));
         if (extension is ".csv" or ".tsv" or ".txt")
         {
             try
@@ -63,6 +65,9 @@ public static class BankStatementParser
                 throw new InvalidOperationException(Loc.T("This XML file isn’t a camt bank statement."));
             }
         }
+
+        if (extension == ".pdf")
+            return PdfStatementParser.Parse(PdfStatementParser.ReadText(path));
 
         return ParseCsv(ReadLines(path));
     }

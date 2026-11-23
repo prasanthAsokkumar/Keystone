@@ -116,7 +116,10 @@ public partial class MainViewModel
         shown = AppointmentStatusFilterIndex == 1
             ? shown.OrderByDescending(a => a.Start)
             : shown.OrderBy(a => a.HasPassed(now)).ThenBy(a => a.HasPassed(now) ? -a.Start.Ticks : a.Start.Ticks);
-        AppointmentRows = shown.Select(a => new AppointmentRow(a, PersonName(a.PersonId), now)).ToList();
+        AppointmentRows = Sorted("appointments", shown.Select(a => new AppointmentRow(a, PersonName(a.PersonId), now)), null,
+            new SortKey<AppointmentRow>("title", r => r.Appointment.Title),
+            new SortKey<AppointmentRow>("person", r => r.PersonName),
+            new SortKey<AppointmentRow>("date", r => r.Appointment.Start));
 
         var upcoming = _appointments.Where(a => !a.HasPassed(now)).OrderBy(a => a.Start).ToList();
         AppointmentCountText = Loc.F("{0} coming up", upcoming.Count);

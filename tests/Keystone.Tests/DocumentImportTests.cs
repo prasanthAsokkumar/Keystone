@@ -106,8 +106,8 @@ public class DocumentImportTests
 
     [Theory]
     [InlineData(2_000, 4_096)]
-    [InlineData(12_000, 8_192)]
-    [InlineData(40_000, 16_384)]
+    [InlineData(12_000, 16_384)] // room for an answer listing many entries
+    [InlineData(40_000, 32_768)]
     [InlineData(DocumentReader.MaxTextLength, 32_768)]
     public void ContextSize_GrowsWithDocumentButStaysSmallForLetters(int characters, int expected) =>
         Assert.Equal(expected, LocalAiClient.ContextSizeFor(new DocumentContent("a.pdf", new string('x', characters), null, false)));

@@ -16,6 +16,9 @@ public class AppSettings
     /// <summary>The app's language code ("en", "de"). Empty means the Mac's language.</summary>
     public string Language { get; set; } = "";
 
+    /// <summary>How each list is sorted, e.g. {"transactions":"-amount"}: the column, and "-" for descending.</summary>
+    public string ListSorts { get; set; } = "";
+
     /// <summary>Where household documents are filed. Empty means the default OneDrive folder.</summary>
     public string DocumentsFolder { get; set; } = "";
 

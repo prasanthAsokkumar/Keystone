@@ -394,6 +394,17 @@ public sealed class KeystoneRepository(string databasePath)
 
     public Task SetLanguageAsync(string language) => UpdateSettingsAsync(s => s.Language = language);
 
+    public Task SetListSortsAsync(string json) => UpdateSettingsAsync(s => s.ListSorts = json);
+
+    /// <summary>Saves where rows were dragged to, for one kind of record.</summary>
+    public async Task SetSortOrdersAsync<T>(IReadOnlyDictionary<int, int> orders) where T : class
+    {
+        await using var db = CreateContext();
+        foreach (var (id, order) in orders)
+            await db.Set<T>().Where(e => EF.Property<int>(e, "Id") == id)
+                .ExecuteUpdateAsync(s => s.SetProperty(e => EF.Property<int>(e, "SortOrder"), order));
+    }
+
     public Task SetDocumentsFolderAsync(string folder) => UpdateSettingsAsync(s => s.DocumentsFolder = folder);
 
     public async Task<List<Debt>> GetDebtsAsync()

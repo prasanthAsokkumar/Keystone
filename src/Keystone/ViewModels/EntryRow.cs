@@ -44,9 +44,8 @@ public sealed record EntryRow(Transaction Transaction, string PersonName, string
 
     public bool IsIncome => Transaction.IsIncome;
 
-    public string AmountText => (Transaction.IsTransfer
-                                    ? Transaction.Amount.ToString("#,##0.00", CultureInfo.CurrentCulture)
-                                    : Transaction.SignedAmount.ToString("+#,##0.00;-#,##0.00", CultureInfo.CurrentCulture)) +
+    /// <summary>Without a sign: income, expenses and transfers each have their own tab.</summary>
+    public string AmountText => Transaction.Amount.ToString("#,##0.00", CultureInfo.CurrentCulture) +
         Transaction.Recurrence switch
         {
             Recurrence.Monthly => Loc.T(" / mo"),

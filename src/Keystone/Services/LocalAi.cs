@@ -40,7 +40,10 @@ public sealed class LocalAiClient
     {
         // Rough token counts: about 3 characters per token, an image of up to 1280 px about 2,100.
         var documentTokens = document.IsImage ? 2_100 : (document.Text?.Length ?? 0) / 3;
-        var needed = documentTokens + 2_500; // instructions and answer
+        // The answer can be nearly as long as a text full of entries (a statement lists every booking);
+        // without room for it, the answer is cut off and can't be read.
+        var answerTokens = document.IsImage ? 1_500 : Math.Max(1_500, documentTokens);
+        var needed = documentTokens + answerTokens + 1_000; // plus the instructions
         var size = 4_096;
         while (size < needed && size < 32_768)
             size *= 2;

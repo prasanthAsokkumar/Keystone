@@ -84,11 +84,12 @@ public partial class MainViewModel
 
     private void RefreshDocumentRows()
     {
+        RefreshOwnPageLists();
         var names = People.ToDictionary(p => p.Id, p => p.Name);
         var search = DocumentSearch.Trim();
         var person = DocumentPersonFilter ?? PersonOption.Everyone;
 
-        DocumentRows = Documents
+        DocumentRows = Sorted("documents", Documents
             .Where(d => person.IsEveryone || d.PersonId == person.Id)
             .Where(d => DocumentKindFilterIndex <= 0 || (int)d.Kind == DocumentKindFilterIndex - 1)
             .Where(d => DocumentStatusFilterIndex switch
@@ -110,7 +111,7 @@ public partial class MainViewModel
             .Select(d => new DocumentRow(
                 d, d.PersonId is { } id && names.TryGetValue(id, out var name) ? name : Loc.T(DocumentStore.HouseholdFolder),
                 _documentStore.Exists(d), Today))
-            .ToList();
+            .ToList(), null, DocumentSortKeys);
 
         ScheduleReminders();
         var open = Documents.Where(d => d.IsOpenBill).ToList();

@@ -101,6 +101,7 @@ public partial class MainViewModel
 
     private void RefreshTaxes()
     {
+        RefreshOwnPageLists();
         if (_isLoading)
             return;
 

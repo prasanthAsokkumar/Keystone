@@ -53,6 +53,20 @@ public static class Categories
 
     public const string DebtRepayment = "Debt repayment";
 
+    public const string HealthInsurance = "Health insurance";
+
+    public const string OtherInsurance = "Other insurance";
+
+    public const string Taxes = "Taxes";
+
+    /// <summary>Premiums: listed on the Insurance page rather than with the other expenses.</summary>
+    public static bool IsInsurance(string category) =>
+        string.Equals(category, HealthInsurance, StringComparison.OrdinalIgnoreCase) ||
+        string.Equals(category, OtherInsurance, StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>Tax payments: listed on the Taxes page rather than with the other expenses.</summary>
+    public static bool IsTaxes(string category) => string.Equals(category, Taxes, StringComparison.OrdinalIgnoreCase);
+
     /// <summary>Built-in categories are stored in English and shown in the app's language.</summary>
     public static string Display(string category) =>
         IsBuiltIn(category) ? Loc.T(category) : category;

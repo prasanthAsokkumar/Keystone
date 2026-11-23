@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:l="using:Keystone.Localization"
              xmlns:vm="using:Keystone.ViewModels"
+             xmlns:controls="using:Keystone.Controls"
              x:Class="Keystone.Views.Pages.ContractsPage"
              x:DataType="vm:MainViewModel">
     <!-- Contracts, important dates and warranties: everything with a deadline. -->
@@ -74,10 +75,17 @@
                     <TextBlock Classes="secondary" IsVisible="{Binding !HasContractRows}" HorizontalAlignment="Center"
                                VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
                                Text="{l:T 'No contracts yet. Add your mobile, internet, gym or leasing contracts to see what they cost and when to cancel.'}" />
-                    <ListBox Classes="table" ItemsSource="{Binding ContractRows}" IsVisible="{Binding HasContractRows}" Margin="12,4">
+                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,2" IsVisible="{Binding HasContractRows}" VerticalAlignment="Top">
+                        <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
+                        <controls:SortHeader Label="{l:T 'Provider'}" List="contracts" Key="provider" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Person'}" List="contracts" Key="person" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Cost per year'}" List="contracts" Key="cost" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Cancel by'}" List="contracts" Key="deadline" Sorts="{Binding ListSorts}" />
+                    </StackPanel>
+                    <ListBox Classes="table" ItemsSource="{Binding ContractRows}" IsVisible="{Binding HasContractRows}" Margin="12,34,12,4">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:ContractRow">
-                                <Grid ColumnDefinitions="*,130,150,190,106" ColumnSpacing="16" Background="Transparent"
+                                <Grid ColumnDefinitions="*,130,150,190,106" ColumnSpacing="16" Background="Transparent" controls:Drag.Item="{Binding}" controls:Drag.Target="reorder:contracts" controls:Drag.TargetItem="{Binding}"
                                       Opacity="{Binding HasEnded, Converter={x:Static vm:Format.EndedOpacityConverter}}">
                                     <StackPanel VerticalAlignment="Center">
                                         <TextBlock Text="{Binding Provider}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis" />
@@ -125,7 +133,13 @@
                     <TextBlock Classes="secondary" IsVisible="{Binding !HasImportantDateRows}" HorizontalAlignment="Center"
                                VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
                                Text="{l:T 'No dates yet. Add when passports and ID cards expire, the car inspection or the vignette.'}" />
-                    <ListBox Classes="table" ItemsSource="{Binding ImportantDateRows}" IsVisible="{Binding HasImportantDateRows}" Margin="12,4">
+                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,2" IsVisible="{Binding HasImportantDateRows}" VerticalAlignment="Top">
+                        <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
+                        <controls:SortHeader Label="{l:T 'Title'}" List="dates" Key="title" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Person'}" List="dates" Key="person" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Date'}" List="dates" Key="date" Sorts="{Binding ListSorts}" />
+                    </StackPanel>
+                    <ListBox Classes="table" ItemsSource="{Binding ImportantDateRows}" IsVisible="{Binding HasImportantDateRows}" Margin="12,34,12,4">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:ImportantDateRow">
                                 <Grid ColumnDefinitions="*,130,190,72" ColumnSpacing="16" Background="Transparent"
@@ -165,7 +179,14 @@
                     <TextBlock Classes="secondary" IsVisible="{Binding !HasWarrantyRows}" HorizontalAlignment="Center"
                                VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
                                Text="{l:T 'No warranties yet. Add bigger purchases with their receipt, so you know until when they’re covered.'}" />
-                    <ListBox Classes="table" ItemsSource="{Binding WarrantyRows}" IsVisible="{Binding HasWarrantyRows}" Margin="12,4">
+                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,2" IsVisible="{Binding HasWarrantyRows}" VerticalAlignment="Top">
+                        <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
+                        <controls:SortHeader Label="{l:T 'Item'}" List="warranties" Key="item" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Person'}" List="warranties" Key="person" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Price'}" List="warranties" Key="price" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Ends'}" List="warranties" Key="expires" Sorts="{Binding ListSorts}" />
+                    </StackPanel>
+                    <ListBox Classes="table" ItemsSource="{Binding WarrantyRows}" IsVisible="{Binding HasWarrantyRows}" Margin="12,34,12,4">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:WarrantyRow">
                                 <Grid ColumnDefinitions="*,130,170,106" ColumnSpacing="16" Background="Transparent"

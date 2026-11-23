@@ -60,6 +60,10 @@ namespace Keystone.Data.Migrations
                         .HasMaxLength(8)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("ListSorts")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<int>("LockAfterMinutes")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
@@ -238,6 +242,9 @@ namespace Keystone.Data.Migrations
                     b.Property<bool>("RenewsAutomatically")
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("DocumentId");
@@ -272,6 +279,9 @@ namespace Keystone.Data.Migrations
                         .IsRequired()
                         .HasMaxLength(200)
                         .HasColumnType("TEXT");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
 
                     b.Property<DateOnly>("StartDate")
                         .HasColumnType("TEXT");
@@ -398,6 +408,10 @@ namespace Keystone.Data.Migrations
                         .HasMaxLength(500)
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("Section")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("Sender")
                         .IsRequired()
                         .HasMaxLength(200)
@@ -509,6 +523,9 @@ namespace Keystone.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<bool>("RenewsAutomatically")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("SortOrder")
                         .HasColumnType("INTEGER");
 
                     b.HasKey("Id");
@@ -667,6 +684,9 @@ namespace Keystone.Data.Migrations
                     b.Property<decimal>("Saved")
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
+
                     b.Property<decimal>("Target")
                         .HasColumnType("TEXT");
 
@@ -709,6 +729,9 @@ namespace Keystone.Data.Migrations
                         .HasMaxLength(16)
                         .HasColumnType("TEXT")
                         .HasDefaultValue("Never");
+
+                    b.Property<int>("SortOrder")
+                        .HasColumnType("INTEGER");
 
                     b.Property<string>("Title")
                         .IsRequired()

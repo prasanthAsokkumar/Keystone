@@ -55,8 +55,47 @@ cat > "$APP/Contents/Info.plist" <<PLIST
 </plist>
 PLIST
 
+# The desktop widget (open tasks, bills, appointments): a small WidgetKit extension in Swift, built when the
+# Xcode command line tools are there. It reads the summary Keystone writes next to its database.
+WIDGET="$APP/Contents/PlugIns/KeystoneWidget.appex"
+if xcrun --find swiftc >/dev/null 2>&1; then
+    echo "Building the widget..."
+    mkdir -p "$WIDGET/Contents/MacOS"
+    xcrun swiftc -target "$(uname -m)-apple-macos14.0" -sdk "$(xcrun --sdk macosx --show-sdk-path)" \
+        -parse-as-library -application-extension -O -framework WidgetKit -framework SwiftUI \
+        -Xlinker -e -Xlinker _NSExtensionMain \
+        "$ROOT/src/KeystoneWidget/KeystoneWidget.swift" -o "$WIDGET/Contents/MacOS/KeystoneWidget"
+    cat > "$WIDGET/Contents/Info.plist" <<PLIST
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <key>CFBundleName</key><string>Keystone</string>
+    <key>CFBundleDisplayName</key><string>Keystone</string>
+    <key>CFBundleIdentifier</key><string>ch.keystone.app.widget</string>
+    <key>CFBundleExecutable</key><string>KeystoneWidget</string>
+    <key>CFBundlePackageType</key><string>XPC!</string>
+    <key>CFBundleVersion</key><string>$VERSION</string>
+    <key>CFBundleShortVersionString</key><string>$VERSION</string>
+    <key>LSMinimumSystemVersion</key><string>14.0</string>
+    <key>NSExtension</key>
+    <dict>
+        <key>NSExtensionPointIdentifier</key><string>com.apple.widgetkit-extension</string>
+    </dict>
+</dict>
+</plist>
+PLIST
+else
+    echo "Xcode command line tools not found: building without the desktop widget."
+fi
+
 # Ad-hoc signature: required to run on Apple Silicon. Not notarized, so only for this Mac.
 codesign --force --deep --sign - "$APP"
+if [[ -d "$WIDGET" ]]; then
+    # The widget needs its own sandbox entitlements; then the app is sealed again around it.
+    codesign --force --sign - --entitlements "$ROOT/src/KeystoneWidget/KeystoneWidget.entitlements" "$WIDGET"
+    codesign --force --sign - "$APP"
+fi
 
 echo "Built $APP"
 
@@ -64,6 +103,9 @@ if [[ "${1:-}" == "--install" ]]; then
     rm -rf /Applications/Keystone.app
     cp -R "$APP" /Applications/
     echo "Installed /Applications/Keystone.app"
+    # Tell macOS about the app (and its widget) now, rather than at its next scan.
+    /System/Library/Frameworks/CoreServices.framework/Frameworks/LaunchServices.framework/Support/lsregister \
+        -f /Applications/Keystone.app >/dev/null 2>&1 || true
     # The app used to be called Runway; remove that older copy so only one is installed.
     if [[ -d /Applications/Runway.app ]]; then
         rm -rf /Applications/Runway.app

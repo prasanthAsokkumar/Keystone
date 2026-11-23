@@ -111,13 +111,13 @@
                             <TextBlock Text="{l:T 'Overview'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTransactionsPage}">
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTransactionsPage}" controls:Drag.Target="transactions">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconList}" />
                             <TextBlock Text="{l:T 'Transactions'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsDocumentsPage}">
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsDocumentsPage}" controls:Drag.Target="documents">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconFolder}" />
                             <TextBlock Text="{l:T 'Documents'}" VerticalAlignment="Center" />
@@ -153,7 +153,7 @@
                             <TextBlock Text="{l:T 'Retirement'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsInsurancePage}">
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsInsurancePage}" controls:Drag.Target="insurance">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconUmbrella}" />
                             <TextBlock Text="{l:T 'Insurance'}" VerticalAlignment="Center" />
@@ -165,7 +165,7 @@
                             <TextBlock Text="{l:T 'Contracts &amp; dates'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTaxesPage}">
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTaxesPage}" controls:Drag.Target="taxes">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconReceipt}" />
                             <TextBlock Text="{l:T 'Taxes'}" VerticalAlignment="Center" />
@@ -256,7 +256,7 @@
                             </StackPanel>
                         </Button>
                         <Button Classes="secondary" Click="ImportBankStatement_Click"
-                                ToolTip.Tip="{l:T 'camt.053 or CSV from your bank. You can also drop it on the window.'}">
+                                ToolTip.Tip="{l:T 'camt.053 or CSV from your bank, or a Revolut PDF statement. You can also drop it on the window.'}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <PathIcon Data="{StaticResource IconBank}" />
                                 <TextBlock Text="{l:T 'Import bank statement'}" />
@@ -265,7 +265,7 @@
                         <Button Classes="primary" Command="{Binding NewEntryCommand}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <PathIcon Data="{StaticResource IconPlus}" />
-                                <TextBlock Text="{l:T 'New entry'}" />
+                                <TextBlock Text="{Binding NewEntryText}" />
                             </StackPanel>
                         </Button>
                     </StackPanel>
@@ -575,7 +575,27 @@
             </Grid>
 
             <!-- ═══ Transactions ═══ -->
-            <Border Grid.Row="1" Classes="card" Padding="8" IsVisible="{Binding IsTransactionsPage}">
+            <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="16" IsVisible="{Binding IsTransactionsPage}">
+            <!-- Income, expenses and transfers each on their own tab -->
+            <Grid ColumnDefinitions="Auto,*" ColumnSpacing="24">
+                <Border Classes="segments" HorizontalAlignment="Left" VerticalAlignment="Center">
+                    <UniformGrid Rows="1">
+                        <RadioButton Classes="segment" GroupName="TransactionTabs" Content="{l:T 'Income'}" MinWidth="130"
+                                     IsChecked="{Binding IsIncomeTab}" controls:Drag.Target="income" />
+                        <RadioButton Classes="segment" GroupName="TransactionTabs" Content="{l:T 'Expenses'}" MinWidth="130"
+                                     IsChecked="{Binding IsExpensesTab}" controls:Drag.Target="expenses" />
+                        <RadioButton Classes="segment" GroupName="TransactionTabs" Content="{l:T 'Transfers'}" MinWidth="130"
+                                     IsChecked="{Binding IsTransfersTab}" IsVisible="{Binding ShowTransfersTab}" />
+                    </UniformGrid>
+                </Border>
+                <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="2">
+                    <TextBlock Text="{Binding TransactionsTabTotal}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right"
+                               Classes.positive="{Binding IsIncomeTab}" />
+                    <TextBlock Classes="muted" FontSize="12" Text="{Binding TransactionsTabDetail}" HorizontalAlignment="Right"
+                               TextTrimming="CharacterEllipsis" />
+                </StackPanel>
+            </Grid>
+            <Border Grid.Row="1" Classes="card" Padding="8">
                 <DockPanel>
                     <!-- Filters -->
                     <WrapPanel DockPanel.Dock="Top" ItemSpacing="8" LineSpacing="8" Margin="12,12,12,8">
@@ -585,19 +605,27 @@
                                           Margin="10,0,0,0" Foreground="{DynamicResource TextMuted}" />
                             </TextBox.InnerLeftContent>
                         </TextBox>
-                        <ComboBox ItemsSource="{Binding TypeFilters}" SelectedIndex="{Binding TypeFilterIndex}" Width="120" />
                         <ComboBox ItemsSource="{Binding PersonFilters}" SelectedItem="{Binding PersonFilter}" Width="120" />
                         <ComboBox ItemsSource="{Binding AccountFilters}" SelectedItem="{Binding AccountFilter}" Width="150"
                                   IsVisible="{Binding HasSeveralAccounts}" />
                         <ComboBox ItemsSource="{Binding CategoryFilters}" SelectedItem="{Binding CategoryFilter}" Width="150" />
                         <ComboBox ItemsSource="{Binding ScheduleFilters}" SelectedIndex="{Binding ScheduleFilterIndex}" Width="152" />
-                        <ComboBox ItemsSource="{Binding SortOptions}" SelectedIndex="{Binding SortIndex}" Width="148"
-                                  ToolTip.Tip="{l:T 'Sort'}" />
                         <Button Classes="icon" Command="{Binding ClearFiltersCommand}" ToolTip.Tip="{l:T 'Clear filters'}"
                                 VerticalAlignment="Center">
                             <PathIcon Data="{StaticResource IconClose}" />
                         </Button>
                     </WrapPanel>
+
+                    <!-- Premiums and tax payments are listed on their own pages -->
+                    <Border DockPanel.Dock="Bottom" Background="{DynamicResource SurfaceSunken}" CornerRadius="8"
+                            Padding="14,8" Margin="12,4,12,0" IsVisible="{Binding HasMovedExpenses}">
+                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                            <TextBlock Classes="secondary" FontSize="13" Text="{Binding MovedExpensesText}" TextWrapping="Wrap"
+                                       VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Insurance'}" Command="{Binding ShowInsuranceCommand}" />
+                            <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Taxes'}" Command="{Binding ShowTaxesCommand}" />
+                        </Grid>
+                    </Border>
 
                     <!-- Totals for the filtered rows -->
                     <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
@@ -613,10 +641,10 @@
                     <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,0,0,1"
                             Padding="28,10,28,10" Margin="0,4,0,4">
                         <Grid ColumnDefinitions="*,130,110,150,108" ColumnSpacing="16">
-                            <TextBlock Classes="columnHeader" Text="{l:T 'Description'}" />
-                            <TextBlock Grid.Column="1" Classes="columnHeader" Text="{l:T 'Person'}" />
-                            <TextBlock Grid.Column="2" Classes="columnHeader" Text="{l:T 'Date'}" />
-                            <TextBlock Grid.Column="3" Classes="columnHeader" Text="{l:T 'Amount'}" TextAlignment="Right" />
+                            <controls:SortHeader Label="{l:T 'Description'}" List="transactions" Key="description" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Grid.Column="1" Label="{l:T 'Person'}" List="transactions" Key="person" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Grid.Column="2" Label="{l:T 'Date'}" List="transactions" Key="date" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Grid.Column="3" Label="{l:T 'Amount'}" List="transactions" Key="amount" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
                         </Grid>
                     </Border>
 
@@ -631,7 +659,7 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:EntryRow">
                                     <Grid ColumnDefinitions="*,130,110,150,108" ColumnSpacing="16" Background="Transparent"
-                                          DoubleTapped="EntryRow_DoubleTapped">
+                                          DoubleTapped="EntryRow_DoubleTapped" controls:Drag.Item="{Binding}">
                                         <StackPanel VerticalAlignment="Center" MinWidth="140" ToolTip.Tip="{Binding Description}">
                                             <TextBlock Text="{Binding Description}" FontWeight="Medium"
                                                        TextTrimming="CharacterEllipsis" />
@@ -673,6 +701,8 @@
                 </DockPanel>
             </Border>
 
+            </Grid>
+
             <!-- ═══ Documents ═══ -->
             <Border Grid.Row="1" Classes="card" Padding="8" IsVisible="{Binding IsDocumentsPage}">
                 <DockPanel>
@@ -702,10 +732,10 @@
                     <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,0,0,1"
                             Padding="28,10,28,10" Margin="0,4,0,4">
                         <Grid ColumnDefinitions="*,130,110,190,142" ColumnSpacing="16">
-                            <TextBlock Classes="columnHeader" Text="{l:T 'Document'}" />
-                            <TextBlock Grid.Column="1" Classes="columnHeader" Text="{l:T 'Person'}" />
-                            <TextBlock Grid.Column="2" Classes="columnHeader" Text="{l:T 'Date'}" />
-                            <TextBlock Grid.Column="3" Classes="columnHeader" Text="{l:T 'To pay'}" TextAlignment="Right" />
+                            <controls:SortHeader Label="{l:T 'Document'}" List="documents" Key="title" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Grid.Column="1" Label="{l:T 'Person'}" List="documents" Key="person" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Grid.Column="2" Label="{l:T 'Date'}" List="documents" Key="date" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Grid.Column="3" Label="{l:T 'To pay'}" List="documents" Key="amount" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
                         </Grid>
                     </Border>
 
@@ -718,7 +748,7 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:DocumentRow">
                                     <Grid ColumnDefinitions="*,130,110,190,142" ColumnSpacing="16" Background="Transparent"
-                                          DoubleTapped="DocumentRow_DoubleTapped">
+                                          DoubleTapped="DocumentRow_DoubleTapped" controls:Drag.Item="{Binding}">
                                         <StackPanel VerticalAlignment="Center" MinWidth="140" ToolTip.Tip="{Binding Title}">
                                             <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
                                             <StackPanel Orientation="Horizontal" Spacing="8">
@@ -827,11 +857,17 @@
                         <TextBlock Classes="secondary" Text="{Binding TasksEmptyText}" IsVisible="{Binding !HasTaskRows}"
                                    HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                                    TextWrapping="Wrap" MaxWidth="360" />
-                        <ListBox Classes="table" ItemsSource="{Binding TaskRows}" IsVisible="{Binding HasTaskRows}" Margin="12,0">
+                        <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,6" IsVisible="{Binding HasTaskRows}" VerticalAlignment="Top">
+                            <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
+                            <controls:SortHeader Label="{l:T 'Title'}" List="tasks" Key="title" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Label="{l:T 'Person'}" List="tasks" Key="person" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Label="{l:T 'Due'}" List="tasks" Key="due" Sorts="{Binding ListSorts}" />
+                        </StackPanel>
+                        <ListBox Classes="table" ItemsSource="{Binding TaskRows}" IsVisible="{Binding HasTaskRows}" Margin="12,30,12,0">
                             <ListBox.ItemTemplate>
                                 <DataTemplate x:DataType="vm:TaskRow">
                                     <Grid ColumnDefinitions="Auto,*,130,190,72" ColumnSpacing="16" Background="Transparent"
-                                          DoubleTapped="TaskRow_DoubleTapped">
+                                          DoubleTapped="TaskRow_DoubleTapped" controls:Drag.Item="{Binding}" controls:Drag.Target="reorder:tasks" controls:Drag.TargetItem="{Binding}">
                                         <CheckBox IsChecked="{Binding IsDone, Mode=OneWay}" VerticalAlignment="Center"
                                                   ToolTip.Tip="{l:T 'Mark as done'}" MinWidth="0" Padding="0"
                                                   Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).ToggleTaskCommand}"
@@ -1019,6 +1055,14 @@
                         </StackPanel>
                     </Border>
                     <ScrollViewer IsVisible="{Binding HasDebts}">
+<StackPanel>
+<StackPanel Orientation="Horizontal" Spacing="18" Margin="4,0,0,10" IsVisible="{Binding HasDebts}" VerticalAlignment="Top">
+                        <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
+                        <controls:SortHeader Label="{l:T 'Name'}" List="debts" Key="name" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Still owed'}" List="debts" Key="outstanding" Sorts="{Binding ListSorts}" />
+                        <controls:SortHeader Label="{l:T 'Paid off'}" List="debts" Key="payoff" Sorts="{Binding ListSorts}" />
+                    </StackPanel>
+
                         <ItemsControl ItemsSource="{Binding Debts}" Margin="0,0,14,0">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
@@ -1027,7 +1071,7 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:DebtItemViewModel">
-                                    <Border Classes="card" Padding="20,18">
+                                    <Border Classes="card" Padding="20,18" controls:Drag.Item="{Binding}" controls:Drag.Target="reorder:debts" controls:Drag.TargetItem="{Binding}">
                                         <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
                                             <Border Classes="iconTile" VerticalAlignment="Top">
                                                 <PathIcon Data="{StaticResource IconCard}" />
@@ -1106,7 +1150,8 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                    </ScrollViewer>
+                    </StackPanel>
+</ScrollViewer>
                 </Panel>
             </Grid>
 
@@ -1151,8 +1196,15 @@
                                 <TextBlock Classes="secondary" Text="{Binding RetirementEmptyText}"
                                            IsVisible="{Binding !HasPensionAccounts}" HorizontalAlignment="Center"
                                            VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="380" />
+                                <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,6" IsVisible="{Binding HasPensionAccounts}" VerticalAlignment="Top">
+                                    <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
+                                    <controls:SortHeader Label="{l:T 'Name'}" List="pensionAccounts" Key="name" Sorts="{Binding ListSorts}" />
+                                    <controls:SortHeader Label="{l:T 'Person'}" List="pensionAccounts" Key="person" Sorts="{Binding ListSorts}" />
+                                    <controls:SortHeader Label="{l:T 'Pillar'}" List="pensionAccounts" Key="pillar" Sorts="{Binding ListSorts}" />
+                                    <controls:SortHeader Label="{l:T 'Value'}" List="pensionAccounts" Key="balance" Sorts="{Binding ListSorts}" />
+                                </StackPanel>
                                 <ListBox Classes="table" ItemsSource="{Binding PensionAccountRows}"
-                                         IsVisible="{Binding HasPensionAccounts}" Margin="4,0">
+                                         IsVisible="{Binding HasPensionAccounts}" Margin="4,30,4,0">
                                     <ListBox.ItemTemplate>
                                         <DataTemplate x:DataType="vm:PensionAccountRow">
                                             <Grid ColumnDefinitions="*,Auto,106" ColumnSpacing="16" Background="Transparent"
@@ -2064,6 +2116,24 @@
                             <TextBlock Classes="muted" TextWrapping="Wrap" IsVisible="{Binding HasImportItems}"
                                        Text="{l:T 'Check what was found. Untick anything you don’t want, and fix the details before adding.'}" />
 
+                            <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14,12"
+                                    IsVisible="{Binding HasImportItems}">
+                                <StackPanel Spacing="8">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Tick'}" />
+                                    <WrapPanel ItemSpacing="8" LineSpacing="8">
+                                        <Button Classes="secondary" Content="{l:T 'All'}" Command="{Binding SelectImportedCommand}"
+                                                CommandParameter="all" />
+                                        <Button Classes="secondary" Content="{Binding ImportExpensesOnlyText}"
+                                                Command="{Binding SelectImportedCommand}" CommandParameter="expenses" />
+                                        <Button Classes="secondary" Content="{Binding ImportIncomeOnlyText}"
+                                                Command="{Binding SelectImportedCommand}" CommandParameter="income" />
+                                        <Button Classes="secondary" Content="{l:T 'None'}" Command="{Binding SelectImportedCommand}"
+                                                CommandParameter="none" />
+                                    </WrapPanel>
+                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding ImportSelectionText}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </Border>
+
                             <ItemsControl ItemsSource="{Binding ImportItems}">
                                 <ItemsControl.ItemsPanel>
                                     <ItemsPanelTemplate>
@@ -2676,6 +2746,30 @@
                 <pages:GoalPanel />
             </Border>
         </Panel>
+
+        <!-- While a document is dragged: drop it on a person to make it theirs (its file moves to their folder). -->
+        <Border Grid.Column="1" IsVisible="{Binding IsDraggingDocument}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
+                Margin="0,0,0,24" Padding="14,10" CornerRadius="12" Background="{DynamicResource Surface}"
+                BorderBrush="{DynamicResource Hairline}" BorderThickness="1" BoxShadow="0 6 24 0 #33000000">
+            <StackPanel Orientation="Horizontal" Spacing="10">
+                <TextBlock Classes="secondary" Text="{l:T 'Drop on a person to make it theirs:'}" VerticalAlignment="Center" />
+                <ItemsControl ItemsSource="{Binding PersonOptions}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Orientation="Horizontal" Spacing="8" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:PersonOption">
+                            <Border Background="{DynamicResource SurfaceSunken}" BorderBrush="{DynamicResource Hairline}" BorderThickness="1"
+                                    CornerRadius="16" Padding="14,6" controls:Drag.Target="person" controls:Drag.TargetItem="{Binding}">
+                                <TextBlock Text="{Binding}" FontWeight="Medium" />
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
 
         <!-- Short message with Undo after deleting, or where an export was saved. -->
         <Border Grid.Column="1" IsVisible="{Binding HasNotice}" HorizontalAlignment="Center" VerticalAlignment="Bottom"

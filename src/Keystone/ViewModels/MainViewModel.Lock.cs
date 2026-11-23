@@ -97,6 +97,7 @@ public partial class MainViewModel
     /// <summary>Turning the lock on first checks that unlocking works, so nobody locks themselves out.</summary>
     partial void OnIsLockEnabledChanged(bool value)
     {
+        ScheduleReminders(); // the widget hides titles while the lock is on
         if (_isChangingLock || _isLoading)
             return;
         _ = ChangeLockAsync(value);
