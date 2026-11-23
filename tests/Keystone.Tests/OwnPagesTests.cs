@@ -48,7 +48,7 @@ public sealed class OwnPagesTests : IDisposable
         await AddAsync("Household insurance", Categories.OtherInsurance, 640, Recurrence.Yearly);
         await AddAsync("Tax instalments", Categories.Taxes, 1150);
         var vm = await LoadAsync();
-        vm.IsExpensesTab = true;
+        vm.IsRecurringTab = true;
 
         Assert.Equal(["Rent"], vm.EntryRows.Select(r => r.Description));
         Assert.True(vm.HasMovedExpenses);

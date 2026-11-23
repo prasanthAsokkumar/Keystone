@@ -26,6 +26,7 @@ internal static unsafe class ObjC
     [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern IntPtr Send(IntPtr receiver, IntPtr selector, IntPtr a);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern IntPtr Send(IntPtr receiver, IntPtr selector, IntPtr a, IntPtr b);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern IntPtr Send(IntPtr receiver, IntPtr selector, IntPtr a, IntPtr b, IntPtr c);
+    [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern IntPtr Send(IntPtr receiver, IntPtr selector, IntPtr a, IntPtr b, IntPtr c, IntPtr d);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern IntPtr Send(IntPtr receiver, IntPtr selector, IntPtr a, byte b);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern void SendLong(IntPtr receiver, IntPtr selector, long a);
     [DllImport(Objc, EntryPoint = "objc_msgSend")] public static extern void SendLong(IntPtr receiver, IntPtr selector, long a, IntPtr b);

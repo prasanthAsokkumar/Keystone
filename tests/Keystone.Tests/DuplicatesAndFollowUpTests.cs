@@ -216,24 +216,39 @@ public sealed class DuplicatesAndFollowUpTests : IDisposable
     }
 
     [Fact]
-    public async Task AFiledPolicyOpensTheInsuranceFormFilledIn()
+    public async Task AFiledPolicyIsSavedUnderInsuranceWithItsPremium()
     {
         var vm = await LoadAsync();
         await vm.StartNewDocumentAsync(File("police.pdf", "made-up policy"));
-        vm.DocumentKindIndex = (int)DocumentKind.Policy;
+        vm.DocumentKindIndex = (int)DocumentKind.Letter;
         vm.DocumentTitle = "Household insurance policy";
-        vm.DocumentSender = "Mobiliar";
+        vm.DocumentSender = "Die Mobiliar";
 
-        // Without the AI, the type alone says it belongs under Insurance.
+        // What the local AI read from the paper.
+        vm.SetDocumentFollowUpForTest(new FollowUp(FollowUpKind.Insurance, "HouseholdLiability", "H-55.123", 640m, Recurrence.Yearly,
+            Today.AddMonths(2)));
         Assert.True(vm.HasDocumentFollowUp);
-        Assert.Equal("Also add to Insurance: Mobiliar", vm.DocumentFollowUpText);
+        Assert.StartsWith("Saved under Insurance", vm.DocumentFollowUpNote);
         await vm.SaveDocumentCommand.ExecuteAsync(null);
 
+        // No form to fill in: the policy is there, with its premium as a yearly expense from the next term on.
         Assert.Equal(AppPage.Insurance, vm.CurrentPage);
-        Assert.True(vm.IsInsurancePanelOpen);
-        Assert.Equal("Mobiliar", vm.PolicyInsurer);
-        Assert.Equal(vm.Documents.Single().Id, vm.PolicyDocument!.Document!.Id);
-        Assert.StartsWith("Filled in from “Household insurance policy”", vm.FollowUpHint);
+        Assert.False(vm.IsInsurancePanelOpen);
+        var policy = Assert.Single(await _repository.GetInsurancePoliciesAsync());
+        Assert.Equal(("Die Mobiliar", InsuranceKind.HouseholdLiability, 640m, vm.Documents.Single().Id),
+            (policy.Insurer, policy.Kind, policy.Premium, policy.DocumentId!.Value));
+        var premium = vm.Transactions.Single();
+        var start = MainViewModel.PremiumStart(Recurrence.Yearly, Today.AddMonths(2), Today);
+        Assert.Equal((640m, Recurrence.Yearly, Categories.OtherInsurance, start), (premium.Amount, premium.Recurrence, premium.Category, premium.Date));
+        Assert.Equal($"Added Die Mobiliar to Insurance · premium {Format.Money(640m)} / year in your expenses from {Format.Date(start)}", vm.NoticeText);
+        // The letter is now one of the insurance papers.
+        Assert.Contains(vm.InsuranceDocumentRows, r => r.Title == "Household insurance policy");
+
+        // Undo takes it all back; the paper stays filed.
+        await vm.UndoCommand.ExecuteAsync(null);
+        Assert.Empty(await _repository.GetInsurancePoliciesAsync());
+        Assert.Empty(vm.Transactions);
+        Assert.Single(vm.Documents);
 
         // Unticked, the document is just filed.
         await vm.StartNewDocumentAsync(File("contract.pdf", "made-up contract"));
@@ -243,6 +258,68 @@ public sealed class DuplicatesAndFollowUpTests : IDisposable
         await vm.SaveDocumentCommand.ExecuteAsync(null);
         Assert.Equal(AppPage.Documents, vm.CurrentPage);
         Assert.False(vm.IsContractPanelOpen);
+    }
+
+    [Fact]
+    public async Task ANewPremiumReplacesTheOldOneFromTheNewTerm()
+    {
+        var termEnd = Today.AddDays(40);
+        await _repository.SaveInsurancePolicyAsync(new InsurancePolicy
+        {
+            Insurer = "Helsana", Kind = InsuranceKind.HealthBasic, PolicyNumber = "123.456.789", Premium = 380,
+            PremiumRecurrence = Recurrence.Monthly, ContractEnd = termEnd, NoticeMonths = 1,
+        });
+        // The premium was entered by hand, under another name.
+        var old = await _repository.AddTransactionAsync(new Transaction
+        {
+            Date = Today.AddMonths(-10), Description = "Krankenkasse Lukas", Category = Categories.HealthInsurance, Amount = 380,
+            Type = TransactionType.Expense, Recurrence = Recurrence.Monthly,
+        });
+        var vm = await LoadAsync();
+        var letter = await AddDocumentAsync(new HouseholdDocument { Title = "Prämien nächstes Jahr", Sender = "Helsana Versicherungen AG", Date = Today });
+        var newTermEnd = termEnd.AddYears(1);
+
+        var (text, undo) = await vm.SavePolicyFromDocumentAsync(letter,
+            new FollowUp(FollowUpKind.Insurance, "HealthBasic", "123 456 789", 412.35m, Recurrence.Monthly, newTermEnd));
+
+        // From the new term's first day the new premium counts, the old one until the day before.
+        var newStart = termEnd.AddDays(1);
+        Assert.Equal(newStart.AddDays(-1), vm.Transactions.Single(t => t.Id == old.Id).EndDate);
+        var added = vm.Transactions.Single(t => t.Id != old.Id);
+        Assert.Equal((412.35m, newStart, "Krankenkasse Lukas"), (added.Amount, added.Date, added.Description));
+        Assert.StartsWith("Updated Helsana in Insurance · new premium", text);
+
+        // Filing the same letter again changes nothing more.
+        var (again, _) = await vm.SavePolicyFromDocumentAsync(letter,
+            new FollowUp(FollowUpKind.Insurance, "HealthBasic", "123 456 789", 412.35m, Recurrence.Monthly, newTermEnd));
+        Assert.Equal("Updated Helsana in Insurance · premium already in your expenses", again);
+        Assert.Equal(2, vm.Transactions.Count);
+
+        // On the Insurance page the old premium says until when, the new one from when.
+        var rows = vm.InsuranceEntryRows.ToDictionary(r => r.Transaction.Id);
+        Assert.Equal($"Until {Format.Date(newStart.AddDays(-1))}", rows[old.Id].PhaseText);
+        Assert.True(rows[old.Id].IsEnding);
+        Assert.Equal($"From {Format.Date(newStart)}", rows[added.Id].PhaseText);
+        Assert.Equal([old.Id, added.Id], vm.InsuranceEntryRows.Select(r => r.Transaction.Id)); // current first
+        // Only what is paid now counts a month: not the old and the new premium together.
+        Assert.Equal($"{Format.Money(380)} a month", vm.InsuranceEntriesTotal);
+
+        await undo();
+        Assert.Null(vm.Transactions.Single(t => t.Id == old.Id).EndDate);
+    }
+
+    [Fact]
+    public void APremiumCountsFromTheNextPayment()
+    {
+        var today = new DateOnly(2026, 11, 23);
+        // A new term that hasn't begun: from its first day.
+        Assert.Equal(new DateOnly(2027, 1, 1), MainViewModel.PremiumStart(Recurrence.Monthly, new DateOnly(2027, 12, 31), today));
+        // The current term: the next payment after today.
+        Assert.Equal(new DateOnly(2026, 12, 1), MainViewModel.PremiumStart(Recurrence.Monthly, new DateOnly(2026, 12, 31), today));
+        Assert.Equal(new DateOnly(2027, 1, 1), MainViewModel.PremiumStart(Recurrence.Yearly, new DateOnly(2026, 12, 31), today));
+        Assert.Equal(new DateOnly(2027, 1, 1), MainViewModel.PremiumStart(Recurrence.Quarterly, new DateOnly(2026, 12, 31), today));
+        // No term end known: from next month.
+        Assert.Equal(new DateOnly(2026, 12, 1), MainViewModel.PremiumStart(Recurrence.Yearly, null, today));
     }
 
     [Fact]

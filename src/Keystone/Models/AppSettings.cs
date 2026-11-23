@@ -19,6 +19,17 @@ public class AppSettings
     /// <summary>How each list is sorted, e.g. {"transactions":"-amount"}: the column, and "-" for descending.</summary>
     public string ListSorts { get; set; } = "";
 
+    /// <summary>Kinds of insurance marked "doesn't apply" in the Insurance page's cover overview, e.g. "Car,Building".</summary>
+    public string HiddenCover { get; set; } = "";
+
+    /// <summary>Ids of insurance papers "Check filed papers" has read, e.g. "12,40", so a later check skips them.</summary>
+    public string CheckedPapers { get; set; } = "";
+
+    /// <summary>
+    /// How the owner arranged the sections of a page, e.g. {"insurance":{"order":["policies","bills"],"closed":["cover"]}}.
+    /// </summary>
+    public string PageLayout { get; set; } = "";
+
     /// <summary>Where household documents are filed. Empty means the default OneDrive folder.</summary>
     public string DocumentsFolder { get; set; } = "";
 
@@ -41,7 +52,7 @@ public class AppSettings
     public bool LockEnabled { get; set; }
 
     /// <summary>Minutes away from Keystone after which it locks again; 0 locks as soon as you switch away.</summary>
-    public int LockAfterMinutes { get; set; } = 5;
+    public int LockAfterMinutes { get; set; } = -1;
 
     /// <summary>The what-if changes being tried, as JSON.</summary>
     public string ScenarioJson { get; set; } = "";

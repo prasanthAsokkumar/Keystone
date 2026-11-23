@@ -82,11 +82,17 @@ public partial class MainViewModel
     }
 
     /// <summary>Puts a deleted entry back as it was: same id, its changed months and its linked documents.</summary>
-    private Func<Task> UndoDeleteTransaction(Transaction transaction, int[] linkedDocuments) => async () =>
+    private Func<Task> UndoDeleteTransaction(Transaction transaction, int[] linkedDocuments, BillInstalment[]? parts = null) => async () =>
     {
         await repository.AddTransactionAsync(transaction);
         if (linkedDocuments.Length > 0)
             await repository.LinkDocumentsAsync(linkedDocuments, transaction.Id);
+        if (parts is { Length: > 0 })
+        {
+            await repository.LinkInstalmentsAsync(parts.Select(p => p.Id).ToArray(), transaction.Id);
+            foreach (var part in parts)
+                part.TransactionId = transaction.Id;
+        }
         foreach (var document in Documents.Where(d => linkedDocuments.Contains(d.Id)))
             document.TransactionId = transaction.Id;
         InsertSorted(transaction);

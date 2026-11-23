@@ -99,7 +99,8 @@ public sealed class SortingAndDragTests : IDisposable
         await vm.DropAsync("insurance", null, row);
 
         Assert.Empty(vm.EntryRows);
-        Assert.Equal(Categories.HealthInsurance, Assert.Single(vm.InsuranceEntryRows).Transaction.Category);
+        // A one-time payment made yesterday is listed with the ended premiums ("Paid …").
+        Assert.Equal(Categories.HealthInsurance, Assert.Single(vm.EndedInsuranceEntryRows).Transaction.Category);
         Assert.Equal(Categories.HealthInsurance, (await _repository.GetTransactionsAsync()).Single().Category);
         Assert.Equal("Moved “Helsana” to Insurance", vm.NoticeText);
 

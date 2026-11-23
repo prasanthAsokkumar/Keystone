@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using Avalonia;
 using Avalonia.Controls;
 using Avalonia.Input;
@@ -16,6 +17,13 @@ public static class Drag
 {
     /// <summary>Only Keystone itself can read what is dragged; it never leaves the app.</summary>
     public static readonly DataFormat<object> Format = DataFormat.CreateInProcessFormat<object>("keystone-item");
+
+    /// <summary>
+    /// What macOS sees of a drag. A drag must put at least one item on the system's drag pasteboard, and in-process
+    /// data isn't put there; with nothing else, AppKit refuses the drag session with an exception that ends the app.
+    /// This app-only type carries nothing, and other apps don't take it, so a row can't be dropped into them.
+    /// </summary>
+    internal static readonly DataFormat<string> Marker = DataFormat.CreateStringApplicationFormat("keystone-row");
 
     /// <summary>How far the pointer moves before a press becomes a drag, so clicks and double-clicks still work.</summary>
     private const double Threshold = 6;
@@ -95,11 +103,18 @@ public static class Drag
         if (GetItem(control) is not { } item || ViewModel(control) is not { } vm || vm.IsLocked)
             return;
         var data = new DataTransfer();
-        data.Add(DataTransferItem.Create(Format, item));
+        var dragged = new DataTransferItem();
+        dragged.Set(Format, item);
+        dragged.Set(Marker, "row");
+        data.Add(dragged);
         vm.DraggedItem = item;
         try
         {
             await DragDrop.DoDragDropAsync(pressed, data, DragDropEffects.Move);
+        }
+        catch (Exception)
+        {
+            // A drag the system refuses only means nothing moves.
         }
         finally
         {
@@ -107,11 +122,14 @@ public static class Drag
         }
     }
 
-    private static object? Dragged(DragEventArgs e) => e.DataTransfer.TryGetValue(Format);
+    /// <summary>The dragged row: from the drag itself, or the one Keystone noted when its drag started.</summary>
+    private static object? Dragged(Control control, DragEventArgs e) =>
+        e.DataTransfer.TryGetValue(Format) ??
+        (e.DataTransfer.Formats.Any(f => f == Marker) ? ViewModel(control)?.DraggedItem : null);
 
     private static void OnDragOver(object? sender, DragEventArgs e)
     {
-        if (sender is not Control control || Dragged(e) is not { } item)
+        if (sender is not Control control || Dragged(control, e) is not { } item)
             return;
         var allowed = ViewModel(control)?.CanDrop(GetTarget(control)!, GetTargetItem(control), item) == true;
         e.DragEffects = allowed ? DragDropEffects.Move : DragDropEffects.None;
@@ -127,7 +145,7 @@ public static class Drag
 
     private static async void OnDrop(object? sender, DragEventArgs e)
     {
-        if (sender is not Control control || Dragged(e) is not { } item)
+        if (sender is not Control control || Dragged(control, e) is not { } item)
             return;
         control.Classes.Set("dropHover", false);
         e.Handled = true;

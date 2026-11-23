@@ -59,6 +59,14 @@
                     </StackPanel>
                 </Grid>
 
+                <StackPanel Spacing="4" IsVisible="{Binding PolicyHasDeductible}">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Deductible (Franchise)'}" />
+                    <NumericUpDown Value="{Binding PolicyDeductible}" Minimum="0" Maximum="5000" FormatString="N0"
+                                   PlaceholderText="{l:T 'e.g. 300, 1500 or 2500'}" ShowButtonSpinner="False" />
+                    <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                               Text="{l:T 'Optional. With it, Health costs shows how much the insurer can still bill you this year.'}" />
+                </StackPanel>
+
                 <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14">
                     <StackPanel Spacing="12">
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
@@ -79,7 +87,16 @@
 
                 <StackPanel Spacing="4">
                     <TextBlock Classes="fieldLabel" Text="{l:T 'Policy document'}" />
-                    <ComboBox ItemsSource="{Binding PolicyDocumentOptions}" SelectedItem="{Binding PolicyDocument}" />
+                    <ComboBox ItemsSource="{Binding PolicyDocumentOptions}" SelectedItem="{Binding PolicyDocument}" HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DocumentOption">
+                                <StackPanel Spacing="1">
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                 </StackPanel>
 
                 <StackPanel Spacing="4">

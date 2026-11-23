@@ -1,0 +1,242 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.OverviewPage"
+             x:DataType="vm:MainViewModel">
+    <!-- The household at a glance: what needs attention, the money, what is coming up, and cash over time.
+         Each card can be moved and folded (Tag = its section key; OverviewPage.axaml.cs puts them in order). -->
+    <ScrollViewer>
+    <StackPanel x:Name="Sections" Spacing="16" Margin="0,0,14,0">
+
+        <!-- ── Needs your attention ── -->
+        <Border Classes="card" Padding="8" Tag="attention">
+            <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Needs your attention'}" />
+                        <TextBlock Classes="muted" FontSize="13" Text="{Binding AttentionSummary}" />
+                    </StackPanel>
+                    <controls:SectionTools Grid.Column="1" DataContext="{Binding AttentionSection}" />
+                </Grid>
+                <StackPanel IsVisible="{Binding AttentionSection.IsOpen}">
+                    <!-- All clear -->
+                    <StackPanel Orientation="Horizontal" Spacing="12" Margin="16,6,16,12" IsVisible="{Binding !HasAttention}">
+                        <Border Classes="iconTile">
+                            <PathIcon Data="{StaticResource IconCheck}" />
+                        </Border>
+                        <TextBlock Classes="secondary" VerticalAlignment="Center" TextWrapping="Wrap"
+                                   Text="{l:T 'No overdue bills, tasks or deadlines. Enjoy your day.'}" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding AttentionRows}" Margin="12,0,12,6">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AttentionRow">
+                                <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="4,10">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="14">
+                                        <Border Classes="iconTile" Classes.urgent="{Binding IsUrgent}" Classes.calm="{Binding !IsUrgent}">
+                                            <Panel>
+                                                <PathIcon Data="{StaticResource IconReceipt}" IsVisible="{Binding IsBill}" />
+                                                <PathIcon Data="{StaticResource IconTask}" IsVisible="{Binding IsTask}" />
+                                                <PathIcon Data="{StaticResource IconBell}" IsVisible="{Binding IsDeadline}" />
+                                                <PathIcon Data="{StaticResource IconAppointment}" IsVisible="{Binding IsAppointment}" />
+                                                <PathIcon Data="{StaticResource IconInbox}" IsVisible="{Binding IsInbox}" />
+                                            </Panel>
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                            <TextBlock Text="{Binding Text}" FontWeight="Medium" TextTrimming="CharacterEllipsis"
+                                                       Classes.negative="{Binding IsUrgent}" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" IsVisible="{Binding HasDetail}"
+                                                       TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Open'}" VerticalAlignment="Center"
+                                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).OpenAttentionCommand}"
+                                                CommandParameter="{Binding}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ── Money ── -->
+        <Border Classes="card" Padding="8" Tag="money">
+            <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
+                    <TextBlock Classes="sectionTitle" Text="{l:T 'Money'}" VerticalAlignment="Center" />
+                    <controls:SectionTools Grid.Column="1" DataContext="{Binding MoneySection}" />
+                </Grid>
+                <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="12" Margin="12,4,12,12" IsVisible="{Binding MoneySection.IsOpen}">
+                    <!-- Cash today -->
+                    <Border Classes="tile">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="{l:T 'Cash today'}" />
+                            <TextBlock Classes="value" Text="{Binding BalanceText}" FontSize="24" />
+                            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap">
+                                <Run Text="{l:T 'Cash minus debt'}" />
+                                <Run Text="{Binding NetWorthText}" />
+                            </TextBlock>
+                            <ItemsControl ItemsSource="{Binding AccountRows}" IsVisible="{Binding HasSeveralAccounts}" Margin="0,2,0,0">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:AccountRow">
+                                        <Grid ColumnDefinitions="*,Auto" Margin="0,1">
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1" Classes="secondary" FontSize="12" Text="{Binding BalanceText}"
+                                                       Classes.negative="{Binding IsNegative}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Classes="muted" FontSize="12" Text="{Binding OverdraftText}" IsVisible="{Binding HasOverdraft}" TextWrapping="Wrap" />
+                            <Button Classes="link" FontSize="12" Padding="0" Margin="0,4,0,0">
+                                <TextBlock Text="{l:T 'Match my bank balance →'}" TextWrapping="Wrap" />
+                                <Button.Flyout>
+                                    <Flyout Placement="BottomEdgeAlignedLeft">
+                                        <StackPanel Spacing="10" Width="270" Margin="4">
+                                            <TextBlock Text="{l:T 'What’s in your bank today?'}" FontWeight="SemiBold" />
+                                            <TextBlock Classes="muted" TextWrapping="Wrap"
+                                                       Text="{l:T 'Keystone adjusts the starting balance so its cash matches your bank. Your entries stay as they are.'}" />
+                                            <ComboBox ItemsSource="{Binding AccountOptions}" SelectedItem="{Binding BalanceAccount}"
+                                                      IsVisible="{Binding HasSeveralAccounts}" HorizontalAlignment="Stretch" />
+                                            <NumericUpDown Value="{Binding BankBalance}" FormatString="N2"
+                                                           Increment="100" PlaceholderText="{l:T 'Bank balance'}"
+                                                           ShowButtonSpinner="False" />
+                                            <Button Classes="primary" Content="{l:T 'Apply'}" HorizontalAlignment="Stretch"
+                                                    Command="{Binding MatchBankBalanceCommand}" />
+                                        </StackPanel>
+                                    </Flyout>
+                                </Button.Flyout>
+                            </Button>
+                        </StackPanel>
+                    </Border>
+                    <!-- Runway -->
+                    <Border Grid.Column="1" Classes="tile" ToolTip.Tip="{Binding AveragingText}">
+                        <StackPanel Spacing="4">
+                            <!-- The status (healthy, watch out…) is in the value's colour and under it, not a pill that crowds the label -->
+                            <TextBlock Classes="label" Text="{l:T 'Your runway'}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="value" Text="{Binding RunwayText}" FontSize="24"
+                                       Classes.negative="{Binding RunwayIsCritical}" Classes.warning="{Binding RunwayIsWarning}"
+                                       Classes.positive="{Binding RunwayIsHealthy}" />
+                            <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding RunwayStatusText}"
+                                       Classes.negative="{Binding RunwayIsCritical}" Classes.warning="{Binding RunwayIsWarning}"
+                                       Classes.positive="{Binding RunwayIsHealthy}" />
+                            <TextBlock Classes="secondary" FontSize="12" Text="{Binding RunwayDetailText}" TextWrapping="Wrap" />
+                            <TextBlock Classes="muted" FontSize="12" Text="{Binding RunwayCauseText}" IsVisible="{Binding HasRunwayCause}" TextWrapping="Wrap" />
+                            <TextBlock Classes="muted" FontSize="12" Text="{Binding OverdraftRunwayText}" IsVisible="{Binding HasOverdraftRunway}" TextWrapping="Wrap" />
+                            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap">
+                                <Run Text="{l:T 'Without income'}" />
+                                <Run Text="{Binding WithoutIncomeText}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                    <!-- This month -->
+                    <Border Grid.Column="2" Classes="tile">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="{Binding MonthTitle}" />
+                            <TextBlock Classes="value" Text="{Binding MonthNetText}" FontSize="24"
+                                       Classes.negative="{Binding MonthNetIsNegative}" Classes.positive="{Binding !MonthNetIsNegative}" />
+                            <Grid ColumnDefinitions="Auto,*" RowDefinitions="Auto,Auto" ColumnSpacing="8">
+                                <TextBlock Classes="muted" FontSize="12" Text="{l:T 'In'}" />
+                                <TextBlock Grid.Column="1" Classes="positive" FontSize="12" Text="{Binding MonthInText}" />
+                                <TextBlock Grid.Row="1" Classes="muted" FontSize="12" Text="{l:T 'Out'}" />
+                                <TextBlock Grid.Row="1" Grid.Column="1" Classes="negative" FontSize="12" Text="{Binding MonthOutText}" />
+                            </Grid>
+                            <TextBlock Classes="muted" FontSize="12" Text="{Binding MonthDetailText}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+                    <!-- Saving this financial year -->
+                    <Border Grid.Column="3" Classes="tile">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="label" Text="{Binding YearSavingsTitle}" />
+                            <TextBlock Classes="value" Text="{Binding YearSavingsText}" FontSize="24"
+                                       Classes.negative="{Binding YearSavingsIsNegative}" Classes.positive="{Binding !YearSavingsIsNegative}" />
+                            <TextBlock Classes="secondary" FontSize="12" Text="{Binding YearSavingsCoverText}" TextWrapping="Wrap" />
+                            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap">
+                                <Run Text="{l:T 'Every day'}" />
+                                <Run Text="{Binding NetPerDayText}" />
+                            </TextBlock>
+                        </StackPanel>
+                    </Border>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <!-- ── Coming up ── -->
+        <Border Classes="card" Padding="8" Tag="upcoming">
+            <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12" Margin="16,12,12,4">
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Coming up'}" />
+                        <TextBlock Classes="muted" FontSize="13" Text="{l:T 'Payments, bills, appointments and deadlines in the next 3 weeks'}" />
+                    </StackPanel>
+                    <Button Grid.Column="1" Classes="link" FontSize="13" Content="{l:T 'All payments →'}" VerticalAlignment="Top"
+                            Command="{Binding ShowTransactionsCommand}" />
+                    <controls:SectionTools Grid.Column="2" DataContext="{Binding UpcomingSection}" />
+                </Grid>
+                <StackPanel IsVisible="{Binding UpcomingSection.IsOpen}">
+                    <TextBlock Classes="muted" Margin="16,4,16,12" Text="{l:T 'Nothing coming up in the next 3 weeks.'}"
+                               IsVisible="{Binding !HasComingUp}" />
+                    <ItemsControl ItemsSource="{Binding VisibleComingUpRows}" Margin="12,0,12,4">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:ComingUpRow">
+                                <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="4,8">
+                                    <Grid ColumnDefinitions="Auto,Auto,*,Auto" ColumnSpacing="12">
+                                        <Border Width="40" Height="40" CornerRadius="10" Background="{DynamicResource SurfaceSunken}"
+                                                BorderBrush="{DynamicResource Hairline}" BorderThickness="1">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DayText}" FontSize="14" FontWeight="Bold" HorizontalAlignment="Center" />
+                                                <TextBlock Text="{Binding MonthText}" FontSize="9" FontWeight="SemiBold"
+                                                           Foreground="{DynamicResource TextMuted}" HorizontalAlignment="Center" Margin="0,-2,0,0" />
+                                            </StackPanel>
+                                        </Border>
+                                        <Panel Grid.Column="1" Width="16" VerticalAlignment="Center">
+                                            <PathIcon Data="{StaticResource IconRepeat}" Width="14" Height="14" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding IsPayment}" />
+                                            <PathIcon Data="{StaticResource IconReceipt}" Width="14" Height="14" Foreground="{DynamicResource TextMuted}" IsVisible="{Binding IsBill}" />
+                                            <PathIcon Data="{StaticResource IconAppointment}" Width="14" Height="14" Foreground="{DynamicResource Brand}" IsVisible="{Binding IsAppointment}" />
+                                            <PathIcon Data="{StaticResource IconBell}" Width="14" Height="14" Foreground="{DynamicResource Warning}" IsVisible="{Binding IsDeadline}" />
+                                        </Panel>
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailLine}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <TextBlock Grid.Column="3" Text="{Binding AmountText}" FontWeight="SemiBold" VerticalAlignment="Center"
+                                                   IsVisible="{Binding HasAmount}" Classes.positive="{Binding IsIncome}" />
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Button Classes="link" FontSize="12" Padding="0" Margin="16,2,16,10" HorizontalAlignment="Left"
+                            Content="{Binding ComingUpMoreText}" Command="{Binding ToggleComingUpCommand}"
+                            IsVisible="{Binding HasMoreComingUp}" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <!-- ── Cash over time ── -->
+        <Border Classes="card" Padding="8" Tag="chart">
+            <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="16" Margin="16,12,12,4">
+                    <TextBlock Classes="sectionTitle" Text="{l:T 'Cash over time'}" VerticalAlignment="Center" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16" VerticalAlignment="Center">
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Ellipse Width="8" Height="8" Fill="#3B82F6" />
+                            <TextBlock Classes="muted" Text="{l:T 'Actual'}" />
+                        </StackPanel>
+                        <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                            <Ellipse Width="8" Height="8" Fill="#F59E0B" />
+                            <TextBlock Classes="muted" Text="{l:T 'Projected'}" />
+                        </StackPanel>
+                    </StackPanel>
+                    <controls:SectionTools Grid.Column="2" DataContext="{Binding ChartSection}" />
+                </Grid>
+                <controls:RunwayChart History="{Binding Summary.History}" Projection="{Binding Summary.Projection}"
+                                      Foreground="{DynamicResource TextMuted}" Height="240" Margin="16,0,16,12"
+                                      IsVisible="{Binding ChartSection.IsOpen}" />
+            </StackPanel>
+        </Border>
+    </StackPanel>
+    </ScrollViewer>
+</UserControl>

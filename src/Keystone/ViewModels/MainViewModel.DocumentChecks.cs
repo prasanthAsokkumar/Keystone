@@ -31,7 +31,7 @@ public partial class MainViewModel
     public string DocumentDuplicateText => DuplicateText(DocumentDuplicate);
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(HasDocumentFollowUp))]
+    [NotifyPropertyChangedFor(nameof(HasDocumentFollowUp), nameof(DocumentFollowUpNote))]
     public partial FollowUp? DocumentFollowUp { get; set; }
 
     public bool HasDocumentFollowUp => DocumentFollowUp is not null && !IsEditingDocument;

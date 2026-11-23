@@ -47,6 +47,10 @@ namespace Keystone.Data.Migrations
                     b.Property<bool>("CalendarSyncEnabled")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("CheckedPapers")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("DocumentsFolder")
                         .IsRequired()
                         .HasMaxLength(500)
@@ -54,6 +58,10 @@ namespace Keystone.Data.Migrations
 
                     b.Property<int>("FinancialYearStartMonth")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("HiddenCover")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<string>("Language")
                         .IsRequired()
@@ -67,10 +75,14 @@ namespace Keystone.Data.Migrations
                     b.Property<int>("LockAfterMinutes")
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER")
-                        .HasDefaultValue(5);
+                        .HasDefaultValue(-1);
 
                     b.Property<bool>("LockEnabled")
                         .HasColumnType("INTEGER");
+
+                    b.Property<string>("PageLayout")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
 
                     b.Property<int>("ReminderHour")
                         .ValueGeneratedOnAdd()
@@ -191,6 +203,36 @@ namespace Keystone.Data.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("BankAccounts");
+                });
+
+            modelBuilder.Entity("Keystone.Models.BillInstalment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("DocumentId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<DateOnly>("DueDate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateOnly?>("PaidOn")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int?>("TransactionId")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DocumentId");
+
+                    b.HasIndex("TransactionId");
+
+                    b.ToTable("BillInstalments", (string)null);
                 });
 
             modelBuilder.Entity("Keystone.Models.Contract", b =>
@@ -483,6 +525,9 @@ namespace Keystone.Data.Migrations
                         .HasColumnType("INTEGER");
 
                     b.Property<DateOnly?>("ContractEnd")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("Deductible")
                         .HasColumnType("TEXT");
 
                     b.Property<int?>("DocumentId")
@@ -863,6 +908,20 @@ namespace Keystone.Data.Migrations
                         .OnDelete(DeleteBehavior.SetNull);
                 });
 
+            modelBuilder.Entity("Keystone.Models.BillInstalment", b =>
+                {
+                    b.HasOne("Keystone.Models.HouseholdDocument", null)
+                        .WithMany("Instalments")
+                        .HasForeignKey("DocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Keystone.Models.Transaction", null)
+                        .WithMany()
+                        .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.SetNull);
+                });
+
             modelBuilder.Entity("Keystone.Models.Contract", b =>
                 {
                     b.HasOne("Keystone.Models.HouseholdDocument", null)
@@ -1009,6 +1068,11 @@ namespace Keystone.Data.Migrations
             modelBuilder.Entity("Keystone.Models.Debt", b =>
                 {
                     b.Navigation("ExtraPayments");
+                });
+
+            modelBuilder.Entity("Keystone.Models.HouseholdDocument", b =>
+                {
+                    b.Navigation("Instalments");
                 });
 
             modelBuilder.Entity("Keystone.Models.PensionAccount", b =>

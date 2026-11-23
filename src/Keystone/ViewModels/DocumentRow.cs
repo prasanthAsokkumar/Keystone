@@ -34,6 +34,10 @@ public sealed record DocumentRow(HouseholdDocument Document, string PersonName, 
 
     public string StatusText => this switch
     {
+        { IsOverdue: true } when Document.HasInstalments =>
+            Loc.F("Instalment {0}/{1} overdue", Document.NextInstalmentNumber, Document.Instalments.Count),
+        { IsOpen: true } when Document.HasInstalments =>
+            Loc.F("Instalment {0}/{1} · {2}", Document.NextInstalmentNumber, Document.Instalments.Count, Format.Date(Document.NextDueDate!.Value)),
         { IsOverdue: true } => Loc.F("Overdue since {0}", Format.Date(Document.DueDate!.Value)),
         { IsOpen: true } => Document.DueDate is { } due ? Loc.F("Due {0}", Format.Date(due)) : Loc.T("To pay"),
         { IsPaid: true } => Loc.F("Paid {0}", Format.Date(Document.PaidOn!.Value)),
@@ -42,6 +46,14 @@ public sealed record DocumentRow(HouseholdDocument Document, string PersonName, 
     };
 
     public bool HasStatus => StatusText != "";
+
+    /// <summary>For a bill paid in parts: the next part and what is left, e.g. "CHF 500 due 3 Feb 2027 · CHF 1'000 left of CHF 1'500".</summary>
+    public string? InstalmentTip => Document is { HasInstalments: true, IsOpenBill: true, NextDueDate: { } due }
+        ? Loc.F("{0} due {1} · {2} left of {3}", Format.Money(Document.NextAmount), Format.Date(due),
+            Format.Money(Document.AmountLeft), Format.Money(Document.Amount ?? 0))
+        : null;
+
+    public string MarkPaidTip => Document.HasInstalments ? Loc.T("Mark the next instalment as paid today") : Loc.T("Mark as paid today");
 
     public bool IsMissing => !FileExists;
 }

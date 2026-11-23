@@ -39,6 +39,24 @@
         <Setter Property="Height" Value="18" />
         <Setter Property="Foreground" Value="{DynamicResource BrandText}" />
     </Style>
+    <!-- Overview: something overdue or close gets a red tile, the rest a calm grey one. -->
+    <Style Selector="Border.iconTile.urgent">
+        <Setter Property="Background" Value="{DynamicResource DangerSoft}" />
+    </Style>
+    <Style Selector="Border.iconTile.urgent > PathIcon">
+        <Setter Property="Foreground" Value="{DynamicResource Negative}" />
+    </Style>
+    <Style Selector="Border.iconTile.calm">
+        <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
+    </Style>
+    <Style Selector="Border.iconTile.calm > PathIcon">
+        <Setter Property="Foreground" Value="{DynamicResource TextSecondary}" />
+    </Style>
+    <Style Selector="Border.tile">
+        <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
+        <Setter Property="CornerRadius" Value="12" />
+        <Setter Property="Padding" Value="16,14" />
+    </Style>
 
     <Style Selector="Border.pill">
         <Setter Property="CornerRadius" Value="999" />

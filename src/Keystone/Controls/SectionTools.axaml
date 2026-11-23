@@ -1,0 +1,32 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             x:Class="Keystone.Controls.SectionTools"
+             x:DataType="vm:PageSection"
+             VerticalAlignment="Top">
+    <UserControl.Styles>
+        <!-- A move that isn't possible (top or bottom card) just fades, without the pressed look. -->
+        <Style Selector="Button:disabled /template/ ContentPresenter#PART_ContentPresenter">
+            <Setter Property="Background" Value="Transparent" />
+        </Style>
+        <Style Selector="Button:disabled">
+            <Setter Property="Opacity" Value="0.3" />
+        </Style>
+    </UserControl.Styles>
+    <!-- Move a page's card up or down, and fold it away. -->
+    <StackPanel Orientation="Horizontal" Spacing="2">
+        <Button Classes="icon" Command="{Binding MoveUpCommand}" IsEnabled="{Binding CanMoveUp}" ToolTip.Tip="{l:T 'Move up'}">
+            <PathIcon Data="{StaticResource IconArrowUp}" Width="14" Height="14" />
+        </Button>
+        <Button Classes="icon" Command="{Binding MoveDownCommand}" IsEnabled="{Binding CanMoveDown}" ToolTip.Tip="{l:T 'Move down'}">
+            <PathIcon Data="{StaticResource IconArrowDown}" Width="14" Height="14" />
+        </Button>
+        <Button Classes="icon" Command="{Binding ToggleCommand}" ToolTip.Tip="{Binding ToggleTip}">
+            <Panel>
+                <PathIcon Data="{StaticResource IconChevronUp}" IsVisible="{Binding IsOpen}" />
+                <PathIcon Data="{StaticResource IconChevronDown}" IsVisible="{Binding !IsOpen}" />
+            </Panel>
+        </Button>
+    </StackPanel>
+</UserControl>

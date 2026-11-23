@@ -105,7 +105,7 @@ public partial class MainViewModel
                         d.Notes.Contains(search, StringComparison.CurrentCultureIgnoreCase) ||
                         DocumentContent(d.Id)?.Contains(search, StringComparison.CurrentCultureIgnoreCase) == true)
             .OrderBy(d => d.IsOpenBill ? 0 : 1)
-            .ThenBy(d => d.IsOpenBill ? d.DueDate ?? DateOnly.MaxValue : DateOnly.MaxValue)
+            .ThenBy(d => d.IsOpenBill ? d.NextDueDate ?? DateOnly.MaxValue : DateOnly.MaxValue)
             .ThenByDescending(d => d.Date)
             .ThenByDescending(d => d.Id)
             .Select(d => new DocumentRow(
@@ -119,7 +119,7 @@ public partial class MainViewModel
         HasOverdueBills = overdue > 0;
         OpenBillsText = open.Count == 0
             ? ""
-            : Loc.Plural(open.Count, "{0} bill to pay · {1}", "{0} bills to pay · {1}", Format.Money(open.Sum(d => d.Amount ?? 0))) +
+            : Loc.Plural(open.Count, "{0} bill to pay · {1}", "{0} bills to pay · {1}", Format.Money(open.Sum(d => d.AmountLeft))) +
               (overdue > 0 ? Loc.F(" · {0} overdue", overdue) : "");
     }
 
@@ -268,7 +268,7 @@ public partial class MainViewModel
     public partial DateTime? DocumentDueDate { get; set; }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(CanCreateDocumentEntry))]
+    [NotifyPropertyChangedFor(nameof(CanCreateDocumentEntry), nameof(CanPayDocumentInInstalments))]
     public partial bool DocumentIsPaid { get; set; }
 
     [ObservableProperty]
@@ -300,7 +300,7 @@ public partial class MainViewModel
     public bool DocumentIsPayable => SelectedDocumentKind is DocumentKind.Bill or DocumentKind.Invoice;
 
     public bool CanCreateDocumentEntry =>
-        DocumentIsPayable && !DocumentIsPaid && EditingDocument?.TransactionId is null;
+        DocumentIsPayable && !DocumentIsPaid && EditingDocument?.TransactionId is null && !HasInstalmentEntries(EditingDocument);
 
     /// <summary>Opens the panel to file a dropped or picked file, and lets the local AI fill in what it can.</summary>
     public async Task StartNewDocumentAsync(string path)
@@ -389,6 +389,7 @@ public partial class MainViewModel
         DocumentNotes = document.Notes;
         DocumentPaymentIban = document.PaymentIban == "" ? "" : QrBill.FormatIban(document.PaymentIban);
         DocumentPaymentReference = document.PaymentReference;
+        LoadInstalmentForm(document);
         OnPropertyChanged(nameof(DocumentRetentionText));
         IsDocumentPanelOpen = true;
     }
@@ -404,7 +405,12 @@ public partial class MainViewModel
         }
 
         var payable = DocumentIsPayable;
-        var createEntry = CanCreateDocumentEntry && DocumentCreateEntry;
+        var inParts = payable && DocumentPaysInInstalments;
+        var existingBill = EditingDocument;
+        // Taking a plan away puts the bill back in the expenses as one entry, if its parts were there.
+        var createEntry = !inParts && (CanCreateDocumentEntry && DocumentCreateEntry || HasInstalmentEntries(existingBill));
+        var partEntries = inParts && (existingBill?.TransactionId is not null || HasInstalmentEntries(existingBill) ||
+                                      CanCreateDocumentEntry && DocumentCreateEntry);
         if (createEntry && DocumentAmount is not > 0)
         {
             DocumentError = Loc.T("Enter the amount to pay, or untick “Add to expenses”.");
@@ -431,6 +437,17 @@ public partial class MainViewModel
             TransactionId = existing?.TransactionId,
             FileHash = existing?.FileHash ?? _documentSourceHash,
         };
+        if (inParts)
+        {
+            var (parts, error) = InstalmentsFromForm(document.Id);
+            if (error is not null)
+            {
+                DocumentError = error;
+                return;
+            }
+            document.Instalments = parts;
+            document.PaidOn = parts.All(p => p.IsPaid) ? parts.Max(p => p.PaidOn) : null;
+        }
         var followUp = existing is null && DocumentAddFollowUp ? DocumentFollowUp : null;
         var personName = DocumentPerson.Id is null ? null : DocumentPerson.Name;
 
@@ -449,8 +466,11 @@ public partial class MainViewModel
 
         try
         {
+            var category = BillCategory(existing, document);
+            if (inParts || existing?.HasInstalments == true)
+                await SyncInstalmentEntriesAsync(existing, document, partEntries);
             if (createEntry)
-                await AddBillEntryAsync(document);
+                await AddBillEntryAsync(document, category);
 
             if (existing is null)
                 await repository.AddDocumentAsync(document);
@@ -469,21 +489,38 @@ public partial class MainViewModel
         RefreshDocumentRows();
         CloseDocumentPanel();
         _ = IndexDocumentAsync(document);
-        // An insurance policy, contract, passport or receipt: its form opens next, filled in, for the reminders.
-        if (followUp is not null)
+        // An insurance policy is saved under Insurance straight away, with its premium; a contract, passport or
+        // receipt opens its form next, filled in, for the reminders.
+        if (followUp is { Kind: FollowUpKind.Insurance })
+        {
+            try
+            {
+                var (text, undo) = await SavePolicyFromDocumentAsync(document, followUp);
+                CurrentPage = AppPage.Insurance;
+                ShowNotice(text, undo);
+            }
+            catch (Exception ex)
+            {
+                // The document is filed; the policy can be checked and saved by hand.
+                OpenFollowUp(document, followUp);
+                PolicyError = Loc.F("Could not save: {0}", ex.GetBaseException().Message);
+            }
+        }
+        else if (followUp is not null)
             OpenFollowUp(document, followUp);
         else
             CurrentPage = AppPage.Documents;
     }
 
     /// <summary>Adds an open bill as a one-time expense on its due date, so the runway includes it.</summary>
-    private async Task AddBillEntryAsync(HouseholdDocument document)
+    private async Task AddBillEntryAsync(HouseholdDocument document, (string Category, int? AccountId)? like = null)
     {
         var entry = await repository.AddTransactionAsync(new Transaction
         {
             Date = document.DueDate ?? document.Date,
-            Description = document.Sender == "" ? document.Title : $"{document.Sender}: {document.Title}",
-            Category = "Bills",
+            Description = BillDescription(document),
+            Category = like?.Category ?? "Bills",
+            AccountId = like?.AccountId,
             Amount = document.Amount!.Value,
             Type = TransactionType.Expense,
             PersonId = document.PersonId,
@@ -496,6 +533,11 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task MarkDocumentPaidAsync(HouseholdDocument document)
     {
+        if (document.HasInstalments)
+        {
+            await MarkNextInstalmentPaidAsync(document);
+            return;
+        }
         var paidOn = document.PaidOn;
         document.PaidOn = Today;
         try
@@ -556,6 +598,8 @@ public partial class MainViewModel
     {
         foreach (var document in Documents.Where(d => d.TransactionId == transactionId))
             document.TransactionId = null;
+        foreach (var part in Documents.SelectMany(d => d.Instalments).Where(i => i.TransactionId == transactionId))
+            part.TransactionId = null;
     }
 
     private void CloseDocumentPanel()
@@ -583,6 +627,7 @@ public partial class MainViewModel
         DocumentPaymentIban = "";
         DocumentPaymentReference = "";
         DocumentCreateEntry = true;
+        ResetInstalmentForm();
         DocumentError = null;
         DocumentAiStatus = "";
         ResetDocumentChecks();

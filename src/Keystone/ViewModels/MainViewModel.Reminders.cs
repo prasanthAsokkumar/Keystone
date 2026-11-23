@@ -83,8 +83,10 @@ public partial class MainViewModel
 
     /// <summary>Everything that is reminded of, from now on.</summary>
     public IReadOnlyList<Reminder> PlanReminders(DateTime now) => ReminderPlanner.Plan(
-        Documents.Where(d => d.IsOpenBill && d.DueDate is not null)
-            .Select(d => new BillReminder(d.Id, d.Title, d.Sender, d.Amount ?? 0, d.DueDate!.Value)),
+        Documents.Where(d => d.IsOpenBill && d.NextDueDate is not null)
+            .Select(d => new BillReminder(d.Id,
+                d.HasInstalments ? Loc.F("{0} (instalment {1} of {2})", d.Title, d.NextInstalmentNumber, d.Instalments.Count) : d.Title,
+                d.Sender, d.NextAmount, d.NextDueDate!.Value)),
         _tasks.Where(t => !t.IsDone && t.DueDate is not null).Select(t => new TaskReminder(t.Id, t.Title, t.DueDate!.Value)),
         _policies.Where(p => !p.HasEnded(Today))
             .Select(p => (Policy: p, Deadline: p.NextDeadline(Today)))
@@ -128,8 +130,9 @@ public partial class MainViewModel
 
     private async Task ApplyRemindersAsync()
     {
-        // The desktop widget shows the same tasks, bills and appointments the reminders are about.
+        // The desktop widget and the Overview show the same tasks, bills and appointments the reminders are about.
         WriteWidgetSnapshot();
+        RefreshDashboard();
         var plan = PlanReminders(DateTime.Now);
         UpcomingReminders = plan.Take(5)
             .Select(r => new ReminderRow(FormatReminderTime(r.At), r.Title, r.Body))

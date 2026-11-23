@@ -1,10 +1,31 @@
 using System;
+using System.Collections.Generic;
+using System.Linq;
 using Keystone.Localization;
 
 namespace Keystone.Models;
 
 /// <remarks>Stored by name, so new values need no migration.</remarks>
 public enum DocumentKind { Bill, Invoice, Letter, Notice, Contract, Policy, Statement, Payslip, Other }
+
+/// <summary>One part of a bill paid in instalments.</summary>
+public class BillInstalment
+{
+    public int Id { get; set; }
+
+    public int DocumentId { get; set; }
+
+    public DateOnly DueDate { get; set; }
+
+    public decimal Amount { get; set; }
+
+    public DateOnly? PaidOn { get; set; }
+
+    /// <summary>Its one-time expense entry, if the bill's payments are in the expenses.</summary>
+    public int? TransactionId { get; set; }
+
+    public bool IsPaid => PaidOn is not null;
+}
 
 /// <summary>
 /// A bill, letter or other paper kept for a household member. The file itself lives in the
@@ -59,6 +80,12 @@ public class HouseholdDocument
     /// <summary>The expense entry created for this bill, if any.</summary>
     public int? TransactionId { get; set; }
 
+    /// <summary>
+    /// When the bill is paid in parts (agreed with the tax office or the sender): each part with its own date and
+    /// amount. Empty for a bill paid at once. The bill counts as paid once every part is.
+    /// </summary>
+    public List<BillInstalment> Instalments { get; set; } = [];
+
     public bool IsPayable => Kind is DocumentKind.Bill or DocumentKind.Invoice;
 
     public bool IsPaid => PaidOn is not null;
@@ -66,7 +93,27 @@ public class HouseholdDocument
     /// <summary>A bill or invoice with an amount that hasn't been paid yet.</summary>
     public bool IsOpenBill => IsPayable && !IsPaid && Amount is > 0;
 
-    public bool IsOverdue(DateOnly today) => IsOpenBill && DueDate < today;
+    public bool HasInstalments => Instalments.Count > 0;
+
+    /// <summary>The parts in the order they are due.</summary>
+    public IReadOnlyList<BillInstalment> InstalmentsInOrder => Instalments.OrderBy(i => i.DueDate).ThenBy(i => i.Id).ToList();
+
+    /// <summary>The first part not paid yet; null without a plan or once all are paid.</summary>
+    public BillInstalment? NextInstalment => InstalmentsInOrder.FirstOrDefault(i => !i.IsPaid);
+
+    /// <summary>Which part is next, counting from 1 (0 without one).</summary>
+    public int NextInstalmentNumber => NextInstalment is { } next ? InstalmentsInOrder.ToList().IndexOf(next) + 1 : 0;
+
+    /// <summary>When the next payment is due: the next part's date, or the bill's own.</summary>
+    public DateOnly? NextDueDate => HasInstalments ? NextInstalment?.DueDate : DueDate;
+
+    /// <summary>What the next payment is: the next part, or the whole bill.</summary>
+    public decimal NextAmount => NextInstalment?.Amount ?? Amount ?? 0;
+
+    /// <summary>What is still to pay: the parts not paid yet, or the whole bill while it's open.</summary>
+    public decimal AmountLeft => !IsOpenBill ? 0 : HasInstalments ? Instalments.Where(i => !i.IsPaid).Sum(i => i.Amount) : Amount ?? 0;
+
+    public bool IsOverdue(DateOnly today) => IsOpenBill && NextDueDate < today;
 
     /// <summary>The type's name in the app's language.</summary>
     public static string KindName(DocumentKind kind) => Loc.T(EnglishKindName(kind));

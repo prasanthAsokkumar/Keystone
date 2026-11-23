@@ -37,7 +37,7 @@ public partial class MainViewModel
             .ToList();
 
         var bills = Documents.Where(d => d.IsOpenBill)
-            .OrderBy(d => d.DueDate ?? DateOnly.MaxValue).ThenBy(d => d.Date)
+            .OrderBy(d => d.NextDueDate ?? DateOnly.MaxValue).ThenBy(d => d.Date)
             .ToList();
 
         var appointments = _appointments
@@ -53,9 +53,13 @@ public partial class MainViewModel
             WidgetLabels(),
             new WidgetSection(tasks.Count, tasks.Count(t => t.DueDate < today), null,
                 tasks.Take(WidgetSnapshot.MaxItems).Select(t => Item(t.Title, null, t.DueDate)).ToList()),
-            new WidgetSection(bills.Count, bills.Count(d => d.IsOverdue(today)), Format.Money(bills.Sum(d => d.Amount ?? 0)),
+            new WidgetSection(bills.Count, bills.Count(d => d.IsOverdue(today)), Format.Money(bills.Sum(d => d.AmountLeft)),
                 bills.Take(WidgetSnapshot.MaxItems)
-                    .Select(d => Item(d.Sender == "" ? d.Title : d.Sender, Format.Money(d.Amount ?? 0), d.DueDate))
+                    .Select(d => Item(d.Sender == "" ? d.Title : d.Sender,
+                        d.HasInstalments
+                            ? $"{Format.Money(d.NextAmount)} · {d.NextInstalmentNumber}/{d.Instalments.Count}"
+                            : Format.Money(d.NextAmount),
+                        d.NextDueDate))
                     .ToList()),
             new WidgetSection(appointments.Count, 0, null,
                 appointments.Take(WidgetSnapshot.MaxItems)

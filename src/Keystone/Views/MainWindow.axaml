@@ -281,42 +281,25 @@
                             <TextBlock Text="{Binding AddDeadlineText}" />
                         </StackPanel>
                     </Button>
+                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsInsurancePage}">
+                        <TextBlock Classes="muted" FontSize="13" Text="{Binding CheckPapersStatus}" IsVisible="{Binding IsCheckingPapers}"
+                                   VerticalAlignment="Center" MaxWidth="320" TextTrimming="CharacterEllipsis" />
+                        <Button Classes="secondary" Command="{Binding StopCheckingPapersCommand}" IsVisible="{Binding IsCheckingPapers}"
+                                Content="{l:T 'Stop'}" />
+                        <Button Classes="secondary" Command="{Binding CheckFiledPapersCommand}" IsVisible="{Binding !IsCheckingPapers}"
+                                ToolTip.Tip="{l:T 'Reads the insurance papers you filed before and adds or updates their policies and premiums'}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconSync}" />
+                                <TextBlock Text="{l:T 'Check filed papers'}" />
+                            </StackPanel>
+                        </Button>
+                    </StackPanel>
                     <Button Classes="primary" Command="{Binding NewInsuranceCommand}" IsVisible="{Binding IsInsurancePage}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <PathIcon Data="{StaticResource IconPlus}" />
                             <TextBlock Text="{l:T 'Add insurance'}" />
                         </StackPanel>
                     </Button>
-                    <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding IsOverviewPage}">
-                        <Button Classes="secondary" Command="{Binding FileInboxCommand}" IsVisible="{Binding HasInboxFiles}"
-                                ToolTip.Tip="{l:T 'File the scans from your inbox'}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <PathIcon Data="{StaticResource IconInbox}" Foreground="{DynamicResource Brand}" />
-                                <TextBlock Text="{Binding InboxText}" />
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="secondary" Command="{Binding ShowAppointmentsCommand}" IsVisible="{Binding HasAppointmentsSoon}"
-                                ToolTip.Tip="{l:T 'Show appointments'}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <PathIcon Data="{StaticResource IconAppointment}" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding AppointmentsSoonText}" />
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="secondary" Command="{Binding ShowTasksDueCommand}" IsVisible="{Binding HasTasksDue}"
-                                ToolTip.Tip="{l:T 'Show tasks to do'}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <PathIcon Data="{StaticResource IconTask}" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding TasksDueText}" Classes.negative="{Binding HasOverdueTasks}" />
-                            </StackPanel>
-                        </Button>
-                        <Button Classes="secondary" Command="{Binding ShowOpenBillsCommand}" IsVisible="{Binding HasOpenBills}"
-                                ToolTip.Tip="{l:T 'Show bills to pay'}">
-                            <StackPanel Orientation="Horizontal" Spacing="8">
-                                <PathIcon Data="{StaticResource IconFolder}" Foreground="{DynamicResource TextSecondary}" />
-                                <TextBlock Text="{Binding OpenBillsText}" Classes.negative="{Binding HasOverdueBills}" />
-                            </StackPanel>
-                        </Button>
-                    </StackPanel>
                     <Button Classes="primary" Command="{Binding NewNoteCommand}" IsVisible="{Binding IsNotesPage}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <PathIcon Data="{StaticResource IconPlus}" />
@@ -363,216 +346,7 @@
             </Grid>
 
             <!-- ═══ Overview ═══ -->
-            <Grid Grid.Row="1" RowDefinitions="Auto,Auto,*" RowSpacing="16" IsVisible="{Binding IsOverviewPage}">
-
-                <Grid ColumnDefinitions="2*,*" ColumnSpacing="16">
-                    <!-- Runway hero -->
-                    <Border Classes="card hero" Padding="26,22"
-                            Classes.critical="{Binding RunwayIsCritical}"
-                            Classes.warning="{Binding RunwayIsWarning}"
-                            Classes.healthy="{Binding RunwayIsHealthy}"
-                            ToolTip.Tip="{Binding AveragingText}">
-                        <StackPanel>
-                            <Grid ColumnDefinitions="*,Auto">
-                                <TextBlock Classes="label" Text="{l:T 'Your runway'}" VerticalAlignment="Center" />
-                                <Border Grid.Column="1" Classes="pill">
-                                    <TextBlock Text="{Binding RunwayStatusText}" />
-                                </Border>
-                            </Grid>
-                            <TextBlock Classes="heroValue" Text="{Binding RunwayText}" Margin="0,6,0,0" />
-                            <TextBlock Text="{Binding RunwayDetailText}" FontSize="15" FontWeight="Medium" />
-                            <TextBlock Classes="muted" Text="{Binding RunwayCauseText}" FontSize="13"
-                                       IsVisible="{Binding HasRunwayCause}" Margin="0,2,0,0" />
-                            <TextBlock Classes="muted" Text="{Binding OverdraftRunwayText}" FontSize="13"
-                                       IsVisible="{Binding HasOverdraftRunway}" Margin="0,2,0,0" />
-                            <ProgressBar Classes="runway" Value="{Binding RunwayBarValue}" Maximum="12" Margin="0,20,0,6" />
-                            <Grid ColumnDefinitions="*,*,*">
-                                <TextBlock Classes="muted" Text="{l:T 'Today'}" />
-                                <TextBlock Grid.Column="1" Classes="muted" Text="{l:T '6 months'}" HorizontalAlignment="Center" />
-                                <TextBlock Grid.Column="2" Classes="muted" Text="{l:T '1 year +'}" HorizontalAlignment="Right" />
-                            </Grid>
-                        </StackPanel>
-                    </Border>
-
-                    <!-- Cash -->
-                    <Border Grid.Column="1" Classes="card" Padding="22">
-                        <DockPanel>
-                            <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="10">
-                                <Border Classes="iconTile">
-                                    <PathIcon Data="{StaticResource IconWallet}" />
-                                </Border>
-                                <TextBlock Classes="label" Text="{l:T 'Cash today'}" VerticalAlignment="Center" />
-                            </StackPanel>
-                            <Button DockPanel.Dock="Bottom" Classes="link" Content="{l:T 'Match my bank balance →'}">
-                                <Button.Flyout>
-                                    <Flyout Placement="BottomEdgeAlignedLeft">
-                                        <StackPanel Spacing="10" Width="270" Margin="4">
-                                            <TextBlock Text="{l:T 'What’s in your bank today?'}" FontWeight="SemiBold" />
-                                            <TextBlock Classes="muted" TextWrapping="Wrap"
-                                                       Text="{l:T 'Keystone adjusts the starting balance so its cash matches your bank. Your entries stay as they are.'}" />
-                                            <ComboBox ItemsSource="{Binding AccountOptions}" SelectedItem="{Binding BalanceAccount}"
-                                                      IsVisible="{Binding HasSeveralAccounts}" HorizontalAlignment="Stretch" />
-                                            <NumericUpDown Value="{Binding BankBalance}" FormatString="N2"
-                                                           Increment="100" PlaceholderText="{l:T 'Bank balance'}"
-                                                           ShowButtonSpinner="False" />
-                                            <Button Classes="primary" Content="{l:T 'Apply'}" HorizontalAlignment="Stretch"
-                                                    Command="{Binding MatchBankBalanceCommand}" />
-                                        </StackPanel>
-                                    </Flyout>
-                                </Button.Flyout>
-                            </Button>
-                            <StackPanel Margin="0,14,0,12" Spacing="6">
-                                <TextBlock Classes="value" Text="{Binding BalanceText}" FontSize="32" />
-                                <Grid ColumnDefinitions="*,Auto" RowDefinitions="Auto,Auto" RowSpacing="4">
-                                    <TextBlock Classes="muted" FontSize="13" Text="{l:T 'Debt'}" />
-                                    <TextBlock Grid.Column="1" Classes="secondary" FontSize="13" FontWeight="Medium"
-                                               Text="{Binding TotalDebtText}" />
-                                    <TextBlock Grid.Row="1" Classes="muted" FontSize="13" Text="{l:T 'Cash minus debt'}" />
-                                    <TextBlock Grid.Row="1" Grid.Column="1" Classes="secondary" FontSize="13"
-                                               FontWeight="Medium" Text="{Binding NetWorthText}" />
-                                </Grid>
-                                <ItemsControl ItemsSource="{Binding AccountRows}" IsVisible="{Binding HasSeveralAccounts}" Margin="0,6,0,0">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:AccountRow">
-                                            <Grid ColumnDefinitions="*,Auto" Margin="0,2">
-                                                <TextBlock Classes="muted" FontSize="13" Text="{Binding Name}" TextTrimming="CharacterEllipsis" />
-                                                <TextBlock Grid.Column="1" Classes="secondary" FontSize="13" Text="{Binding BalanceText}"
-                                                           Classes.negative="{Binding IsNegative}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                                <TextBlock Classes="muted" FontSize="12" Text="{Binding OverdraftText}" IsVisible="{Binding HasOverdraft}" />
-                            </StackPanel>
-                        </DockPanel>
-                    </Border>
-                </Grid>
-
-                <!-- Stat tiles -->
-                <Grid Grid.Row="1" ColumnDefinitions="*,*,*" ColumnSpacing="16">
-                    <Border Classes="card">
-                        <StackPanel Spacing="4">
-                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
-                                <Border Classes="iconTile">
-                                    <PathIcon Data="{StaticResource IconSun}" />
-                                </Border>
-                                <TextBlock Classes="label" Text="{l:T 'Every day'}" VerticalAlignment="Center" />
-                            </StackPanel>
-                            <TextBlock Classes="value" Text="{Binding NetPerDayText}"
-                                       Classes.negative="{Binding NetPerDayIsNegative}"
-                                       Classes.positive="{Binding !NetPerDayIsNegative}" />
-                            <StackPanel Orientation="Horizontal" Spacing="14">
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <TextBlock Classes="muted" FontSize="13" Text="{l:T 'Earn'}" />
-                                    <TextBlock Classes="positive" FontSize="13" FontWeight="SemiBold" Text="{Binding IncomePerDayText}" />
-                                </StackPanel>
-                                <StackPanel Orientation="Horizontal" Spacing="4">
-                                    <TextBlock Classes="muted" FontSize="13" Text="{l:T 'Spend'}" />
-                                    <TextBlock Classes="negative" FontSize="13" FontWeight="SemiBold" Text="{Binding ExpensesPerDayText}" />
-                                </StackPanel>
-                            </StackPanel>
-                            <TextBlock Classes="muted" Text="{l:T 'Average of the next 12 months'}" Margin="0,4,0,0" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Column="1" Classes="card">
-                        <StackPanel Spacing="4">
-                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
-                                <Border Classes="iconTile">
-                                    <PathIcon Data="{StaticResource IconPiggy}" />
-                                </Border>
-                                <TextBlock Classes="label" Text="{Binding YearSavingsTitle}" VerticalAlignment="Center" />
-                            </StackPanel>
-                            <TextBlock Classes="value" Text="{Binding YearSavingsText}"
-                                       Classes.negative="{Binding YearSavingsIsNegative}"
-                                       Classes.positive="{Binding !YearSavingsIsNegative}" />
-                            <TextBlock Classes="secondary" FontSize="13" Text="{Binding YearSavingsCoverText}" TextWrapping="Wrap" />
-                            <TextBlock Classes="muted" Text="{Binding YearSavingsDetailText}" TextWrapping="Wrap" Margin="0,4,0,0" />
-                        </StackPanel>
-                    </Border>
-
-                    <Border Grid.Column="2" Classes="card">
-                        <StackPanel Spacing="4">
-                            <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,0,0,8">
-                                <Border Classes="iconTile">
-                                    <PathIcon Data="{StaticResource IconShield}" />
-                                </Border>
-                                <TextBlock Classes="label" Text="{l:T 'Without income'}" VerticalAlignment="Center" />
-                            </StackPanel>
-                            <TextBlock Classes="value" Text="{Binding WithoutIncomeText}" />
-                            <TextBlock Classes="secondary" FontSize="13" Text="{l:T 'How long your cash pays for living'}" TextWrapping="Wrap" />
-                            <TextBlock Classes="muted" Text="{Binding WithoutIncomeDetailText}" TextWrapping="Wrap" Margin="0,4,0,0" />
-                        </StackPanel>
-                    </Border>
-                </Grid>
-
-                <Grid Grid.Row="2" ColumnDefinitions="2*,*" ColumnSpacing="16">
-                    <!-- Chart -->
-                    <Border Classes="card">
-                        <DockPanel>
-                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,10">
-                                <TextBlock Classes="sectionTitle" Text="{l:T 'Cash over time'}" />
-                                <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16">
-                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <Ellipse Width="8" Height="8" Fill="#3B82F6" />
-                                        <TextBlock Classes="muted" Text="{l:T 'Actual'}" />
-                                    </StackPanel>
-                                    <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
-                                        <Ellipse Width="8" Height="8" Fill="#F59E0B" />
-                                        <TextBlock Classes="muted" Text="{l:T 'Projected'}" />
-                                    </StackPanel>
-                                </StackPanel>
-                            </Grid>
-                            <controls:RunwayChart History="{Binding Summary.History}"
-                                                  Projection="{Binding Summary.Projection}"
-                                                  Foreground="{DynamicResource TextMuted}" MinHeight="180" />
-                        </DockPanel>
-                    </Border>
-
-                    <!-- Coming up -->
-                    <Border Grid.Column="1" Classes="card" Padding="20,20,12,12">
-                        <DockPanel>
-                            <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,8,10">
-                                <TextBlock Classes="sectionTitle" Text="{l:T 'Next 30 days'}" />
-                                <Button Grid.Column="1" Classes="link" Content="{l:T 'All →'}" FontSize="13"
-                                        Command="{Binding ShowTransactionsCommand}" />
-                            </Grid>
-                            <TextBlock DockPanel.Dock="Top" Classes="muted" Text="{l:T 'Nothing scheduled in the next 30 days.'}"
-                                       IsVisible="{Binding !HasUpcoming}" TextWrapping="Wrap" />
-                            <ScrollViewer>
-                                <ItemsControl ItemsSource="{Binding Upcoming}">
-                                    <ItemsControl.ItemTemplate>
-                                        <DataTemplate x:DataType="vm:UpcomingRow">
-                                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12" Margin="0,0,8,12">
-                                                <Border Width="42" Height="42" CornerRadius="10"
-                                                        Background="{DynamicResource SurfaceSunken}"
-                                                        BorderBrush="{DynamicResource Hairline}" BorderThickness="1">
-                                                    <StackPanel VerticalAlignment="Center">
-                                                        <TextBlock Text="{Binding DayText}" FontSize="15" FontWeight="Bold"
-                                                                   HorizontalAlignment="Center" />
-                                                        <TextBlock Text="{Binding MonthText}" FontSize="9" FontWeight="SemiBold"
-                                                                   Foreground="{DynamicResource TextMuted}"
-                                                                   HorizontalAlignment="Center" Margin="0,-2,0,0" />
-                                                    </StackPanel>
-                                                </Border>
-                                                <StackPanel Grid.Column="1" VerticalAlignment="Center">
-                                                    <TextBlock Text="{Binding Description}" FontWeight="Medium"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                    <TextBlock Classes="muted" Text="{Binding DetailText}"
-                                                               TextTrimming="CharacterEllipsis" />
-                                                </StackPanel>
-                                                <TextBlock Grid.Column="2" Text="{Binding AmountText}" FontWeight="SemiBold"
-                                                           VerticalAlignment="Center"
-                                                           Classes.positive="{Binding IsIncome}" />
-                                            </Grid>
-                                        </DataTemplate>
-                                    </ItemsControl.ItemTemplate>
-                                </ItemsControl>
-                            </ScrollViewer>
-                        </DockPanel>
-                    </Border>
-                </Grid>
-            </Grid>
+            <pages:OverviewPage Grid.Row="1" IsVisible="{Binding IsOverviewPage}" />
 
             <!-- ═══ Transactions ═══ -->
             <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="16" IsVisible="{Binding IsTransactionsPage}">
@@ -584,6 +358,8 @@
                                      IsChecked="{Binding IsIncomeTab}" controls:Drag.Target="income" />
                         <RadioButton Classes="segment" GroupName="TransactionTabs" Content="{l:T 'Expenses'}" MinWidth="130"
                                      IsChecked="{Binding IsExpensesTab}" controls:Drag.Target="expenses" />
+                        <RadioButton Classes="segment" GroupName="TransactionTabs" Content="{l:T 'Recurring'}" MinWidth="130"
+                                     IsChecked="{Binding IsRecurringTab}" controls:Drag.Target="recurring" />
                         <RadioButton Classes="segment" GroupName="TransactionTabs" Content="{l:T 'Transfers'}" MinWidth="130"
                                      IsChecked="{Binding IsTransfersTab}" IsVisible="{Binding ShowTransfersTab}" />
                     </UniformGrid>
@@ -609,7 +385,8 @@
                         <ComboBox ItemsSource="{Binding AccountFilters}" SelectedItem="{Binding AccountFilter}" Width="150"
                                   IsVisible="{Binding HasSeveralAccounts}" />
                         <ComboBox ItemsSource="{Binding CategoryFilters}" SelectedItem="{Binding CategoryFilter}" Width="150" />
-                        <ComboBox ItemsSource="{Binding ScheduleFilters}" SelectedIndex="{Binding ScheduleFilterIndex}" Width="152" />
+                        <ComboBox ItemsSource="{Binding ScheduleFilters}" SelectedIndex="{Binding ScheduleFilterIndex}" Width="152"
+                                  IsVisible="{Binding ShowScheduleFilter}" />
                         <Button Classes="icon" Command="{Binding ClearFiltersCommand}" ToolTip.Tip="{l:T 'Clear filters'}"
                                 VerticalAlignment="Center">
                             <PathIcon Data="{StaticResource IconClose}" />
@@ -762,7 +539,8 @@
                                         </Border>
                                         <TextBlock Grid.Column="2" Classes="secondary" FontSize="13" Text="{Binding DateText}"
                                                    VerticalAlignment="Center" />
-                                        <StackPanel Grid.Column="3" VerticalAlignment="Center">
+                                        <StackPanel Grid.Column="3" VerticalAlignment="Center" Background="Transparent"
+                                                    ToolTip.Tip="{Binding InstalmentTip}">
                                             <TextBlock Text="{Binding AmountText}" FontWeight="SemiBold" TextAlignment="Right"
                                                        IsVisible="{Binding HasAmount}" />
                                             <TextBlock FontSize="12" Text="{Binding StatusText}" TextAlignment="Right"
@@ -776,7 +554,7 @@
                                                     CommandParameter="{Binding Document}">
                                                 <PathIcon Data="{StaticResource IconOpen}" />
                                             </Button>
-                                            <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Mark as paid today'}"
+                                            <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{Binding MarkPaidTip}"
                                                     IsVisible="{Binding CanMarkPaid}"
                                                     Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).MarkDocumentPaidCommand}"
                                                     CommandParameter="{Binding Document}">
@@ -2291,9 +2069,56 @@
                                             </Grid>
                                         </StackPanel>
                                     </Border>
-                                    <CheckBox IsChecked="{Binding DocumentIsPaid}" Content="{l:T 'Already paid'}" />
-                                    <CheckBox IsChecked="{Binding DocumentCreateEntry}" IsVisible="{Binding CanCreateDocumentEntry}"
-                                              Content="{l:T 'Add to expenses on the due date, so your runway includes it'}" />
+                                    <CheckBox IsChecked="{Binding DocumentIsPaid}" Content="{l:T 'Already paid'}"
+                                              IsVisible="{Binding CanTickDocumentPaid}" />
+                                    <CheckBox IsChecked="{Binding DocumentPaysInInstalments}" IsVisible="{Binding CanPayDocumentInInstalments}"
+                                              Content="{l:T 'Pay in instalments'}"
+                                              ToolTip.Tip="{l:T 'For a bill too big to pay at once, e.g. taxes you agreed to pay in parts'}" />
+                                    <StackPanel Spacing="10" IsVisible="{Binding DocumentPaysInInstalments}">
+                                        <Grid ColumnDefinitions="*,*,1.4*" ColumnSpacing="10">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'Instalments'}" />
+                                                <NumericUpDown Value="{Binding InstalmentCount}" Minimum="2" Maximum="36" Increment="1"
+                                                               FormatString="0" MinWidth="0" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'Every … months'}" />
+                                                <NumericUpDown Value="{Binding InstalmentEveryMonths}" Minimum="1" Maximum="12" Increment="1"
+                                                               FormatString="0" MinWidth="0" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="2" Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'First one on'}" />
+                                                <CalendarDatePicker SelectedDate="{Binding InstalmentFirstDate}" HorizontalAlignment="Stretch" />
+                                            </StackPanel>
+                                        </Grid>
+                                        <ItemsControl ItemsSource="{Binding InstalmentRows}">
+                                            <ItemsControl.ItemsPanel>
+                                                <ItemsPanelTemplate>
+                                                    <StackPanel Spacing="6" />
+                                                </ItemsPanelTemplate>
+                                            </ItemsControl.ItemsPanel>
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:InstalmentRow">
+                                                    <Grid ColumnDefinitions="26,*,110,Auto" ColumnSpacing="8">
+                                                        <TextBlock Classes="muted" Text="{Binding NumberText}" VerticalAlignment="Center" />
+                                                        <CalendarDatePicker Grid.Column="1" SelectedDate="{Binding DueDate}"
+                                                                            HorizontalAlignment="Stretch" IsEnabled="{Binding !IsPaid}" />
+                                                        <NumericUpDown Grid.Column="2" Value="{Binding Amount}" Minimum="0" FormatString="N2"
+                                                                       ShowButtonSpinner="False" MinWidth="0" IsEnabled="{Binding !IsPaid}" />
+                                                        <CheckBox Grid.Column="3" IsChecked="{Binding IsPaid}" Content="{l:T 'Paid'}" />
+                                                    </Grid>
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Classes="secondary" FontSize="12" Text="{Binding InstalmentSummaryText}" />
+                                        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding InstalmentDifferenceText}"
+                                                   IsVisible="{Binding HasInstalmentDifference}" />
+                                        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                                   Text="{l:T 'Each instalment is reminded on its own date. Changing the number, the months between or the first date shares out again what isn’t paid yet.'}" />
+                                    </StackPanel>
+                                    <CheckBox IsChecked="{Binding DocumentCreateEntry}" IsVisible="{Binding CanCreateDocumentEntry}">
+                                        <TextBlock Text="{Binding DocumentCreateEntryText}" TextWrapping="Wrap" />
+                                    </CheckBox>
                                 </StackPanel>
                             </Border>
 
@@ -2313,7 +2138,7 @@
                                         <TextBlock Text="{Binding DocumentFollowUpText}" TextWrapping="Wrap" FontWeight="Medium" />
                                     </CheckBox>
                                     <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0"
-                                               Text="{l:T 'After saving, its form opens filled in, so you can check it and get the reminders.'}" />
+                                               Text="{Binding DocumentFollowUpNote}" />
                                 </StackPanel>
                             </Border>
 
@@ -2773,11 +2598,11 @@
 
         <!-- Short message with Undo after deleting, or where an export was saved. -->
         <Border Grid.Column="1" IsVisible="{Binding HasNotice}" HorizontalAlignment="Center" VerticalAlignment="Bottom"
-                Margin="0,0,0,24" Padding="18,10,10,10" CornerRadius="10" MaxWidth="560"
+                Margin="0,0,0,24" Padding="18,10,10,10" CornerRadius="10" MaxWidth="680"
                 Background="{DynamicResource TextPrimary}" BoxShadow="0 6 24 0 #33000000">
             <StackPanel Orientation="Horizontal" Spacing="14">
                 <TextBlock Text="{Binding NoticeText}" Foreground="{DynamicResource Surface}" VerticalAlignment="Center"
-                           TextTrimming="CharacterEllipsis" MaxWidth="400" />
+                           TextWrapping="Wrap" MaxLines="3" TextTrimming="CharacterEllipsis" MaxWidth="520" />
                 <Button Content="{l:T 'Undo'}" Command="{Binding UndoCommand}" IsVisible="{Binding CanUndo}"
                         Foreground="{DynamicResource Brand}" Background="Transparent" FontWeight="SemiBold" Padding="8,4" />
                 <Button Classes="icon" Command="{Binding DismissNoticeCommand}" ToolTip.Tip="{l:T 'Close'}"

@@ -399,7 +399,9 @@ public static class DocumentDetailsExtraction
           ("MFK", "Aufgebot zur Fahrzeugprüfung"). "warranty" for a purchase receipt or invoice for a durable item
           (electronics, an appliance, furniture, a bike) worth at least 50. Otherwise "none".
         - record_kind: for insurance one of health_basic (KVG/LAMal basic health insurance), health_supplementary (VVG),
-          household_liability, car, life, legal_protection, travel, building, other; for a contract one of mobile,
+          accident, household_liability (household contents and private liability together), household_contents
+          (Hausrat only), private_liability (Privathaftpflicht only), building, car (car or motorbike), legal_protection,
+          life, income_protection (Erwerbsunfähigkeit), travel, pet, other; for a contract one of mobile,
           internet, tv_and_streaming, gym, leasing, rent, subscription, energy, other; for a date one of passport,
           identity_card, driving_licence, car_inspection, vignette, other. Otherwise empty.
         - reference: the policy, customer or contract number, otherwise empty.

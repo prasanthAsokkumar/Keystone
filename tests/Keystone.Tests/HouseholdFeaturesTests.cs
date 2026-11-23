@@ -205,7 +205,7 @@ public sealed class HouseholdFeaturesTests : IDisposable
         Assert.True(vm.IsLockEnabled);
         Assert.True((await _repository.GetSettingsAsync()).LockEnabled);
 
-        vm.LockDelayIndex = 2; // 5 minutes
+        vm.LockDelayIndex = 3; // 5 minutes
         var left = DateTime.Now;
         vm.OnLeftApp(left);
         vm.OnReturnedToApp(left.AddMinutes(2));
@@ -221,6 +221,38 @@ public sealed class HouseholdFeaturesTests : IDisposable
         Assert.False(vm.IsLocked);
     }
 
+    [Fact]
+    public async Task ByDefaultTheLockFollowsTheMacsOwnLock()
+    {
+        var vm = await LoadAsync();
+        var asked = 0;
+        vm.Authenticate = _ => { asked++; return Task.FromResult(true); };
+        if (!vm.CanLock)
+            return; // no Touch ID or password check on this machine
+        vm.IsLockEnabled = true;
+        await Task.Delay(50);
+        asked = 0;
+        Assert.Equal(0, vm.LockDelayIndex); // "When my Mac locks or sleeps"
+        Assert.Equal(-1, (await _repository.GetSettingsAsync()).LockAfterMinutes);
+
+        // Switching to other apps, even for hours, doesn't lock.
+        var left = DateTime.Now;
+        vm.OnLeftApp(left);
+        vm.OnReturnedToApp(left.AddHours(3));
+        Assert.False(vm.IsLocked);
+        Assert.Equal(0, asked);
+
+        // The Mac locks its screen: Keystone locks too, and asks once the Mac is unlocked with Keystone in front.
+        vm.OnMacLocked();
+        Assert.True(vm.IsLocked);
+        vm.OnMacUnlocked(keystoneInFront: false);
+        Assert.Equal(0, asked);
+        vm.OnMacUnlocked(keystoneInFront: true);
+        await Task.Delay(50);
+        Assert.Equal(1, asked);
+        Assert.False(vm.IsLocked);
+    }
+
     /// <summary>Turns the lock on with "as soon as I switch away", the setting the Touch ID prompt used to upset.</summary>
     private async Task<MainViewModel> LockedImmediatelyAsync(Func<MainViewModel, Task<bool>> touchId)
     {
@@ -228,7 +260,7 @@ public sealed class HouseholdFeaturesTests : IDisposable
         vm.Authenticate = _ => touchId(vm);
         vm.IsLockEnabled = true;
         await Task.Delay(50);
-        vm.LockDelayIndex = 0; // as soon as I switch away
+        vm.LockDelayIndex = 1; // as soon as I switch away
         vm.LockNowCommand.Execute(null);
         return vm;
     }

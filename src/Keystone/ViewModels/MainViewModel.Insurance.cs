@@ -10,9 +10,17 @@ using Keystone.Models;
 namespace Keystone.ViewModels;
 
 /// <summary>A choice of policy document; <see cref="Document"/> is null for "none".</summary>
-public sealed record DocumentOption(HouseholdDocument? Document, string Name)
+/// <param name="Person">Whose it is, e.g. "Anna" or "Shared", so papers of the same insurer can be told apart.</param>
+public sealed record DocumentOption(HouseholdDocument? Document, string Name, string Person = "", string DateText = "")
 {
-    public override string ToString() => Document is null ? Loc.T("None") : Name;
+    public string Title => Document is null ? Loc.T("None") : Name;
+
+    /// <summary>"Anna · 15 Nov 2026" under the name; empty for "none".</summary>
+    public string Detail => Document is null ? "" : $"{Person} · {DateText}";
+
+    public bool HasDetail => Document is not null;
+
+    public override string ToString() => Document is null ? Loc.T("None") : $"{Name} ({Person}, {DateText})";
 }
 
 /// <summary>The Insurance page: every policy, what it costs a year and by when it can be cancelled.</summary>
@@ -38,9 +46,28 @@ public partial class MainViewModel
 
     public bool HasInsuranceRows => InsuranceRows.Count > 0;
 
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasEndedInsuranceRows), nameof(EndedPoliciesText))]
+    public partial IReadOnlyList<InsuranceRow> EndedInsuranceRows { get; set; } = [];
+
+    public bool HasEndedInsuranceRows => EndedInsuranceRows.Count > 0;
+
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(EndedPoliciesText))]
+    public partial bool ShowEndedPolicies { get; set; }
+
+    public string EndedPoliciesText => ShowEndedPolicies
+        ? Loc.T("Hide ended policies")
+        : Loc.Plural(EndedInsuranceRows.Count, "Show {0} ended policy", "Show {0} ended policies");
+
+    [RelayCommand]
+    private void ToggleEndedPolicies() => ShowEndedPolicies = !ShowEndedPolicies;
+
     public string InsuranceEmptyText => _policies.Count == 0
         ? Loc.T("No policies yet. Add your health, household, car and other insurance to see what they cost and when to cancel.")
-        : Loc.T("No policies for this person.");
+        : _policies.Any(p => !p.HasEnded(Today))
+            ? Loc.T("No policies for this person.")
+            : Loc.T("No current policies. The ended ones are listed below.");
 
     [ObservableProperty]
     public partial string InsurancePremiumsText { get; set; } = "";
@@ -71,6 +98,13 @@ public partial class MainViewModel
         var policies = _policies.Where(p => filter.IsEveryone || p.PersonId == filter.Id).ToList();
         var documents = Documents.ToDictionary(d => d.Id);
 
+        // Ended policies are kept, but out of the way: listed apart, shown on request.
+        EndedInsuranceRows = policies.Where(p => p.HasEnded(Today))
+            .OrderByDescending(p => p.ContractEnd)
+            .Select(p => new InsuranceRow(p, PersonName(p.PersonId),
+                p.DocumentId is { } id && documents.TryGetValue(id, out var document) ? document : null, Today))
+            .ToList();
+        policies = policies.Where(p => !p.HasEnded(Today)).ToList();
         InsuranceRows = Sorted("policies", policies
             .OrderBy(p => p.HasEnded(Today))
             .ThenBy(p => p.NextDeadline(Today)?.CancelBy ?? DateOnly.MaxValue)
@@ -83,6 +117,7 @@ public partial class MainViewModel
             new SortKey<InsuranceRow>("premium", r => r.Policy.YearlyPremium, DescendingFirst: true),
             new SortKey<InsuranceRow>("deadline", r => r.Policy.NextDeadline(Today)?.CancelBy));
         OnPropertyChanged(nameof(InsuranceEmptyText));
+        RefreshCover();
 
         var running = policies.Where(p => !p.HasEnded(Today)).ToList();
         var yearly = running.Sum(p => p.YearlyPremium);
@@ -182,6 +217,12 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial string PolicyNotes { get; set; } = "";
 
+    /// <summary>The deductible ("Franchise") of a basic health insurance.</summary>
+    [ObservableProperty]
+    public partial decimal? PolicyDeductible { get; set; }
+
+    public bool PolicyHasDeductible => PolicyKindIndex == (int)InsuranceKind.HealthBasic;
+
     /// <summary>Also add the premium as a repeating expense, so the runway includes it.</summary>
     [ObservableProperty]
     public partial bool PolicyAddToExpenses { get; set; }
@@ -227,6 +268,7 @@ public partial class MainViewModel
 
     partial void OnPolicyKindIndexChanged(int value)
     {
+        OnPropertyChanged(nameof(PolicyHasDeductible));
         // A new policy gets the usual notice period for its kind.
         if (EditingPolicy is null && Enum.IsDefined((InsuranceKind)value))
         {
@@ -251,7 +293,8 @@ public partial class MainViewModel
         OnPolicyKindIndexChanged(0);
         PolicyPerson = InsurancePersonFilter is { IsEveryone: false } person ? person : PersonOption.Shared;
         PolicyNotes = "";
-        PolicyAddToExpenses = false;
+        PolicyDeductible = null;
+        PolicyAddToExpenses = true; // a premium is money going out; leave it unticked only if it's already there
         PolicyError = null;
         RefreshPolicyDocumentOptions(null);
         IsInsurancePanelOpen = true;
@@ -272,6 +315,7 @@ public partial class MainViewModel
         PolicyRenews = policy.RenewsAutomatically;
         PolicyNoticeMonths = policy.NoticeMonths;
         PolicyNotes = policy.Notes;
+        PolicyDeductible = policy.Deductible;
         PolicyAddToExpenses = false;
         PolicyError = null;
         RefreshPolicyDocumentOptions(policy.DocumentId);
@@ -284,9 +328,10 @@ public partial class MainViewModel
         [
             new DocumentOption(null, ""),
             .. Documents
-                .Where(d => d.Kind is DocumentKind.Policy or DocumentKind.Contract || d.Id == selectedId)
+                // Every insurance paper: policies, and letters or bills from an insurer.
+                .Where(d => d.Kind is DocumentKind.Policy or DocumentKind.Contract || IsInsuranceDocument(d) || d.Id == selectedId)
                 .OrderByDescending(d => d.Date)
-                .Select(d => new DocumentOption(d, d.Sender == "" ? d.Title : $"{d.Sender}: {d.Title}")),
+                .Select(DocumentOptionOf),
         ];
         PolicyDocument = PolicyDocumentOptions.FirstOrDefault(o => o.Document?.Id == selectedId) ?? PolicyDocumentOptions[0];
     }
@@ -320,6 +365,7 @@ public partial class MainViewModel
             RenewsAutomatically = PolicyRenews,
             NoticeMonths = Math.Clamp((int)(PolicyNoticeMonths ?? 0), 0, 24),
             Notes = PolicyNotes.Trim(),
+            Deductible = (InsuranceKind)PolicyKindIndex == InsuranceKind.HealthBasic ? PolicyDeductible : null,
             DocumentId = PolicyDocument?.Document?.Id,
         };
 
@@ -429,4 +475,7 @@ public sealed record InsuranceRow(InsurancePolicy Policy, string PersonName, Hou
     public bool IsDeadlineSoon => !HasEnded && !IsDeadlineUrgent && DaysToDeadline <= MainViewModel.InsuranceDeadlineWarningDays;
 
     public bool HasDocument => Document is not null;
+
+    /// <summary>"Current" or "Ended 31 Dec 2025", so old and new policies are told apart at a glance.</summary>
+    public string StatusText => HasEnded ? Loc.T("Ended") : Loc.T("Current");
 }

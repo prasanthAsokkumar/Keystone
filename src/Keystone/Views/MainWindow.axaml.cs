@@ -55,6 +55,10 @@ public partial class MainWindow : Window
         // The app lock counts time away from the window.
         Deactivated += (_, _) => (DataContext as MainViewModel)?.OnLeftApp(System.DateTime.Now);
         Activated += (_, _) => (DataContext as MainViewModel)?.OnReturnedToApp(System.DateTime.Now);
+        // The app lock follows the Mac's own lock: locked with the screen, Touch ID asked when back in front.
+        Keystone.Services.Mac.ScreenLock.Locked += () => (DataContext as MainViewModel)?.OnMacLocked();
+        Keystone.Services.Mac.ScreenLock.Unlocked += () => (DataContext as MainViewModel)?.OnMacUnlocked(IsActive);
+        Keystone.Services.Mac.ScreenLock.Start();
 
         // ⌘F searches everything.
         KeyBindings.Add(new KeyBinding

@@ -103,6 +103,12 @@ public class Transaction
     public bool CanStop =>
         IsRecurring && (EndDate is null || EndDate > DateOnly.FromDateTime(DateTime.Today));
 
+    /// <summary>
+    /// Repeating and paid now: started, not ended. A premium starting next year isn't, so it isn't added to the one it
+    /// replaces in "a month" totals.
+    /// </summary>
+    public bool IsRunning(DateOnly today) => IsRecurring && Date <= today && (EndDate is null || EndDate >= today);
+
     public string RecurrenceName => Recurrence switch
     {
         Recurrence.Monthly => Loc.T("Monthly"),

@@ -3,17 +3,23 @@ using Keystone.Localization;
 
 namespace Keystone.Models;
 
-/// <remarks>Stored by name, so new values need no migration.</remarks>
+/// <remarks>Stored by name, so new values need no migration and the order (that of the form's list) can change.</remarks>
 public enum InsuranceKind
 {
     HealthBasic,
     HealthSupplementary,
+    Accident,
+    /// <summary>Household contents and private liability in one policy, as Swiss insurers often sell them.</summary>
     HouseholdLiability,
-    Car,
-    Life,
-    LegalProtection,
-    Travel,
+    HouseholdContents,
+    PrivateLiability,
     Building,
+    Car,
+    LegalProtection,
+    Life,
+    IncomeProtection,
+    Travel,
+    Pet,
     Other,
 }
 
@@ -50,6 +56,12 @@ public class InsurancePolicy
 
     public string Notes { get; set; } = "";
 
+    /// <summary>
+    /// Basic health insurance: the yearly deductible ("Franchise", CHF 300 to 2'500 for adults, 0 to 600 for
+    /// children). With it, the Insurance page says how much cost sharing can still come this year.
+    /// </summary>
+    public decimal? Deductible { get; set; }
+
     /// <summary>The policy document, filed in Documents.</summary>
     public int? DocumentId { get; set; }
 
@@ -76,12 +88,17 @@ public class InsurancePolicy
     {
         InsuranceKind.HealthBasic => "Health insurance (basic)",
         InsuranceKind.HealthSupplementary => "Health insurance (supplementary)",
+        InsuranceKind.Accident => "Accident",
         InsuranceKind.HouseholdLiability => "Household contents and liability",
-        InsuranceKind.Car => "Car",
+        InsuranceKind.HouseholdContents => "Household contents",
+        InsuranceKind.PrivateLiability => "Private liability",
+        InsuranceKind.Car => "Car and motorbike",
         InsuranceKind.Life => "Life",
+        InsuranceKind.IncomeProtection => "Income protection",
         InsuranceKind.LegalProtection => "Legal protection",
         InsuranceKind.Travel => "Travel",
         InsuranceKind.Building => "Building",
+        InsuranceKind.Pet => "Pet",
         _ => "Other",
     });
 

@@ -129,7 +129,7 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Planning => Loc.T("Planning"),
         AppPage.Year => Loc.T("Year overview"),
         AppPage.Settings => Loc.T("Settings"),
-        _ => Loc.T("Overview"),
+        _ => Greeting,
     };
 
     public string PageSubtitle => CurrentPage switch
@@ -147,7 +147,7 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Planning => Loc.T("Savings goals, what-if scenarios, retirement and net worth"),
         AppPage.Year => Loc.T("Income and spending month by month"),
         AppPage.Settings => Loc.T("Accounts, reminders, calendar, backup, household and language"),
-        _ => Loc.F("How long your money lasts · {0:dddd, d MMMM}", Today),
+        _ => Loc.F("{0:dddd, d MMMM} · Your household at a glance", Today),
     };
 
     /// <summary>The side panel with the add/edit entry form.</summary>
@@ -230,6 +230,11 @@ public partial class MainViewModel : ViewModelBase
         {
             NewIsTransfer = TransactionsTab == 2 && HasSeveralAccounts;
             NewIsIncome = TransactionsTab == 0;
+            // The Recurring tab is for costs that come back; the Expenses tab for one-time spending.
+            if (TransactionsTab == 3)
+                NewRecurrence = Recurrence.Monthly;
+            else if (TransactionsTab == 1)
+                NewRecurrence = Recurrence.OneTime;
         }
         IsEntryPanelOpen = true;
     }
@@ -556,9 +561,13 @@ public partial class MainViewModel : ViewModelBase
 
     // ── Entries table ───────────────────────────────────────────────────────
 
-    /// <summary>Income, expenses and transfers are kept apart, each on its own tab with its own totals.</summary>
+    /// <summary>
+    /// Income, one-time expenses, recurring expenses (monthly, quarterly, yearly) and transfers are kept apart, each
+    /// on its own tab with its own totals: 0 income, 1 expenses, 2 transfers, 3 recurring.
+    /// </summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsIncomeTab), nameof(IsExpensesTab), nameof(IsTransfersTab), nameof(NewEntryText), nameof(HasMovedExpenses))]
+    [NotifyPropertyChangedFor(nameof(IsIncomeTab), nameof(IsExpensesTab), nameof(IsTransfersTab), nameof(IsRecurringTab),
+        nameof(NewEntryText), nameof(HasMovedExpenses), nameof(ShowScheduleFilter))]
     public partial int TransactionsTab { get; set; }
 
     public bool IsIncomeTab { get => TransactionsTab == 0; set { if (value) TransactionsTab = 0; } }
@@ -567,11 +576,16 @@ public partial class MainViewModel : ViewModelBase
 
     public bool IsTransfersTab { get => TransactionsTab == 2; set { if (value) TransactionsTab = 2; } }
 
+    public bool IsRecurringTab { get => TransactionsTab == 3; set { if (value) TransactionsTab = 3; } }
+
+    /// <summary>Expenses are all one-time; the other tabs can be filtered by how often.</summary>
+    public bool ShowScheduleFilter => !IsExpensesTab;
+
     /// <summary>Transfers only matter with more than one account, or once there are some.</summary>
     public bool ShowTransfersTab => HasSeveralAccounts || Transactions.Any(t => t.IsTransfer);
 
     public string NewEntryText => Loc.T(!IsTransactionsPage ? "New entry"
-        : TransactionsTab switch { 0 => "New income", 2 => "New transfer", _ => "New expense" });
+        : TransactionsTab switch { 0 => "New income", 2 => "New transfer", 3 => "New recurring expense", _ => "New expense" });
 
     /// <summary>The headline of the open tab, e.g. "CHF 12'050 a month coming in".</summary>
     [ObservableProperty]
@@ -583,10 +597,13 @@ public partial class MainViewModel : ViewModelBase
     partial void OnTransactionsTabChanged(int value)
     {
         CategoryFilter = AllCategories; // income and expense categories differ
+        if (IsExpensesTab)
+            ScheduleFilterIndex = 0; // the filter is hidden there: every expense on it is one-time
         RefreshEntryRows();
     }
 
-    private static int TabOf(Transaction transaction) => transaction.IsIncome ? 0 : transaction.IsTransfer ? 2 : 1;
+    private static int TabOf(Transaction transaction) =>
+        transaction.IsIncome ? 0 : transaction.IsTransfer ? 2 : transaction.IsRecurring ? 3 : 1;
 
     /// <summary>Premiums and tax payments are on the Insurance and Taxes pages, not the Expenses tab.</summary>
     private bool IsOnTab(Transaction transaction) => TabOf(transaction) == TransactionsTab && !HasOwnPage(transaction);
@@ -630,7 +647,8 @@ public partial class MainViewModel : ViewModelBase
         {
             0 => "No income yet. Add your salary and other money coming in with New income.",
             2 => "No transfers yet. Add money moved between your own accounts with New transfer.",
-            _ => "No expenses yet. Add rent, insurance and other costs with New expense.",
+            3 => "No recurring expenses yet. Add rent, subscriptions and other costs that come back with New recurring expense.",
+            _ => "No one-time expenses yet. Add a purchase, a repair or a bill with New expense. Costs that come back are on the Recurring tab.",
         })
         : Loc.T("No entries match these filters.");
 
@@ -691,28 +709,45 @@ public partial class MainViewModel : ViewModelBase
         // Recurring and one-time amounts can't be added up meaningfully, so they're totalled apart.
         // Quarterly and yearly entries count as their monthly share, e.g. a yearly 1,200 as 100 a month.
         static decimal Monthly(IEnumerable<Transaction> entries) =>
-            entries.Where(t => t.CanStop).Sum(t => t.Amount / t.IntervalMonths);
+            entries.Where(t => t.IsRunning(DateOnly.FromDateTime(DateTime.Today))).Sum(t => t.Amount / t.IntervalMonths);
         var onTab = Transactions.Where(IsOnTab).ToList();
         var count = Loc.Plural(onTab.Count, "{1} of {0} entry", "{1} of {0} entries", EntryRows.Count);
-        EntriesSummaryText = Loc.F("{0}   ·   Repeating: {1} / month   ·   One-time: {2}",
-            count, Format.Money(Monthly(EntryRows.Select(r => r.Transaction))),
-            Format.Money(EntryRows.Where(r => !r.Transaction.IsRecurring).Sum(r => r.Transaction.Amount)));
+        var listedMonthly = Format.Money(Monthly(EntryRows.Select(r => r.Transaction)));
+        var listedOneTime = Format.Money(EntryRows.Where(r => !r.Transaction.IsRecurring).Sum(r => r.Transaction.Amount));
+        // Each expense tab has one kind only, so it shows only that total.
+        EntriesSummaryText = TransactionsTab switch
+        {
+            1 => Loc.F("{0}   ·   One-time: {1}", count, listedOneTime),
+            3 => Loc.F("{0}   ·   Repeating: {1} / month", count, listedMonthly),
+            _ => Loc.F("{0}   ·   Repeating: {1} / month   ·   One-time: {2}", count, listedMonthly, listedOneTime),
+        };
 
         // The headline counts every entry on the tab, whatever the filters, for this financial year.
         var yearOneTime = onTab.Where(t => !t.IsRecurring && t.Date >= Summary.YearStart && t.Date <= Summary.YearEnd)
             .Sum(t => t.Amount);
-        TransactionsTabTotal = Loc.F(TransactionsTab switch
+        var year = FinancialYearReport.LabelFor(Summary.YearStart);
+        switch (TransactionsTab)
         {
-            0 => "{0} a month coming in",
-            2 => "{0} a month moved between accounts",
-            _ => "{0} a month going out",
-        }, Format.Money(Monthly(onTab)));
-        TransactionsTabDetail = Loc.F(TransactionsTab switch
-        {
-            0 => "Repeating income now running, plus {0} one-time in {1}",
-            2 => "Repeating transfers now running, plus {0} one-time in {1}",
-            _ => "Repeating costs now running, plus {0} one-time in {1}",
-        }, Format.Money(yearOneTime), FinancialYearReport.LabelFor(Summary.YearStart));
+            case 1:
+                // One-time spending only: what this financial year has (and will have) cost.
+                TransactionsTabTotal = Loc.F("{0} one-time in {1}", Format.Money(yearOneTime), year);
+                TransactionsTabDetail = Loc.F("Recurring costs ({0} a month) are on the Recurring tab",
+                    Format.Money(Monthly(Transactions.Where(t => TabOf(t) == 3 && !HasOwnPage(t)))));
+                break;
+            case 3:
+                var running = onTab.Count(t => t.IsRunning(Today));
+                TransactionsTabTotal = Loc.F("{0} a month going out", Format.Money(Monthly(onTab)));
+                TransactionsTabDetail = Loc.F("{0} a year · {1}", Format.Money(Monthly(onTab) * 12),
+                    Loc.Plural(running, "{0} recurring cost now running", "{0} recurring costs now running"));
+                break;
+            default:
+                TransactionsTabTotal = Loc.F(TransactionsTab == 0 ? "{0} a month coming in" : "{0} a month moved between accounts",
+                    Format.Money(Monthly(onTab)));
+                TransactionsTabDetail = Loc.F(TransactionsTab == 0
+                    ? "Repeating income now running, plus {0} one-time in {1}"
+                    : "Repeating transfers now running, plus {0} one-time in {1}", Format.Money(yearOneTime), year);
+                break;
+        }
         OnPropertyChanged(nameof(ShowTransfersTab));
         RefreshOwnPageLists();
         if (TransactionsTab == 2 && !ShowTransfersTab)
@@ -988,6 +1023,10 @@ public partial class MainViewModel : ViewModelBase
         {
             var settings = await repository.GetSettingsAsync();
             LoadListSorts(settings.ListSorts);
+            LoadHiddenCover(settings.HiddenCover);
+            LoadPageLayout(settings.PageLayout);
+            _checkedPapers = settings.CheckedPapers.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                .Select(id => int.TryParse(id, out var n) ? n : 0).Where(n => n > 0).ToHashSet();
             ApplyLockSettings(settings.LockEnabled, settings.LockAfterMinutes);
             ApplyReminderSettings(settings.RemindersEnabled, settings.ReminderHour);
             LoadScenario(settings.ScenarioJson);
@@ -1198,10 +1237,11 @@ public partial class MainViewModel : ViewModelBase
         if (EditingTransaction == transaction)
             ClosePanel();
         var linked = Documents.Where(d => d.TransactionId == transaction.Id).Select(d => d.Id).ToArray();
+        var parts = Documents.SelectMany(d => d.Instalments).Where(i => i.TransactionId == transaction.Id).ToArray();
         Transactions.Remove(transaction);
         UnlinkDocumentsFrom(transaction.Id);
         Recalculate();
-        ShowNotice(Loc.F("Deleted “{0}”", transaction.Description), UndoDeleteTransaction(transaction, linked));
+        ShowNotice(Loc.F("Deleted “{0}”", transaction.Description), UndoDeleteTransaction(transaction, linked, parts));
     }
 
     /// <summary>Ends a monthly entry today, keeping its past months in the history.</summary>
@@ -1791,6 +1831,7 @@ public partial class MainViewModel : ViewModelBase
 
         RefreshPersonOptions();
         RefreshDocumentRows();
+        RefreshCover();
         RefreshTaskRows();
         RefreshAppointmentRows();
         RefreshCalendarState();
@@ -1929,6 +1970,7 @@ public partial class MainViewModel : ViewModelBase
         RebuildReport();
         RefreshEntryRows();
         RefreshUpcoming();
+        RefreshDashboard();
         RefreshTaxes();
         RefreshPlanning();
     }

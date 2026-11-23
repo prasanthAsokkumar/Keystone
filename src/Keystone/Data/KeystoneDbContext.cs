@@ -156,7 +156,8 @@ public class KeystoneDbContext(string databasePath) : DbContext
             entity.Property(s => s.Language).HasMaxLength(8);
             entity.Property(s => s.RemindersEnabled).HasDefaultValue(true);
             entity.Property(s => s.ReminderHour).HasDefaultValue(8);
-            entity.Property(s => s.LockAfterMinutes).HasDefaultValue(5);
+            // -1: lock when the Mac locks its screen or sleeps (MainViewModel.WhenMacLocks).
+            entity.Property(s => s.LockAfterMinutes).HasDefaultValue(-1);
             entity.Property(s => s.RetirementNeedPercent).HasDefaultValue(80);
             entity.Property(s => s.CalendarId).HasMaxLength(300);
         });
@@ -175,6 +176,16 @@ public class KeystoneDbContext(string databasePath) : DbContext
             // Removing a person keeps their documents as household ones; deleting an entry unlinks its bill.
             entity.HasOne<Person>().WithMany().HasForeignKey(d => d.PersonId).OnDelete(DeleteBehavior.SetNull);
             entity.HasOne<Transaction>().WithMany().HasForeignKey(d => d.TransactionId).OnDelete(DeleteBehavior.SetNull);
+            entity.HasMany(d => d.Instalments).WithOne().HasForeignKey(i => i.DocumentId).OnDelete(DeleteBehavior.Cascade);
+            entity.Ignore(d => d.InstalmentsInOrder);
+            entity.Ignore(d => d.NextInstalment);
+        });
+
+        modelBuilder.Entity<BillInstalment>(entity =>
+        {
+            entity.ToTable("BillInstalments");
+            // Deleting an instalment's entry keeps the instalment, without an entry.
+            entity.HasOne<Transaction>().WithMany().HasForeignKey(i => i.TransactionId).OnDelete(DeleteBehavior.SetNull);
         });
 
         modelBuilder.Entity<Note>(entity =>

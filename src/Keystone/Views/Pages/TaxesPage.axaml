@@ -14,6 +14,52 @@
                     <ComboBox Grid.Column="1" ItemsSource="{Binding PersonFilters}" SelectedItem="{Binding TaxPersonFilter}" />
                 </Grid>
 
+        <Border Classes="card" Padding="8" IsVisible="{Binding HasTaxBillRows}">
+            <StackPanel Spacing="4">
+                <StackPanel Spacing="2" Margin="16,12,12,4">
+                    <TextBlock Classes="sectionTitle" Text="{l:T 'Bills to pay'}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding TaxBillsText}" />
+                </StackPanel>
+                <ItemsControl ItemsSource="{Binding TaxBillRows}" Margin="12,0,12,8">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DocumentRow">
+                            <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,8">
+                                <Grid ColumnDefinitions="*,170,106" ColumnSpacing="16" Background="Transparent" controls:Drag.Item="{Binding}">
+                                    <StackPanel VerticalAlignment="Center" ToolTip.Tip="{Binding Title}">
+                                        <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Background="Transparent" ToolTip.Tip="{Binding InstalmentTip}">
+                                        <TextBlock Text="{Binding AmountText}" FontWeight="SemiBold" TextAlignment="Right" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding StatusText}" TextAlignment="Right"
+                                                   Classes.negative="{Binding IsOverdue}" />
+                                    </StackPanel>
+                                    <Grid Grid.Column="2" ColumnDefinitions="34,34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
+                                        <Button Classes="icon" ToolTip.Tip="{l:T 'Open'}" IsEnabled="{Binding !IsMissing}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).OpenDocumentCommand}"
+                                                CommandParameter="{Binding Document}">
+                                            <PathIcon Data="{StaticResource IconOpen}" />
+                                        </Button>
+                                        <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{Binding MarkPaidTip}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).MarkDocumentPaidCommand}"
+                                                CommandParameter="{Binding Document}">
+                                            <PathIcon Data="{StaticResource IconCheck}" />
+                                        </Button>
+                                        <Button Grid.Column="2" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).EditDocumentCommand}"
+                                                CommandParameter="{Binding Document}">
+                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                        </Button>
+                                    </Grid>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
                 <ItemsControl ItemsSource="{Binding TaxSections}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>

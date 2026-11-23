@@ -89,6 +89,7 @@ public partial class MainViewModel
             RenewsAutomatically = existing?.RenewsAutomatically ?? true,
             NoticeMonths = followUp.NoticeMonths ?? existing?.NoticeMonths ?? InsurancePolicy.DefaultNoticeMonths(kind),
             Notes = existing?.Notes ?? "",
+            Deductible = existing?.Deductible,
             DocumentId = document.Id,
         };
     }
@@ -223,13 +224,9 @@ public partial class MainViewModel
         {
             case FollowUpKind.Insurance:
             {
-                var existing = MatchingPolicy(document, followUp);
-                var policy = PolicyFrom(document, followUp, existing);
-                await repository.SaveInsurancePolicyAsync(policy);
-                Replace(_policies, existing, policy);
-                RefreshInsurance();
-                ScheduleReminders();
-                return policy.Insurer;
+                var insurer = PolicyFrom(document, followUp, MatchingPolicy(document, followUp)).Insurer;
+                await SavePolicyFromDocumentAsync(document, followUp);
+                return insurer;
             }
             case FollowUpKind.Contract:
             {

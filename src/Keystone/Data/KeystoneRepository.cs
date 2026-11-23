@@ -93,6 +93,15 @@ public sealed class KeystoneRepository(string databasePath)
             .ExecuteUpdateAsync(s => s.SetProperty(d => d.TransactionId, transactionId));
     }
 
+    /// <summary>Links parts of bills paid in instalments to an entry again, e.g. when its deletion is undone.</summary>
+    public async Task LinkInstalmentsAsync(IReadOnlyCollection<int> instalmentIds, int transactionId)
+    {
+        await using var db = CreateContext();
+        await db.Set<BillInstalment>()
+            .Where(i => instalmentIds.Contains(i.Id))
+            .ExecuteUpdateAsync(s => s.SetProperty(i => i.TransactionId, transactionId));
+    }
+
     /// <summary>Keeps only the given single-time changes of an entry, e.g. after its dates were edited.</summary>
     public async Task KeepEntryChangesAsync(int transactionId, IReadOnlyCollection<int> keepIds)
     {
@@ -141,7 +150,7 @@ public sealed class KeystoneRepository(string databasePath)
     public async Task<List<HouseholdDocument>> GetDocumentsAsync()
     {
         await using var db = CreateContext();
-        var documents = await db.Documents.AsNoTracking().ToListAsync();
+        var documents = await db.Documents.AsNoTracking().Include(d => d.Instalments).ToListAsync();
         return documents.OrderByDescending(d => d.Date).ThenByDescending(d => d.Id).ToList();
     }
 
@@ -156,6 +165,11 @@ public sealed class KeystoneRepository(string databasePath)
     public async Task UpdateDocumentAsync(HouseholdDocument document)
     {
         await using var db = CreateContext();
+        // Parts taken out of the plan are deleted; the rest are added or updated with the document.
+        var keep = document.Instalments.Where(i => i.Id != 0).Select(i => i.Id).ToList();
+        await db.Set<BillInstalment>()
+            .Where(i => i.DocumentId == document.Id && !keep.Contains(i.Id))
+            .ExecuteDeleteAsync();
         db.Documents.Update(document);
         await db.SaveChangesAsync();
     }
@@ -395,6 +409,12 @@ public sealed class KeystoneRepository(string databasePath)
     public Task SetLanguageAsync(string language) => UpdateSettingsAsync(s => s.Language = language);
 
     public Task SetListSortsAsync(string json) => UpdateSettingsAsync(s => s.ListSorts = json);
+
+    public Task SetHiddenCoverAsync(string kinds) => UpdateSettingsAsync(s => s.HiddenCover = kinds);
+
+    public Task SetCheckedPapersAsync(string ids) => UpdateSettingsAsync(s => s.CheckedPapers = ids);
+
+    public Task SetPageLayoutAsync(string json) => UpdateSettingsAsync(s => s.PageLayout = json);
 
     /// <summary>Saves where rows were dragged to, for one kind of record.</summary>
     public async Task SetSortOrdersAsync<T>(IReadOnlyDictionary<int, int> orders) where T : class

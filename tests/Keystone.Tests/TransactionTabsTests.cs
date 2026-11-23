@@ -5,7 +5,7 @@ using Keystone.ViewModels;
 
 namespace Keystone.Tests;
 
-/// <summary>Income, expenses and transfers are kept apart on the Transactions page, each with its own totals.</summary>
+/// <summary>Income, one-time expenses, recurring expenses and transfers are kept apart on the Transactions page, each with its own totals.</summary>
 [Collection(nameof(LanguageCollection))]
 public sealed class TransactionTabsTests : IDisposable
 {
@@ -65,15 +65,29 @@ public sealed class TransactionTabsTests : IDisposable
         Assert.False(vm.ShowTransfersTab); // one account, no transfers
 
         vm.IsExpensesTab = true;
-        // The insurance premium is on the Insurance page instead.
-        Assert.Equal(["Rent", "Sofa"], vm.EntryRows.Select(r => r.Description).Order());
-        Assert.Equal($"{Format.Money(2450)} a month going out", vm.TransactionsTabTotal);
-        Assert.StartsWith($"Repeating costs now running, plus {Format.Money(900)} one-time in", vm.TransactionsTabDetail);
-        Assert.Equal($"2 of 2 entries   ·   Repeating: {Format.Money(2450)} / month   ·   One-time: {Format.Money(900)}",
-            vm.EntriesSummaryText);
-        // Only expense categories to filter by.
+        // One-time spending only; rent comes back every month and is on the Recurring tab.
+        Assert.Equal(["Sofa"], vm.EntryRows.Select(r => r.Description));
+        Assert.StartsWith($"{Format.Money(900)} one-time in", vm.TransactionsTabTotal);
+        Assert.Equal($"Recurring costs ({Format.Money(2450)} a month) are on the Recurring tab", vm.TransactionsTabDetail);
+        Assert.False(vm.ShowScheduleFilter);
+        Assert.Equal($"1 of 1 entry   ·   One-time: {Format.Money(900)}", vm.EntriesSummaryText);
         Assert.DoesNotContain("Salary", vm.CategoryFilters);
+        Assert.DoesNotContain("Rent", vm.CategoryFilters);
+
+        vm.IsRecurringTab = true;
+        // The insurance premium is on the Insurance page instead.
+        Assert.Equal(["Rent"], vm.EntryRows.Select(r => r.Description));
+        Assert.Equal($"{Format.Money(2450)} a month going out", vm.TransactionsTabTotal);
+        Assert.Equal($"{Format.Money(29400)} a year · 1 recurring cost now running", vm.TransactionsTabDetail);
         Assert.Contains("Rent", vm.CategoryFilters);
+        Assert.True(vm.ShowScheduleFilter);
+        Assert.Equal($"1 of 1 entry   ·   Repeating: {Format.Money(2450)} / month", vm.EntriesSummaryText);
+        Assert.Equal("New recurring expense", vm.NewEntryText);
+        vm.NewEntryCommand.Execute(null);
+        Assert.True(vm.NewIsMonthly);
+        Assert.False(vm.NewIsIncome);
+
+        vm.IsExpensesTab = true;
         Assert.Equal("New expense", vm.NewEntryText);
     }
 
@@ -106,6 +120,8 @@ public sealed class TransactionTabsTests : IDisposable
     {
         var vm = await LoadAsync();
         vm.EditTransactionCommand.Execute(vm.Transactions.Single(t => t.Description == "Rent"));
+        Assert.True(vm.IsRecurringTab);
+        vm.EditTransactionCommand.Execute(vm.Transactions.Single(t => t.Description == "Sofa"));
         Assert.True(vm.IsExpensesTab);
     }
 
@@ -125,5 +141,23 @@ public sealed class TransactionTabsTests : IDisposable
         again.NewEntryCommand.Execute(null);
         Assert.True(again.NewIsTransfer);
         Assert.Equal("New transfer", again.NewEntryText);
+    }
+
+    [Fact]
+    public async Task DroppingAnExpenseOnTheOtherTabChangesHowOftenItComes()
+    {
+        var vm = await LoadAsync();
+        var sofa = vm.Transactions.Single(t => t.Description == "Sofa");
+        var row = new EntryRow(sofa, "", "");
+        Assert.True(vm.CanDrop("recurring", null, row));
+        Assert.False(vm.CanDrop("expenses", null, row));
+
+        await vm.DropAsync("recurring", null, row);
+        Assert.Equal(Recurrence.Monthly, sofa.Recurrence);
+        vm.IsRecurringTab = true;
+        Assert.Contains(vm.EntryRows, r => r.Description == "Sofa");
+
+        await vm.UndoCommand.ExecuteAsync(null);
+        Assert.Equal(Recurrence.OneTime, sofa.Recurrence);
     }
 }

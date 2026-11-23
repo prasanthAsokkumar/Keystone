@@ -1,3 +1,4 @@
+using System;
 using System.Globalization;
 using System.Linq;
 using Keystone.Models;
@@ -19,6 +20,9 @@ public sealed record PersonOption(int? Id, string Name, bool IsEveryone = false)
     /// <summary>"Everyone" and "Shared" are shown in the app's language; people's names as they are.</summary>
     public override string ToString() => Id is null ? Loc.T(Name) : Name;
 }
+
+/// <summary>Where an entry stands today: paid now, being replaced, starting later, or over.</summary>
+public enum EntryPhase { Current, Ending, Upcoming, Ended }
 
 /// <summary>One row of the Entries table.</summary>
 public sealed record EntryRow(Transaction Transaction, string PersonName, string AccountText = "")
@@ -55,6 +59,40 @@ public sealed record EntryRow(Transaction Transaction, string PersonName, string
         };
 
     public bool CanStop => Transaction.CanStop;
+
+    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+
+    /// <summary>
+    /// A repeating entry is current, ending (an end date still ahead, e.g. replaced by a new premium), upcoming
+    /// (starts later, e.g. next year's premium) or ended. A one-time entry is upcoming until its date, then ended.
+    /// </summary>
+    public EntryPhase Phase => Transaction switch
+    {
+        { IsRecurring: false } t => t.Date >= Today ? EntryPhase.Upcoming : EntryPhase.Ended,
+        { EndDate: { } end } when end < Today => EntryPhase.Ended,
+        { Date: var start } when start > Today => EntryPhase.Upcoming,
+        { EndDate: not null } => EntryPhase.Ending,
+        _ => EntryPhase.Current,
+    };
+
+    /// <summary>"Since 01 Jan 2026", "Until 31 Dec 2026", "From 01 Jan 2027", "Ended 31 Dec 2025", or for a one-time payment "Due …"/"Paid …".</summary>
+    public string PhaseText => (Phase, Transaction.IsRecurring) switch
+    {
+        (EntryPhase.Current, _) => Loc.F("Since {0}", Format.Date(Transaction.Date)),
+        (EntryPhase.Ending, _) => Loc.F("Until {0}", Format.Date(Transaction.EndDate!.Value)),
+        (EntryPhase.Upcoming, true) => Loc.F("From {0}", Format.Date(Transaction.Date)),
+        (EntryPhase.Upcoming, false) => Loc.F("Due {0}", Format.Date(Transaction.Date)),
+        (EntryPhase.Ended, true) => Loc.F("Ended {0}", Format.Date(Transaction.EndDate!.Value)),
+        _ => Loc.F("Paid {0}", Format.Date(Transaction.Date)),
+    };
+
+    public bool IsCurrent => Phase == EntryPhase.Current;
+
+    public bool IsEnding => Phase == EntryPhase.Ending;
+
+    public bool IsUpcoming => Phase == EntryPhase.Upcoming;
+
+    public bool IsEnded => Phase == EntryPhase.Ended;
 
     public bool IsShared => Transaction.PersonId is null;
 }

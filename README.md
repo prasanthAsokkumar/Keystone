@@ -16,7 +16,7 @@ documents in your own OneDrive folder, and the optional AI that reads letters ru
 
 The interface is available in English and German (Swiss spelling), and follows the Mac's language by default.
 
-![Overview: how long the money lasts, cash today, daily income and spending, and what's coming up](docs/screenshots/overview.png)
+![Overview: what needs attention, money at a glance, and what's coming up](docs/screenshots/overview.png)
 
 ## Screenshots
 
@@ -33,13 +33,17 @@ The screenshots show a made-up family with sample data.
 
 ## Features
 
-**Overview and runway**
-- How long your money lasts ("your runway"), the day cash would run out and what causes it
-- Daily income and spending, savings this financial year, and how long savings cover living costs
-- A chart of cash over time with a projection, and the payments coming up in the next 30 days
+**Overview**
+- "Needs your attention": overdue bills, tasks due, today's appointments, notice deadlines, expiring documents
+  and warranties, and scans waiting in the inbox, each with a button to deal with it
+- Money at a glance: cash today, how long your money lasts ("your runway"), this month in and out, and savings
+  this financial year
+- Coming up in the next three weeks: payments, bills, appointments and deadlines in one list
+- A chart of cash over time with a projection; every section can be moved and folded
 
 **Transactions, accounts and debts**
 - One-time, monthly, quarterly and yearly income and expenses, per household member or shared
+- Separate tabs for income, one-time expenses, recurring expenses (with what they cost a month and a year) and transfers
 - Change a single time of a repeating entry (a 13th salary, a bonus, a smaller paycheck) or skip it once
 - Several bank accounts, cards and cash, with transfers between them and an overdraft or credit limit
 - Bank statement import: camt.053/054 files and CSV exports from Swiss banks, with categories suggested,
@@ -55,12 +59,17 @@ The screenshots show a made-up family with sample data.
 - Bills, invoices, letters, notices, contracts, insurance policies, statements and payslips
 - Filed in OneDrive as `Person / Year / Type / yyyy-MM-dd Title.pdf`, so the folder also makes sense in Finder
 - Due dates and paid status for bills, with an option to add a bill to your expenses
+- Pay a big bill (taxes, for example) in instalments: choose how many and how often, change any part, tick each one off as you pay it; every part is reminded and counted in your expenses on its own date
 - Drop one file to file it, or drop many at once to import them in bulk
 - Swiss QR-bills are read exactly: amount, payee, IBAN, reference and due date, with copy buttons for e-banking
 - An inbox folder for phone scans (e.g. with the OneDrive app); Keystone offers to file whatever arrives
 - Filing the same paper twice is noticed (the same file, the same QR-bill, or same sender, amount and date)
-- A filed insurance policy, contract, passport or purchase receipt is offered for Insurance or Contracts & dates,
-  filled in from the document, so its notice deadline or expiry gets a reminder
+- A filed insurance policy or premium letter is saved under Insurance by itself: the policy is added or updated,
+  its premium goes into your expenses (a new premium replaces the old one from the new term), and the paper is
+  listed with your insurance papers. One click undoes it
+- "Check filed papers" on the Insurance page does the same for insurance papers you filed earlier
+- A filed contract, passport or purchase receipt is offered for Contracts & dates, filled in from the document,
+  so its notice deadline or expiry gets a reminder
 - Search inside PDFs, text files, scans and photos (scans are read on the Mac with macOS text recognition),
   and a guide to how long each kind of paper should be kept
 
@@ -82,6 +91,11 @@ The screenshots show a made-up family with sample data.
 **Insurance**
 - Every policy with its premium, the end of its term and the last day to cancel it, e.g. 30 November for
   basic health insurance
+- "Your cover": the insurances common in Switzerland (basic health for each person, liability, household contents,
+  car, building, accident, legal protection and more), which ones you have, the gaps, and which don't apply to you
+- Open bills from your insurers in one place; tax bills likewise on the Taxes page
+- Health costs per year and person: health insurance premiums plus the cost-sharing bills (Leistungsabrechnungen)
+  from your health insurer, and with your deductible entered, how much more can still be billed this year
 
 **Contracts & dates**
 - Contracts (mobile, internet, gym, leasing, rent…) with yearly cost and notice deadline
@@ -103,7 +117,7 @@ The screenshots show a made-up family with sample data.
 - Reminders as macOS notifications for bills, tasks, appointments, notice deadlines, important dates, warranties and pillar 3a,
   even when Keystone is closed
 - Daily backups of all data next to your documents in OneDrive, kept for 30 days, with restore
-- App lock with Touch ID or your Mac password
+- App lock with Touch ID or your Mac password; it locks when your Mac locks, not every time you switch apps
 
 **Retirement provision (Swiss three pillars)**
 - AHV, pension fund (BVG), vested benefits, pillar 3a and 3b accounts per person

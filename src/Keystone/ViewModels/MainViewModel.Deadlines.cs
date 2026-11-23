@@ -65,8 +65,12 @@ public partial class MainViewModel
         .. Documents
             .Where(d => kinds.Contains(d.Kind) || d.Id == selectedId)
             .OrderByDescending(d => d.Date)
-            .Select(d => new DocumentOption(d, d.Sender == "" ? d.Title : $"{d.Sender}: {d.Title}")),
+            .Select(DocumentOptionOf),
     ];
+
+    private DocumentOption DocumentOptionOf(HouseholdDocument document) => new(document,
+        document.Sender == "" ? document.Title : $"{document.Sender}: {document.Title}",
+        document.PersonId is null ? Loc.T(PersonOption.SharedName) : PersonName(document.PersonId), Format.Date(document.Date));
 
     [RelayCommand]
     private void OpenLinkedDocument(HouseholdDocument document) => OpenDocument(document);

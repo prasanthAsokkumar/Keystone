@@ -38,7 +38,8 @@ public partial class MainViewModel
                 {
                     "insurance" => !(t.Type == TransactionType.Expense && Categories.IsInsurance(t.Category)),
                     "taxes" => !(t.Type == TransactionType.Expense && Categories.IsTaxes(t.Category)),
-                    "expenses" => t.IsIncome || HasOwnPage(t),
+                    "expenses" => t.IsIncome || HasOwnPage(t) || t.IsRecurring,
+                    "recurring" => t.IsIncome || HasOwnPage(t) || !t.IsRecurring,
                     "transactions" => HasOwnPage(t),
                     "income" => !t.IsIncome,
                     _ => false,
@@ -89,7 +90,7 @@ public partial class MainViewModel
 
     private async Task MoveEntryAsync(Transaction entry, string to)
     {
-        var (type, category) = (entry.Type, entry.Category);
+        var (type, category, recurrence) = (entry.Type, entry.Category, entry.Recurrence);
         string page;
         switch (to)
         {
@@ -110,11 +111,16 @@ public partial class MainViewModel
                     entry.Category = Categories.Uncategorized;
                 page = Loc.T("Income");
                 break;
-            default: // expenses, transactions
+            default: // expenses, recurring, transactions
                 entry.Type = TransactionType.Expense;
                 if (Categories.IsInsurance(category) || Categories.IsTaxes(category) || Categories.Income.Contains(category))
                     entry.Category = Categories.Uncategorized;
-                page = Loc.T("Expenses");
+                // Onto Expenses a cost happens once (on its first date); onto Recurring it comes back every month.
+                if (to == "expenses")
+                    entry.Recurrence = Recurrence.OneTime;
+                else if (to == "recurring" && !entry.IsRecurring)
+                    entry.Recurrence = Recurrence.Monthly;
+                page = Loc.T(entry.IsRecurring ? "Recurring" : "Expenses");
                 break;
         }
 
@@ -122,7 +128,7 @@ public partial class MainViewModel
         Recalculate();
         ShowNotice(Loc.F("Moved “{0}” to {1}", entry.Description, page), async () =>
         {
-            (entry.Type, entry.Category) = (type, category);
+            (entry.Type, entry.Category, entry.Recurrence) = (type, category, recurrence);
             await repository.UpdateTransactionAsync(entry);
             Recalculate();
         });

@@ -74,7 +74,16 @@
                         </Border>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'Contract document'}" />
-                            <ComboBox ItemsSource="{Binding ContractDocumentOptions}" SelectedItem="{Binding ContractDocument}" />
+                            <ComboBox ItemsSource="{Binding ContractDocumentOptions}" SelectedItem="{Binding ContractDocument}" HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DocumentOption">
+                                <StackPanel Spacing="1">
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
@@ -197,7 +206,16 @@
                         <TextBlock Classes="secondary" FontSize="13" Text="{Binding WarrantyEndText}" />
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'Receipt'}" />
-                            <ComboBox ItemsSource="{Binding WarrantyDocumentOptions}" SelectedItem="{Binding WarrantyDocument}" />
+                            <ComboBox ItemsSource="{Binding WarrantyDocumentOptions}" SelectedItem="{Binding WarrantyDocument}" HorizontalAlignment="Stretch">
+                        <ComboBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DocumentOption">
+                                <StackPanel Spacing="1">
+                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ComboBox.ItemTemplate>
+                    </ComboBox>
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />

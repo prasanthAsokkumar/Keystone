@@ -16,10 +16,17 @@ public partial class MainViewModel
 
     public bool CanLock => TouchId.IsAvailable;
 
-    private static readonly int[] LockDelays = [0, 1, 5, 15, 60];
+    /// <summary>Minutes away before locking; <see cref="WhenMacLocks"/> locks only with the Mac's own screen lock.</summary>
+    private static readonly int[] LockDelays = [WhenMacLocks, 0, 1, 5, 15, 60];
+
+    /// <summary>Stored as the lock's minutes: lock only when the Mac locks its screen or goes to sleep.</summary>
+    public const int WhenMacLocks = -1;
+
+    private int LockMinutes => LockDelays[Math.Clamp(LockDelayIndex, 0, LockDelays.Length - 1)];
 
     public IReadOnlyList<string> LockDelayNames =>
     [
+        Loc.T("When my Mac locks or sleeps"),
         Loc.T("As soon as I switch away"),
         Loc.T("After 1 minute away"),
         Loc.T("After 5 minutes away"),
@@ -31,7 +38,7 @@ public partial class MainViewModel
     public partial bool IsLockEnabled { get; set; }
 
     [ObservableProperty]
-    public partial int LockDelayIndex { get; set; } = 2;
+    public partial int LockDelayIndex { get; set; }
 
     /// <summary>Everything is hidden until the user unlocks.</summary>
     [ObservableProperty]
@@ -88,7 +95,7 @@ public partial class MainViewModel
     {
         _isChangingLock = true;
         IsLockEnabled = enabled && CanLock;
-        LockDelayIndex = Math.Max(0, Array.IndexOf(LockDelays, minutes) is var i and >= 0 ? i : 2);
+        LockDelayIndex = Math.Max(0, Array.IndexOf(LockDelays, minutes));
         _isChangingLock = false;
         if (IsLockEnabled)
             IsLocked = true;
@@ -125,7 +132,7 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.SetLockAsync(IsLockEnabled, LockDelays[Math.Clamp(LockDelayIndex, 0, LockDelays.Length - 1)]);
+            await repository.SetLockAsync(IsLockEnabled, LockMinutes);
         }
         catch (Exception ex)
         {
@@ -171,7 +178,7 @@ public partial class MainViewModel
         }
 
         _leftAt = now;
-        if (IsLockEnabled && LockDelays[Math.Clamp(LockDelayIndex, 0, LockDelays.Length - 1)] == 0)
+        if (IsLockEnabled && LockMinutes == 0)
             IsLocked = true;
     }
 
@@ -186,13 +193,27 @@ public partial class MainViewModel
             return;
         }
 
-        if (IsLockEnabled && _leftAt is { } left &&
-            now - left >= TimeSpan.FromMinutes(LockDelays[Math.Clamp(LockDelayIndex, 0, LockDelays.Length - 1)]))
+        // Switching to another app and back never locks with "When my Mac locks": only the Mac's lock does.
+        if (IsLockEnabled && LockMinutes != WhenMacLocks && _leftAt is { } left && now - left >= TimeSpan.FromMinutes(LockMinutes))
             IsLocked = true;
         _leftAt = null;
         CheckInbox(); // scans may have arrived while away
         ScheduleCalendarSync(); // appointments may have changed in Calendar meanwhile
         if (IsLocked)
+            _ = UnlockAsync();
+    }
+
+    /// <summary>The Mac locked its screen or is going to sleep: lock, whatever the lock's timing.</summary>
+    public void OnMacLocked()
+    {
+        if (IsLockEnabled)
+            IsLocked = true;
+    }
+
+    /// <summary>The Mac was unlocked: ask for Touch ID right away if Keystone is the app in front.</summary>
+    public void OnMacUnlocked(bool keystoneInFront)
+    {
+        if (IsLocked && keystoneInFront)
             _ = UnlockAsync();
     }
 }
