@@ -591,7 +591,11 @@ public partial class MainViewModel
     private void OpenCalendarApp() => MacCalendar.OpenCalendarApp();
 
     [RelayCommand]
-    private void ShowCalendarSettings() => CurrentPage = AppPage.Settings;
+    private void ShowCalendarSettings()
+    {
+        CurrentPage = AppPage.Settings;
+        SettingsTab = 3;
+    }
 
     /// <summary>Syncs shortly, e.g. when coming back to Keystone; many requests in a row sync once.</summary>
     private void ScheduleCalendarSync()

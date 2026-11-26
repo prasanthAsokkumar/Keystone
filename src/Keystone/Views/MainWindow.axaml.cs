@@ -50,6 +50,11 @@ public partial class MainWindow : Window
                 return;
             vm.PropertyChanged += ViewModel_PropertyChanged;
             vm.CopyToClipboard = text => Clipboard?.SetTextAsync(text) ?? System.Threading.Tasks.Task.CompletedTask;
+            vm.NewMenuRequested += () => NewButton.Flyout?.ShowAt(NewButton);
+            vm.PickDocumentsRequested += () => AddDocument_Click(null, new RoutedEventArgs());
+            // The task box is on a page that may only just have become visible: focus it once laid out.
+            vm.FocusNewTaskRequested += () => Avalonia.Threading.Dispatcher.UIThread.Post(() => NewTaskBox.Focus(),
+                Avalonia.Threading.DispatcherPriority.Loaded);
         };
 
         // The app lock counts time away from the window.
@@ -163,6 +168,14 @@ public partial class MainWindow : Window
             await vm.StartNewDocumentAsync(path);
         else
             await vm.ImportDocumentAsync(path);
+    }
+
+    /// <summary>A choice in the "+ New" menu: close the menu, then open that thing's form.</summary>
+    private void NewMenuItem_Click(object? sender, RoutedEventArgs e)
+    {
+        NewButton.Flyout?.Hide();
+        if (sender is Button { DataContext: NewMenuItem item } && DataContext is MainViewModel vm)
+            vm.CreateNewCommand.Execute(item);
     }
 
     /// <summary>One file opens the document form; several go to the import list.</summary>

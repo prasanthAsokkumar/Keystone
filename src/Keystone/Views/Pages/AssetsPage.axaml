@@ -23,7 +23,7 @@
                     <TextBlock Classes="label" Text="{l:T 'Net worth'}" />
                     <TextBlock Classes="value" Text="{Binding NetWorthWithAssetsText}" />
                     <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
-                               Text="{l:T 'Cash, retirement savings and these assets, minus debts. Its history is under Planning.'}" />
+                               Text="{l:T 'Cash, retirement savings and these assets, minus debts. Its history is on the Net worth tab.'}" />
                 </StackPanel>
             </Border>
         </Grid>

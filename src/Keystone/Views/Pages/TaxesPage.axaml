@@ -167,17 +167,13 @@
                 </Border>
                 <Border Classes="card" Padding="8">
                     <StackPanel Spacing="4">
-                        <TextBlock Classes="sectionTitle" Text="{l:T 'Tax papers'}" Margin="16,12,12,4" />
+                        <StackPanel Spacing="2" Margin="16,12,12,4">
+                            <TextBlock Classes="sectionTitle" Text="{l:T 'Tax papers'}" />
+                            <TextBlock Classes="muted" FontSize="12" Text="{l:T 'The latest; all of them are under Documents.'}" IsVisible="{Binding HasTaxDocumentRows}" />
+                        </StackPanel>
                         <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasTaxDocumentRows}"
                                    Text="{l:T 'No tax papers yet. Tax returns, assessments and bills from the tax office appear here once filed under Documents.'}" />
-                        <Grid ColumnDefinitions="*,140,72" ColumnSpacing="12" Margin="28,4,28,6" IsVisible="{Binding HasTaxDocumentRows}">
-                            <StackPanel Orientation="Horizontal" Spacing="14">
-                                <controls:SortHeader Label="{l:T 'Document'}" List="taxPapers" Key="title" Sorts="{Binding ListSorts}" />
-                                <controls:SortHeader Label="{l:T 'Date'}" List="taxPapers" Key="date" Sorts="{Binding ListSorts}" />
-                            </StackPanel>
-                            <controls:SortHeader Grid.Column="1" Label="{l:T 'To pay'}" List="taxPapers" Key="amount" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
-                        </Grid>
-                        <ItemsControl ItemsSource="{Binding TaxDocumentRows}" Margin="12,0,12,8" IsVisible="{Binding HasTaxDocumentRows}">
+                        <ItemsControl ItemsSource="{Binding RecentTaxDocumentRows}" Margin="12,0,12,0" IsVisible="{Binding HasTaxDocumentRows}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:DocumentRow">
                                     <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,8">
@@ -213,6 +209,8 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
+                        <Button Classes="link" Margin="28,4,16,12" IsVisible="{Binding HasTaxDocumentRows}"
+                                Command="{Binding ShowPapersCommand}" CommandParameter="taxes" Content="{Binding TaxPapersLinkText}" />
                     </StackPanel>
                 </Border>
 

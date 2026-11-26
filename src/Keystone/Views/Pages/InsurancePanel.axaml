@@ -41,10 +41,6 @@
                         <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
                         <ComboBox ItemsSource="{Binding InsuranceKindNames}" SelectedIndex="{Binding PolicyKindIndex}" />
                     </StackPanel>
-                    <StackPanel Grid.Column="1" Spacing="4">
-                        <TextBlock Classes="fieldLabel" Text="{l:T 'Policy number (optional)'}" />
-                        <TextBox Text="{Binding PolicyNumber}" />
-                    </StackPanel>
                 </Grid>
 
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
@@ -85,25 +81,34 @@
                     </StackPanel>
                 </Border>
 
-                <StackPanel Spacing="4">
-                    <TextBlock Classes="fieldLabel" Text="{l:T 'Policy document'}" />
-                    <ComboBox ItemsSource="{Binding PolicyDocumentOptions}" SelectedItem="{Binding PolicyDocument}" HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:DocumentOption">
-                                <StackPanel Spacing="1">
-                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" />
-                                </StackPanel>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                </StackPanel>
 
-                <StackPanel Spacing="4">
-                    <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
-                    <TextBox Text="{Binding PolicyNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"
-                             PlaceholderText="{l:T 'e.g. deductible, what’s covered, contact'}" />
-                </StackPanel>
+
+                <Expander Header="{l:T 'More details'}" IsExpanded="{Binding InsuranceMoreOpen}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                    <StackPanel Spacing="18">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="fieldLabel" Text="{l:T 'Policy number (optional)'}" />
+                            <TextBox Text="{Binding PolicyNumber}" />
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="fieldLabel" Text="{l:T 'Policy document'}" />
+                            <ComboBox ItemsSource="{Binding PolicyDocumentOptions}" SelectedItem="{Binding PolicyDocument}" HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DocumentOption">
+                                        <StackPanel Spacing="1">
+                                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                            </ComboBox>
+                        </StackPanel>
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
+                            <TextBox Text="{Binding PolicyNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"
+                                     PlaceholderText="{l:T 'e.g. deductible, what’s covered, contact'}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Expander>
 
                 <CheckBox IsChecked="{Binding PolicyAddToExpenses}" IsVisible="{Binding IsNewInsurance}">
                     <TextBlock Text="{Binding PolicyEntryText}" TextWrapping="Wrap" />

@@ -73,18 +73,14 @@ public sealed record RetirementPersonRow(PersonRetirement Plan, Person? Person)
 /// <summary>The Planning page: savings goals, what-if scenarios, the retirement gap and net worth.</summary>
 public partial class MainViewModel
 {
-    /// <summary>0: goals, 1: what if, 2: retirement, 3: net worth.</summary>
+    /// <summary>0: goals, 1: what if. (The retirement plan and net worth have their own pages.)</summary>
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsGoalsTab), nameof(IsScenarioTab), nameof(IsRetirementGapTab), nameof(IsNetWorthTab))]
+    [NotifyPropertyChangedFor(nameof(IsGoalsTab), nameof(IsScenarioTab))]
     public partial int PlanningTab { get; set; }
 
     public bool IsGoalsTab { get => PlanningTab == 0; set { if (value) PlanningTab = 0; } }
 
     public bool IsScenarioTab { get => PlanningTab == 1; set { if (value) PlanningTab = 1; } }
-
-    public bool IsRetirementGapTab { get => PlanningTab == 2; set { if (value) PlanningTab = 2; } }
-
-    public bool IsNetWorthTab { get => PlanningTab == 3; set { if (value) PlanningTab = 3; } }
 
     private void RefreshPlanning()
     {

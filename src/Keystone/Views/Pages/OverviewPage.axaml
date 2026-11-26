@@ -10,15 +10,86 @@
     <ScrollViewer>
     <StackPanel x:Name="Sections" Spacing="16" Margin="0,0,14,0">
 
+        <!-- ── This week ── -->
+        <Border Classes="card" Padding="8" Tag="week">
+            <StackPanel Spacing="4">
+                <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'This week'}" />
+                        <TextBlock Classes="muted" FontSize="13" Text="{Binding WeekSummary}" TextWrapping="Wrap" />
+                    </StackPanel>
+                    <controls:SectionTools Grid.Column="1" DataContext="{Binding WeekSection}" />
+                </Grid>
+                <ItemsControl ItemsSource="{Binding WeekDays}" Margin="12,4,12,12" IsVisible="{Binding WeekSection.IsOpen}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <UniformGrid Columns="7" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:WeekDay">
+                            <Border Classes="weekDay" Classes.today="{Binding IsToday}" Margin="3" Padding="10,8" CornerRadius="10" MinHeight="118">
+                                <StackPanel Spacing="4">
+                                    <StackPanel Orientation="Horizontal" Spacing="6">
+                                        <TextBlock Text="{Binding DayNumber}" FontSize="18" FontWeight="Bold" />
+                                        <TextBlock Classes="muted" FontSize="12" Text="{Binding DayName}" VerticalAlignment="Center" />
+                                    </StackPanel>
+                                    <ItemsControl ItemsSource="{Binding Items}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="vm:WeekItem">
+                                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="6" Margin="0,1">
+                                                    <Ellipse Classes="weekDot" Width="6" Height="6" VerticalAlignment="Center"
+                                                             Classes.money="{Binding IsMoney}" Classes.task="{Binding IsTask}"
+                                                             Classes.appointment="{Binding IsAppointment}" Classes.deadline="{Binding IsDeadline}"
+                                                             Classes.health="{Binding IsHealth}" />
+                                                    <TextBlock Grid.Column="1" FontSize="12" Text="{Binding Text}" TextTrimming="CharacterEllipsis"
+                                                               ToolTip.Tip="{Binding Text}" />
+                                                </Grid>
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Classes="muted" FontSize="11" Text="{Binding MoreText}" IsVisible="{Binding HasMore}" />
+                                </StackPanel>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
         <!-- ── Needs your attention ── -->
         <Border Classes="card" Padding="8" Tag="attention">
             <StackPanel Spacing="4">
                 <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
                     <StackPanel Spacing="2">
                         <TextBlock Classes="sectionTitle" Text="{l:T 'Needs your attention'}" />
-                        <TextBlock Classes="muted" FontSize="13" Text="{Binding AttentionSummary}" />
+                        <TextBlock Classes="muted" FontSize="13">
+                            <Run Text="{Binding AttentionSummary}" />
+                            <Run Text="{Binding HiddenAttentionText}" />
+                        </TextBlock>
                     </StackPanel>
-                    <controls:SectionTools Grid.Column="1" DataContext="{Binding AttentionSection}" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                        <Button Classes="icon" ToolTip.Tip="{l:T 'Choose what shows here'}">
+                            <PathIcon Data="{StaticResource IconSettings}" Width="15" Height="15" />
+                            <Button.Flyout>
+                                <Flyout Placement="BottomEdgeAlignedRight">
+                                    <StackPanel Spacing="6" Width="280" Margin="4">
+                                        <TextBlock Classes="label" Text="{l:T 'Show here'}" Margin="0,0,0,4" />
+                                        <ItemsControl ItemsSource="{Binding AttentionFilters}">
+                                            <ItemsControl.ItemTemplate>
+                                                <DataTemplate x:DataType="vm:AttentionFilter">
+                                                    <CheckBox Content="{Binding Title}" IsChecked="{Binding IsShown}" />
+                                                </DataTemplate>
+                                            </ItemsControl.ItemTemplate>
+                                        </ItemsControl>
+                                        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="0,4,0,0"
+                                                   Text="{l:T 'Reminders still come for everything; this only changes the list.'}" />
+                                    </StackPanel>
+                                </Flyout>
+                            </Button.Flyout>
+                        </Button>
+                        <controls:SectionTools DataContext="{Binding AttentionSection}" />
+                    </StackPanel>
                 </Grid>
                 <StackPanel IsVisible="{Binding AttentionSection.IsOpen}">
                     <!-- All clear -->
@@ -117,14 +188,14 @@
                     <Border Grid.Column="1" Classes="tile" ToolTip.Tip="{Binding AveragingText}">
                         <StackPanel Spacing="4">
                             <!-- The status (healthy, watch out…) is in the value's colour and under it, not a pill that crowds the label -->
-                            <TextBlock Classes="label" Text="{l:T 'Your runway'}" TextTrimming="CharacterEllipsis" />
-                            <TextBlock Classes="value" Text="{Binding RunwayText}" FontSize="24"
+                            <TextBlock Classes="label" Text="{l:T 'Money lasts'}" TextTrimming="CharacterEllipsis" />
+                            <TextBlock Classes="value" Text="{Binding MoneyLastsText}" FontSize="24"
                                        Classes.negative="{Binding RunwayIsCritical}" Classes.warning="{Binding RunwayIsWarning}"
                                        Classes.positive="{Binding RunwayIsHealthy}" />
                             <TextBlock FontSize="12" FontWeight="SemiBold" Text="{Binding RunwayStatusText}"
                                        Classes.negative="{Binding RunwayIsCritical}" Classes.warning="{Binding RunwayIsWarning}"
                                        Classes.positive="{Binding RunwayIsHealthy}" />
-                            <TextBlock Classes="secondary" FontSize="12" Text="{Binding RunwayDetailText}" TextWrapping="Wrap" />
+                            <TextBlock Classes="secondary" FontSize="12" Text="{Binding MoneyLastsDetail}" TextWrapping="Wrap" />
                             <TextBlock Classes="muted" FontSize="12" Text="{Binding RunwayCauseText}" IsVisible="{Binding HasRunwayCause}" TextWrapping="Wrap" />
                             <TextBlock Classes="muted" FontSize="12" Text="{Binding OverdraftRunwayText}" IsVisible="{Binding HasOverdraftRunway}" TextWrapping="Wrap" />
                             <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap">

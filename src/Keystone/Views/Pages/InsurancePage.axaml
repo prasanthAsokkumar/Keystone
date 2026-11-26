@@ -395,19 +395,16 @@
         <Border Classes="card" Padding="8" Tag="papers">
             <StackPanel Spacing="4">
                 <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
-                    <TextBlock Classes="sectionTitle" Text="{l:T 'Insurance papers'}" VerticalAlignment="Center" />
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Insurance papers'}" />
+                        <TextBlock Classes="muted" FontSize="12" Text="{l:T 'The latest; all of them are under Documents.'}" IsVisible="{Binding HasInsuranceDocumentRows}" />
+                    </StackPanel>
                     <controls:SectionTools Grid.Column="1" DataContext="{Binding PapersSection}" />
                 </Grid>
                 <StackPanel Spacing="4" IsVisible="{Binding PapersSection.IsOpen}">
                 <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasInsuranceDocumentRows}"
                            Text="{l:T 'No insurance papers yet. Policies, premium bills and letters from your insurers appear here once filed under Documents.'}" />
-                <Grid ColumnDefinitions="*,120,110,140,72" ColumnSpacing="16" Margin="28,4,28,6" IsVisible="{Binding HasInsuranceDocumentRows}">
-                    <controls:SortHeader Label="{l:T 'Document'}" List="insurancePapers" Key="title" Sorts="{Binding ListSorts}" />
-                    <controls:SortHeader Grid.Column="1" Label="{l:T 'Person'}" List="insurancePapers" Key="person" Sorts="{Binding ListSorts}" />
-                    <controls:SortHeader Grid.Column="2" Label="{l:T 'Date'}" List="insurancePapers" Key="date" Sorts="{Binding ListSorts}" />
-                    <controls:SortHeader Grid.Column="3" Label="{l:T 'To pay'}" List="insurancePapers" Key="amount" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
-                </Grid>
-                <ItemsControl ItemsSource="{Binding InsuranceDocumentRows}" Margin="12,0,12,8" IsVisible="{Binding HasInsuranceDocumentRows}">
+                <ItemsControl ItemsSource="{Binding RecentInsuranceDocumentRows}" Margin="12,0,12,0" IsVisible="{Binding HasInsuranceDocumentRows}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:DocumentRow">
                             <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,8">
@@ -442,6 +439,8 @@
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
+                <Button Classes="link" Margin="28,4,16,12" IsVisible="{Binding HasInsuranceDocumentRows}"
+                        Command="{Binding ShowPapersCommand}" CommandParameter="insurance" Content="{Binding InsurancePapersLinkText}" />
                 </StackPanel>
             </StackPanel>
         </Border>

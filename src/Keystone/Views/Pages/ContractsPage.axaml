@@ -28,9 +28,32 @@
             </Border>
             <Border Grid.Column="1" Classes="card">
                 <StackPanel Spacing="4">
-                    <TextBlock Classes="label" Text="{l:T 'Next notice deadline'}" />
-                    <TextBlock Classes="value" Text="{Binding ContractDeadlineText}" Classes.warning="{Binding IsContractDeadlineSoon}" />
-                    <TextBlock Classes="muted" FontSize="13" Text="{Binding ContractDeadlineDetail}" TextWrapping="Wrap" />
+                    <TextBlock Classes="label" Text="{l:T 'Notice deadlines, contracts and insurance'}" />
+                    <TextBlock Classes="value" Text="{Binding ContractDeadlineText}" Classes.warning="{Binding IsContractDeadlineSoon}"
+                               IsVisible="{Binding !HasAllDeadlineRows}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding ContractDeadlineDetail}" TextWrapping="Wrap"
+                               IsVisible="{Binding !HasAllDeadlineRows}" />
+                    <ItemsControl ItemsSource="{Binding TopDeadlineRows}" IsVisible="{Binding HasAllDeadlineRows}" Margin="0,4,0,0">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:NoticeDeadlineRow">
+                                <Button Classes="searchResult" HorizontalAlignment="Stretch" Margin="-8,0"
+                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).OpenNoticeDeadlineCommand}"
+                                        CommandParameter="{Binding}">
+                                    <Grid ColumnDefinitions="96,*,Auto" ColumnSpacing="10">
+                                        <TextBlock Text="{Binding DateText}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"
+                                                   Classes.warning="{Binding IsSoon}" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontSize="13" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <Border Grid.Column="2" Classes="pill" Classes.brand="{Binding IsInsurance}" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding SourceText}" />
+                                        </Border>
+                                    </Grid>
+                                </Button>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
         </Grid>

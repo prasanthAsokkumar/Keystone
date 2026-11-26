@@ -104,6 +104,7 @@ public partial class MainViewModel
     private void RefreshAssets()
     {
         AssetRows = Sorted("assets", _assets
+                .Where(a => InView(a.PersonId))
                 .OrderBy(a => a.SoldOn is { } sold && sold <= Today)
                 .ThenByDescending(a => a.ValueOn(Today))
                 .Select(a => new AssetRow(a, a.PersonId is null ? Loc.T(PersonOption.SharedName) : PersonName(a.PersonId), Today)),

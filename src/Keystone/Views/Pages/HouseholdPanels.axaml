@@ -43,65 +43,73 @@
                                 <TextBox Text="{Binding PersonEmail}" />
                             </StackPanel>
                         </Grid>
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="{l:T 'AHV number (optional)'}" />
-                            <TextBox Text="{Binding PersonAhvNumber}" PlaceholderText="756.0000.0000.00" />
-                            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                                       Text="{l:T 'On the health insurance card; employers and the tax office ask for it.'}" />
-                        </StackPanel>
+                        <Expander Header="{l:T 'Health and emergency'}" IsExpanded="{Binding PersonHealthOpen}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <StackPanel Spacing="18">
+                                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Classes="label" Text="{l:T 'Health'}" />
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Allergies and intolerances'}" />
+                                            <TextBox Text="{Binding PersonAllergies}" PlaceholderText="{l:T 'e.g. Penicillin, nuts'}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Conditions'}" />
+                                            <TextBox Text="{Binding PersonConditions}" PlaceholderText="{l:T 'e.g. Asthma'}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Blood type'}" />
+                                            <ComboBox ItemsSource="{Binding BloodTypeNames}" SelectedIndex="{Binding PersonBloodTypeIndex}" Width="160" HorizontalAlignment="Left" />
+                                        </StackPanel>
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'Family doctor'}" />
+                                                <TextBox Text="{Binding PersonDoctorName}" PlaceholderText="{l:T 'e.g. Dr. Keller'}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'Doctor’s phone'}" />
+                                                <TextBox Text="{Binding PersonDoctorPhone}" />
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Border>
 
-                        <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14">
-                            <StackPanel Spacing="12">
-                                <TextBlock Classes="label" Text="{l:T 'Health'}" />
-                                <StackPanel Spacing="4">
-                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Allergies and intolerances'}" />
-                                    <TextBox Text="{Binding PersonAllergies}" PlaceholderText="{l:T 'e.g. Penicillin, nuts'}" TextWrapping="Wrap" />
-                                </StackPanel>
-                                <StackPanel Spacing="4">
-                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Conditions'}" />
-                                    <TextBox Text="{Binding PersonConditions}" PlaceholderText="{l:T 'e.g. Asthma'}" TextWrapping="Wrap" />
-                                </StackPanel>
-                                <StackPanel Spacing="4">
-                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Blood type'}" />
-                                    <ComboBox ItemsSource="{Binding BloodTypeNames}" SelectedIndex="{Binding PersonBloodTypeIndex}" Width="160" HorizontalAlignment="Left" />
-                                </StackPanel>
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Family doctor'}" />
-                                        <TextBox Text="{Binding PersonDoctorName}" PlaceholderText="{l:T 'e.g. Dr. Keller'}" />
+                                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Classes="label" Text="{l:T 'In an emergency, call'}" />
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'Name'}" />
+                                                <TextBox Text="{Binding PersonEmergencyName}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'Relation'}" />
+                                                <TextBox Text="{Binding PersonEmergencyRelation}" PlaceholderText="{l:T 'e.g. Sister'}" />
+                                            </StackPanel>
+                                        </Grid>
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Phone'}" />
+                                            <TextBox Text="{Binding PersonEmergencyPhone}" />
+                                        </StackPanel>
                                     </StackPanel>
-                                    <StackPanel Grid.Column="1" Spacing="4">
-                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Doctor’s phone'}" />
-                                        <TextBox Text="{Binding PersonDoctorPhone}" />
-                                    </StackPanel>
-                                </Grid>
+                                </Border>
+
                             </StackPanel>
-                        </Border>
-
-                        <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14">
-                            <StackPanel Spacing="12">
-                                <TextBlock Classes="label" Text="{l:T 'In an emergency, call'}" />
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Name'}" />
-                                        <TextBox Text="{Binding PersonEmergencyName}" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Spacing="4">
-                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Relation'}" />
-                                        <TextBox Text="{Binding PersonEmergencyRelation}" PlaceholderText="{l:T 'e.g. Sister'}" />
-                                    </StackPanel>
-                                </Grid>
+                        </Expander>
+                        <Expander Header="{l:T 'More details'}" IsExpanded="{Binding PersonMoreOpen}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <StackPanel Spacing="18">
                                 <StackPanel Spacing="4">
-                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Phone'}" />
-                                    <TextBox Text="{Binding PersonEmergencyPhone}" />
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'AHV number (optional)'}" />
+                                    <TextBox Text="{Binding PersonAhvNumber}" PlaceholderText="756.0000.0000.00" />
+                                    <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                               Text="{l:T 'On the health insurance card; employers and the tax office ask for it.'}" />
+                                </StackPanel>
+
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
+                                    <TextBox Text="{Binding PersonNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" />
                                 </StackPanel>
                             </StackPanel>
-                        </Border>
-
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
-                            <TextBox Text="{Binding PersonNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" />
-                        </StackPanel>
+                        </Expander>
                         <TextBlock Classes="error" Text="{Binding PersonError}" IsVisible="{Binding HasPersonError}" TextWrapping="Wrap" />
                     </StackPanel>
                 </ScrollViewer>
@@ -166,6 +174,11 @@
                                     <CheckBox Content="{l:T 'Night'}" IsChecked="{Binding MedicineNight}" />
                                 </WrapPanel>
                                 <CheckBox Content="{l:T 'Only when needed'}" IsChecked="{Binding MedicineAsNeeded}" />
+                            </StackPanel>
+                        </Border>
+
+                        <Expander Header="{l:T 'Supply, prescription and dates'}" IsExpanded="{Binding MedicineMoreOpen}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <StackPanel Spacing="18">
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                                     <StackPanel Spacing="4">
                                         <TextBlock Classes="fieldLabel" Text="{l:T 'Since'}" />
@@ -178,42 +191,41 @@
                                 </Grid>
                                 <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
                                            Text="{l:T 'A last day is for a course, such as antibiotics. Leave it empty for a medicine taken for good.'}" />
-                            </StackPanel>
-                        </Border>
+                                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14" IsVisible="{Binding MedicineIsDaily}">
+                                    <StackPanel Spacing="12">
+                                        <TextBlock Classes="label" Text="{l:T 'Supply (optional)'}" />
+                                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'On hand today'}" />
+                                                <NumericUpDown Value="{Binding MedicineStock}" Minimum="0" FormatString="0.#" ShowButtonSpinner="False" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'In one pack'}" />
+                                                <NumericUpDown Value="{Binding MedicinePackSize}" Minimum="0" FormatString="0" ShowButtonSpinner="False" />
+                                            </StackPanel>
+                                        </Grid>
+                                        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                                   Text="{l:T 'Keystone counts down each day and reminds you before it runs out. With the pack size, one click adds a new pack.'}" />
+                                    </StackPanel>
+                                </Border>
 
-                        <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14" IsVisible="{Binding MedicineIsDaily}">
-                            <StackPanel Spacing="12">
-                                <TextBlock Classes="label" Text="{l:T 'Supply (optional)'}" />
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                                     <StackPanel Spacing="4">
-                                        <TextBlock Classes="fieldLabel" Text="{l:T 'On hand today'}" />
-                                        <NumericUpDown Value="{Binding MedicineStock}" Minimum="0" FormatString="0.#" ShowButtonSpinner="False" />
+                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Prescribed by'}" />
+                                        <TextBox Text="{Binding MedicinePrescribedBy}" PlaceholderText="{l:T 'e.g. Dr. Keller'}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Spacing="4">
-                                        <TextBlock Classes="fieldLabel" Text="{l:T 'In one pack'}" />
-                                        <NumericUpDown Value="{Binding MedicinePackSize}" Minimum="0" FormatString="0" ShowButtonSpinner="False" />
+                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Prescription valid until'}" />
+                                        <CalendarDatePicker SelectedDate="{Binding MedicinePrescriptionUntil}" HorizontalAlignment="Stretch" />
                                     </StackPanel>
                                 </Grid>
-                                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                                           Text="{l:T 'Keystone counts down each day and reminds you before it runs out. With the pack size, one click adds a new pack.'}" />
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
+                                    <TextBox Text="{Binding MedicineNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"
+                                             PlaceholderText="{l:T 'e.g. with food, not with milk'}" />
+                                </StackPanel>
                             </StackPanel>
-                        </Border>
-
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                            <StackPanel Spacing="4">
-                                <TextBlock Classes="fieldLabel" Text="{l:T 'Prescribed by'}" />
-                                <TextBox Text="{Binding MedicinePrescribedBy}" PlaceholderText="{l:T 'e.g. Dr. Keller'}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Spacing="4">
-                                <TextBlock Classes="fieldLabel" Text="{l:T 'Prescription valid until'}" />
-                                <CalendarDatePicker SelectedDate="{Binding MedicinePrescriptionUntil}" HorizontalAlignment="Stretch" />
-                            </StackPanel>
-                        </Grid>
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
-                            <TextBox Text="{Binding MedicineNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60"
-                                     PlaceholderText="{l:T 'e.g. with food, not with milk'}" />
-                        </StackPanel>
+                        </Expander>
                         <TextBlock Classes="error" Text="{Binding MedicineError}" IsVisible="{Binding HasMedicineError}" TextWrapping="Wrap" />
                     </StackPanel>
                 </ScrollViewer>
@@ -257,27 +269,6 @@
                                 <NumericUpDown Value="{Binding EmploymentWorkload}" Minimum="0" Maximum="100" Increment="10" FormatString="0" />
                             </StackPanel>
                         </Grid>
-                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                            <StackPanel Spacing="4">
-                                <TextBlock Classes="fieldLabel" Text="{l:T 'Started on'}" />
-                                <CalendarDatePicker SelectedDate="{Binding EmploymentStartedOn}" HorizontalAlignment="Stretch" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Spacing="4">
-                                <TextBlock Classes="fieldLabel" Text="{l:T 'Last day (if left)'}" />
-                                <CalendarDatePicker SelectedDate="{Binding EmploymentEndedOn}" HorizontalAlignment="Stretch" />
-                            </StackPanel>
-                        </Grid>
-                        <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
-                            <StackPanel Spacing="4">
-                                <TextBlock Classes="fieldLabel" Text="{l:T 'Address'}" />
-                                <TextBox Text="{Binding EmploymentAddress}" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Spacing="4">
-                                <TextBlock Classes="fieldLabel" Text="{l:T 'Main number'}" />
-                                <TextBox Text="{Binding EmploymentPhone}" />
-                            </StackPanel>
-                        </Grid>
-
                         <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14">
                             <StackPanel Spacing="10">
                                 <TextBlock Classes="label" Text="{l:T 'Manager'}" />
@@ -285,12 +276,6 @@
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                                     <TextBox Text="{Binding EmploymentManagerPhone}" PlaceholderText="{l:T 'Phone'}" />
                                     <TextBox Grid.Column="1" Text="{Binding EmploymentManagerEmail}" PlaceholderText="{l:T 'Email'}" />
-                                </Grid>
-                                <TextBlock Classes="label" Text="{l:T 'HR'}" Margin="0,6,0,0" />
-                                <TextBox Text="{Binding EmploymentHrName}" PlaceholderText="{l:T 'Name'}" />
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                    <TextBox Text="{Binding EmploymentHrPhone}" PlaceholderText="{l:T 'Phone'}" />
-                                    <TextBox Grid.Column="1" Text="{Binding EmploymentHrEmail}" PlaceholderText="{l:T 'Email'}" />
                                 </Grid>
                             </StackPanel>
                         </Border>
@@ -314,25 +299,60 @@
                                     <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
                                                Text="{l:T 'Often the 3rd or 4th day; the contract or staff rules say which.'}" />
                                 </StackPanel>
-                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
-                                    <StackPanel Spacing="4">
-                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Sick pay insurer'}" />
-                                        <TextBox Text="{Binding EmploymentSickPayInsurer}" PlaceholderText="{l:T 'Krankentaggeld, e.g. Swica'}" />
-                                    </StackPanel>
-                                    <StackPanel Grid.Column="1" Spacing="4">
-                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Accident insurer'}" />
-                                        <TextBox Text="{Binding EmploymentAccidentInsurer}" PlaceholderText="{l:T 'UVG, e.g. Suva'}" />
-                                    </StackPanel>
-                                </Grid>
-                                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
-                                           Text="{l:T 'Both are on the payslip or in the staff rules.'}" />
                             </StackPanel>
                         </Border>
 
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
-                            <TextBox Text="{Binding EmploymentNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" />
-                        </StackPanel>
+                        <Expander Header="{l:T 'More details'}" IsExpanded="{Binding EmploymentMoreOpen}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <StackPanel Spacing="18">
+                                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Started on'}" />
+                                        <CalendarDatePicker SelectedDate="{Binding EmploymentStartedOn}" HorizontalAlignment="Stretch" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Last day (if left)'}" />
+                                        <CalendarDatePicker SelectedDate="{Binding EmploymentEndedOn}" HorizontalAlignment="Stretch" />
+                                    </StackPanel>
+                                </Grid>
+                                <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
+                                    <StackPanel Spacing="4">
+                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Address'}" />
+                                        <TextBox Text="{Binding EmploymentAddress}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1" Spacing="4">
+                                        <TextBlock Classes="fieldLabel" Text="{l:T 'Main number'}" />
+                                        <TextBox Text="{Binding EmploymentPhone}" />
+                                    </StackPanel>
+                                </Grid>
+
+                                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14">
+                                    <StackPanel Spacing="10">
+                                    <TextBlock Classes="label" Text="{l:T 'HR'}" />
+                                    <TextBox Text="{Binding EmploymentHrName}" PlaceholderText="{l:T 'Name'}" />
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                        <TextBox Text="{Binding EmploymentHrPhone}" PlaceholderText="{l:T 'Phone'}" />
+                                        <TextBox Grid.Column="1" Text="{Binding EmploymentHrEmail}" PlaceholderText="{l:T 'Email'}" />
+                                    </Grid>
+                                    <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Sick pay insurer'}" />
+                                            <TextBox Text="{Binding EmploymentSickPayInsurer}" PlaceholderText="{l:T 'Krankentaggeld, e.g. Swica'}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Accident insurer'}" />
+                                            <TextBox Text="{Binding EmploymentAccidentInsurer}" PlaceholderText="{l:T 'UVG, e.g. Suva'}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                               Text="{l:T 'Both are on the payslip or in the staff rules.'}" />
+                                    </StackPanel>
+                                </Border>
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
+                                    <TextBox Text="{Binding EmploymentNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="60" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
                         <TextBlock Classes="error" Text="{Binding EmploymentError}" IsVisible="{Binding HasEmploymentError}" TextWrapping="Wrap" />
                     </StackPanel>
                 </ScrollViewer>

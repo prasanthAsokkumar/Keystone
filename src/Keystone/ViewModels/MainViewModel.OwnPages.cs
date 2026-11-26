@@ -104,6 +104,21 @@ public partial class MainViewModel
 
     public bool HasInsuranceDocumentRows => InsuranceDocumentRows.Count > 0;
 
+    /// <summary>Papers live under Documents; the Insurance and Taxes pages show the latest few and link there.</summary>
+    internal const int RecentPapers = 3;
+
+    public IReadOnlyList<DocumentRow> RecentInsuranceDocumentRows =>
+        InsuranceDocumentRows.OrderByDescending(r => r.Document.Date).ThenByDescending(r => r.Document.Id).Take(RecentPapers).ToList();
+
+    public string InsurancePapersLinkText => Loc.Plural(InsuranceDocumentRows.Count,
+        "Show the insurance paper in Documents →", "Show all {0} insurance papers in Documents →");
+
+    partial void OnInsuranceDocumentRowsChanged(IReadOnlyList<DocumentRow> value)
+    {
+        OnPropertyChanged(nameof(RecentInsuranceDocumentRows));
+        OnPropertyChanged(nameof(InsurancePapersLinkText));
+    }
+
     /// <summary>Open bills from insurers (premiums, deductibles) and from the tax office, on their pages.</summary>
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasInsuranceBillRows))]
@@ -134,6 +149,18 @@ public partial class MainViewModel
     public partial IReadOnlyList<DocumentRow> TaxDocumentRows { get; set; } = [];
 
     public bool HasTaxDocumentRows => TaxDocumentRows.Count > 0;
+
+    public IReadOnlyList<DocumentRow> RecentTaxDocumentRows =>
+        TaxDocumentRows.OrderByDescending(r => r.Document.Date).ThenByDescending(r => r.Document.Id).Take(RecentPapers).ToList();
+
+    public string TaxPapersLinkText => Loc.Plural(TaxDocumentRows.Count,
+        "Show the tax paper in Documents →", "Show all {0} tax papers in Documents →");
+
+    partial void OnTaxDocumentRowsChanged(IReadOnlyList<DocumentRow> value)
+    {
+        OnPropertyChanged(nameof(RecentTaxDocumentRows));
+        OnPropertyChanged(nameof(TaxPapersLinkText));
+    }
 
     /// <summary>"CHF 1'720 a month · CHF 640 one-time this year".</summary>
     [ObservableProperty]

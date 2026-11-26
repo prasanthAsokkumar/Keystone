@@ -62,12 +62,13 @@ public partial class MainViewModel
     private List<PageSection> InsuranceSections => _insuranceSections ??= CreateSections("insurance", InsuranceSectionKeys);
 
     /// <summary>The Overview's cards, in their built-in order.</summary>
-    private static readonly string[] OverviewSectionKeys = ["attention", "money", "upcoming", "chart"];
+    private static readonly string[] OverviewSectionKeys = ["week", "attention", "money", "upcoming", "chart"];
 
     private List<PageSection>? _overviewSections;
 
     private List<PageSection> OverviewSections => _overviewSections ??= CreateSections("overview", OverviewSectionKeys);
 
+    public PageSection WeekSection => OverviewSections.Single(s => s.Key == "week");
     public PageSection AttentionSection => OverviewSections.Single(s => s.Key == "attention");
     public PageSection MoneySection => OverviewSections.Single(s => s.Key == "money");
     public PageSection UpcomingSection => OverviewSections.Single(s => s.Key == "upcoming");
@@ -100,7 +101,7 @@ public partial class MainViewModel
         _overviewSections = null;
         OnPropertyChanged(nameof(InsuranceSectionOrder));
         OnPropertyChanged(nameof(OverviewSectionOrder));
-        foreach (var name in new[] { nameof(AttentionSection), nameof(MoneySection), nameof(UpcomingSection), nameof(ChartSection) })
+        foreach (var name in new[] { nameof(WeekSection), nameof(AttentionSection), nameof(MoneySection), nameof(UpcomingSection), nameof(ChartSection) })
             OnPropertyChanged(name);
         foreach (var name in new[] { nameof(BillsSection), nameof(HealthSection), nameof(PoliciesSection), nameof(CoverSection), nameof(PremiumsSection), nameof(PapersSection) })
             OnPropertyChanged(name);

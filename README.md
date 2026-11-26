@@ -33,10 +33,20 @@ The screenshots show a made-up family with sample data.
 
 ## Features
 
+**Finding your way**
+- The sidebar has three groups: Money, Paperwork and Home. Pages that belong together are tabs of one place
+  (entries and the year; debts, assets and net worth; retirement accounts and the plan for 65; tasks and appointments)
+- One **+ New** button (⌘N) adds anything from anywhere: an entry, a bill, a task, a medicine, a contract…
+- Pick a person in the sidebar to see only their things on every page
+- Forms show the fields most things need; the rest are under "More details"
+- Settings are in tabs
+
 **Overview**
+- This week at a glance: seven days with appointments, tasks, bills and payments, deadlines and medicines running out
 - "Needs your attention": overdue bills, tasks due, today's appointments, notice deadlines, expiring documents
-  and warranties, and scans waiting in the inbox, each with a button to deal with it
-- Money at a glance: cash today, how long your money lasts ("your runway"), this month in and out, and savings
+  and warranties, medicines, sick days and scans waiting in the inbox, each with a button to deal with it; choose
+  which kinds show
+- Money at a glance: cash today, how long your money lasts (as a date), this month in and out, and savings
   this financial year
 - Coming up in the next three weeks: payments, bills, appointments and deadlines in one list
 - A chart of cash over time with a projection; every section can be moved and folded
@@ -107,11 +117,13 @@ The screenshots show a made-up family with sample data.
 - "Your cover": the insurances common in Switzerland (basic health for each person, liability, household contents,
   car, building, accident, legal protection and more), which ones you have, the gaps, and which don't apply to you
 - Open bills from your insurers in one place; tax bills likewise on the Taxes page
+- The latest insurance and tax papers, with a link to all of them under Documents
 - Health costs per year and person: health insurance premiums plus the cost-sharing bills (Leistungsabrechnungen)
   from your health insurer, and with your deductible entered, how much more can still be billed this year
 
 **Contracts & dates**
 - Contracts (mobile, internet, gym, leasing, rent…) with yearly cost and notice deadline
+- All notice deadlines of the next 12 months in one list, contracts and insurance policies together
 - Important dates such as passport and ID expiry, the car inspection (MFK), tyre changes and the vignette
 - Warranties with their receipt and end date
 
@@ -232,8 +244,8 @@ Built with [Avalonia](https://avaloniaui.net), [CommunityToolkit.Mvvm](https://g
 [EF Core](https://learn.microsoft.com/ef/core/) with SQLite, and [PdfPig](https://github.com/UglyToad/PdfPig).
 
 The app was first called Runway. On its first start, Keystone moves data from that time to the new places: the
-database from `Application Support/Runway` and the documents folder from `OneDrive/PRAS/RunwayApp`. "Your runway"
-is still the name of the Overview's headline figure: how long your money lasts.
+database from `Application Support/Runway` and the documents folder from `OneDrive/PRAS/RunwayApp`. "Runway"
+survives in the code for how long your money lasts.
 
 ## Contributing
 

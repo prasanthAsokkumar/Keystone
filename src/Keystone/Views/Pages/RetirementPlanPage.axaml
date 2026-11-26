@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.RetirementPlanPage"
+             x:DataType="vm:MainViewModel">
+    <!-- What is needed at 65, what there will be, and a plan for taking out pillar 3a. -->
+    <ScrollViewer>
+        <StackPanel Spacing="16" Margin="0,0,14,0">
+            <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
+                <Border Classes="card">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label" Text="{l:T 'Needed in retirement'}" />
+                        <TextBlock Classes="value" Text="{Binding RetirementNeedText}" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <NumericUpDown Value="{Binding RetirementNeedPercent}" Minimum="10" Maximum="150" Increment="5" FormatString="0"
+                                           Width="110" MinHeight="30" />
+                            <TextBlock Classes="muted" FontSize="12" Text="{l:T '% of today’s living costs'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="1" Classes="card">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label" Text="{l:T 'Expected income'}" />
+                        <TextBlock Classes="value" Text="{Binding RetirementIncomeText}" />
+                        <TextBlock Classes="muted" FontSize="13" Text="{Binding RetirementIncomeDetail}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+                <Border Grid.Column="2" Classes="card">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="label" Text="{l:T 'Gap'}" />
+                        <TextBlock Classes="value" Text="{Binding RetirementGapText}" Classes.negative="{Binding HasRetirementGap}"
+                                   Classes.positive="{Binding !HasRetirementGap}" />
+                        <ProgressBar Classes="thin" Minimum="0" Maximum="100" Value="{Binding RetirementCoveredPercent}" Margin="0,6,0,0" />
+                    </StackPanel>
+                </Border>
+            </Grid>
+
+            <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding !HasRetirementData}"
+                       Text="{l:T 'Add your pension letters on the Retirement page to see what you can expect.'}" />
+
+            <Border Classes="card">
+                <StackPanel Spacing="10">
+                    <TextBlock Classes="sectionTitle" Text="{l:T 'Year of birth'}" />
+                    <ItemsControl ItemsSource="{Binding BirthYearRows}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <WrapPanel ItemSpacing="24" LineSpacing="8" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:BirthYearRow">
+                                <StackPanel Orientation="Horizontal" Spacing="10">
+                                    <TextBlock Text="{Binding Name}" VerticalAlignment="Center" MinWidth="70" />
+                                    <NumericUpDown Value="{Binding Year}" Minimum="1920" Maximum="2030" FormatString="0" Width="120"
+                                                   PlaceholderText="1985" ShowButtonSpinner="False" />
+                                </StackPanel>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <ItemsControl ItemsSource="{Binding RetirementPeople}">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="16" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:RetirementPersonRow">
+                        <Border Classes="card">
+                            <StackPanel Spacing="10">
+                                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="24">
+                                    <StackPanel>
+                                        <TextBlock Classes="sectionTitle" Text="{Binding Name}" />
+                                        <TextBlock Classes="muted" FontSize="13" Text="{Binding RetirementText}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="1">
+                                        <TextBlock Classes="label" Text="{l:T 'Pensions'}" />
+                                        <TextBlock FontWeight="SemiBold" Text="{Binding PensionText}" />
+                                    </StackPanel>
+                                    <StackPanel Grid.Column="2">
+                                        <TextBlock Classes="label" Text="{l:T 'Savings at 65'}" />
+                                        <TextBlock FontWeight="SemiBold" Text="{Binding CapitalText}" />
+                                    </StackPanel>
+                                </Grid>
+                                <StackPanel Spacing="4" IsVisible="{Binding HasWithdrawals}">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Taking out pillar 3a'}" />
+                                    <ItemsControl ItemsSource="{Binding WithdrawalLines}">
+                                        <ItemsControl.ItemTemplate>
+                                            <DataTemplate x:DataType="x:String">
+                                                <TextBlock Classes="secondary" FontSize="13" Text="{Binding}" />
+                                            </DataTemplate>
+                                        </ItemsControl.ItemTemplate>
+                                    </ItemsControl>
+                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding WithdrawalHint}" TextWrapping="Wrap" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+
+            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                       Text="{l:T 'Savings are spread over 20 years from 65, without interest or inflation. A guide, not financial advice.'}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

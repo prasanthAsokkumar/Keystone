@@ -59,6 +59,10 @@ namespace Keystone.Data.Migrations
                     b.Property<int>("FinancialYearStartMonth")
                         .HasColumnType("INTEGER");
 
+                    b.Property<string>("HiddenAttention")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<string>("HiddenCover")
                         .IsRequired()
                         .HasColumnType("TEXT");

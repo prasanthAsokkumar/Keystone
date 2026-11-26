@@ -94,6 +94,9 @@ public partial class MainViewModel
     private void RefreshInsurance()
     {
         RefreshOwnPageLists();
+        // Policies' notice deadlines are also listed with the contracts'.
+        if (!_isLoading)
+            RefreshContracts();
         var filter = InsurancePersonFilter ?? PersonOption.Everyone;
         var policies = _policies.Where(p => filter.IsEveryone || p.PersonId == filter.Id).ToList();
         var documents = Documents.ToDictionary(d => d.Id);

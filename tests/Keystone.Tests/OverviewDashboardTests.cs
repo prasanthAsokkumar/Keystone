@@ -98,6 +98,6 @@ public sealed class OverviewDashboardTests : IDisposable
         Assert.Equal(Format.Money(2450), vm.MonthOutText);
         Assert.Equal(Format.SignedMoney(4550), vm.MonthNetText);
         Assert.False(vm.MonthNetIsNegative);
-        Assert.Equal(["attention", "money", "upcoming", "chart"], vm.OverviewSectionOrder);
+        Assert.Equal(["week", "attention", "money", "upcoming", "chart"], vm.OverviewSectionOrder);
     }
 }

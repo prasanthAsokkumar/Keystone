@@ -22,6 +22,9 @@ public class AppSettings
     /// <summary>Kinds of insurance marked "doesn't apply" in the Insurance page's cover overview, e.g. "Car,Building".</summary>
     public string HiddenCover { get; set; } = "";
 
+    /// <summary>Kinds left out of the Overview's "Needs your attention", e.g. "inbox,health".</summary>
+    public string HiddenAttention { get; set; } = "";
+
     /// <summary>Ids of insurance papers "Check filed papers" has read, e.g. "12,40", so a later check skips them.</summary>
     public string CheckedPapers { get; set; } = "";
 

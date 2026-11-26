@@ -419,6 +419,8 @@ public sealed class KeystoneRepository(string databasePath)
 
     public Task SetHiddenCoverAsync(string kinds) => UpdateSettingsAsync(s => s.HiddenCover = kinds);
 
+    public Task SetHiddenAttentionAsync(string kinds) => UpdateSettingsAsync(s => s.HiddenAttention = kinds);
+
     public Task SetCheckedPapersAsync(string ids) => UpdateSettingsAsync(s => s.CheckedPapers = ids);
 
     public Task SetPageLayoutAsync(string json) => UpdateSettingsAsync(s => s.PageLayout = json);

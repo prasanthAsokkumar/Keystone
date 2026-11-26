@@ -29,6 +29,26 @@ public partial class MainViewModel
 
     public IReadOnlyList<string> DocumentStatusFilters => Translate("Any status", "To pay", "Paid", "Past keeping time");
 
+    /// <summary>Insurance or tax papers: the Insurance and Taxes pages link here instead of listing them again.</summary>
+    public IReadOnlyList<string> DocumentTopicFilters => Translate("Any topic", "Insurance", "Taxes");
+
+    [ObservableProperty]
+    public partial int DocumentTopicFilterIndex { get; set; }
+
+    partial void OnDocumentTopicFilterIndexChanged(int value) => RefreshDocumentRows();
+
+    /// <summary>Opens Documents on one topic's papers, e.g. from the Insurance page.</summary>
+    [RelayCommand]
+    private void ShowPapers(string topic)
+    {
+        DocumentSearch = "";
+        DocumentPersonFilter = PersonOption.Everyone;
+        DocumentKindFilterIndex = 0;
+        DocumentStatusFilterIndex = 0;
+        DocumentTopicFilterIndex = topic == "taxes" ? 2 : 1;
+        CurrentPage = AppPage.Documents;
+    }
+
     // ── List and filters ────────────────────────────────────────────────────
 
     [ObservableProperty]
@@ -92,6 +112,12 @@ public partial class MainViewModel
         DocumentRows = Sorted("documents", Documents
             .Where(d => person.IsEveryone || d.PersonId == person.Id)
             .Where(d => DocumentKindFilterIndex <= 0 || (int)d.Kind == DocumentKindFilterIndex - 1)
+            .Where(d => DocumentTopicFilterIndex switch
+            {
+                1 => IsInsuranceDocument(d),
+                2 => IsTaxDocument(d),
+                _ => true,
+            })
             .Where(d => DocumentStatusFilterIndex switch
             {
                 1 => d.IsOpenBill,

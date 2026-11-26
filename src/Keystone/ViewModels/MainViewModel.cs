@@ -34,6 +34,8 @@ public enum AppPage
     Taxes,
     Planning,
     Household,
+    NetWorth,
+    RetirementPlan,
     Year,
     Settings,
 }
@@ -83,7 +85,7 @@ public partial class MainViewModel : ViewModelBase
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(
-        nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsAppointmentsPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsAssetsPage), nameof(IsRetirementPage), nameof(IsInsurancePage), nameof(IsTaxesPage), nameof(IsContractsPage), nameof(IsPlanningPage), nameof(IsHouseholdPage),
+        nameof(IsOverviewPage), nameof(IsTransactionsPage), nameof(IsDocumentsPage), nameof(IsTasksPage), nameof(IsAppointmentsPage), nameof(IsNotesPage), nameof(IsDebtsPage), nameof(IsAssetsPage), nameof(IsRetirementPage), nameof(IsInsurancePage), nameof(IsTaxesPage), nameof(IsContractsPage), nameof(IsPlanningPage), nameof(IsHouseholdPage), nameof(IsNetWorthPage), nameof(IsRetirementPlanPage),
         nameof(IsYearPage), nameof(IsSettingsPage), nameof(PageTitle), nameof(PageSubtitle), nameof(DropHint),
         nameof(DropFilesAsDocument), nameof(DropDetailText), nameof(NewEntryText))]
     public partial AppPage CurrentPage { get; set; }
@@ -114,6 +116,10 @@ public partial class MainViewModel : ViewModelBase
 
     public bool IsHouseholdPage { get => CurrentPage == AppPage.Household; set { if (value) CurrentPage = AppPage.Household; } }
 
+    public bool IsNetWorthPage { get => CurrentPage == AppPage.NetWorth; set { if (value) CurrentPage = AppPage.NetWorth; } }
+
+    public bool IsRetirementPlanPage { get => CurrentPage == AppPage.RetirementPlan; set { if (value) CurrentPage = AppPage.RetirementPlan; } }
+
     public bool IsTaxesPage { get => CurrentPage == AppPage.Taxes; set { if (value) CurrentPage = AppPage.Taxes; } }
 
     public bool IsYearPage { get => CurrentPage == AppPage.Year; set { if (value) CurrentPage = AppPage.Year; } }
@@ -122,20 +128,17 @@ public partial class MainViewModel : ViewModelBase
 
     public string PageTitle => CurrentPage switch
     {
-        AppPage.Transactions => Loc.T("Transactions"),
+        AppPage.Transactions or AppPage.Year => Loc.T("Transactions"),
         AppPage.Documents => Loc.T("Documents"),
-        AppPage.Tasks => Loc.T("Tasks"),
-        AppPage.Appointments => Loc.T("Appointments"),
+        AppPage.Tasks or AppPage.Appointments => Loc.T("Agenda"),
         AppPage.Notes => Loc.T("Notes"),
-        AppPage.Debts => Loc.T("Debts"),
-        AppPage.Assets => Loc.T("Assets"),
-        AppPage.Retirement => Loc.T("Retirement"),
+        AppPage.Debts or AppPage.Assets or AppPage.NetWorth => Loc.T("Debts & assets"),
+        AppPage.Retirement or AppPage.RetirementPlan => Loc.T("Retirement"),
         AppPage.Insurance => Loc.T("Insurance"),
         AppPage.Taxes => Loc.T("Taxes"),
         AppPage.Contracts => Loc.T("Contracts & dates"),
         AppPage.Planning => Loc.T("Planning"),
         AppPage.Household => Loc.T("Household"),
-        AppPage.Year => Loc.T("Year overview"),
         AppPage.Settings => Loc.T("Settings"),
         _ => Greeting,
     };
@@ -153,8 +156,10 @@ public partial class MainViewModel : ViewModelBase
         AppPage.Insurance => Loc.T("What your policies cost, and by when to cancel them"),
         AppPage.Taxes => Loc.T("Everything you need for your tax return, gathered in one place"),
         AppPage.Contracts => Loc.T("Contracts, important dates and warranties, with their deadlines"),
-        AppPage.Planning => Loc.T("Savings goals, what-if scenarios, retirement and net worth"),
+        AppPage.Planning => Loc.T("Savings goals and what-if scenarios"),
         AppPage.Household => Loc.T("Everyone at home: contacts, health, medicines, work and sick days"),
+        AppPage.NetWorth => Loc.T("What you own minus what you owe, over the last two years"),
+        AppPage.RetirementPlan => Loc.T("What you’ll need at 65, what you’ll have, and when to take out pillar 3a"),
         AppPage.Year => Loc.T("Income and spending month by month"),
         AppPage.Settings => Loc.T("Accounts, reminders, calendar, backup, household and language"),
         _ => Loc.F("{0:dddd, d MMMM} · Your household at a glance", Today),
@@ -306,7 +311,7 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(
         nameof(BalanceText), nameof(NetPositionText), nameof(NetWorthText), nameof(RunwayText), nameof(RunwayDetailText),
         nameof(RunwayCauseText), nameof(HasRunwayCause), nameof(RunwayStatusText), nameof(RunwayIsCritical),
-        nameof(RunwayIsWarning), nameof(RunwayIsHealthy), nameof(RunwayBarValue))]
+        nameof(RunwayIsWarning), nameof(RunwayIsHealthy), nameof(RunwayBarValue), nameof(MoneyLastsText), nameof(MoneyLastsDetail))]
     [NotifyPropertyChangedFor(
         nameof(IncomePerDayText), nameof(ExpensesPerDayText), nameof(NetPerDayText), nameof(NetPerDayIsNegative),
         nameof(YearSavingsTitle), nameof(YearSavingsText), nameof(YearSavingsIsNegative), nameof(YearSavingsDetailText),
@@ -919,6 +924,7 @@ public partial class MainViewModel : ViewModelBase
         var retirementFilterId = RetirementPersonFilter?.IsEveryone == true ? (int?)null : RetirementPersonFilter?.Id;
         var retirementFilterIsEveryone = RetirementPersonFilter is null or { IsEveryone: true };
         var newPensionPersonId = NewPensionPerson?.Id;
+        var viewPersonId = ViewPerson?.IsEveryone == false ? ViewPerson.Id : null;
         var pensionAccountPersonId = PensionAccountPerson?.Id;
 
         PersonOptions = [PersonOption.Shared, .. members];
@@ -950,6 +956,8 @@ public partial class MainViewModel : ViewModelBase
         ContractPerson = PersonOptions.FirstOrDefault(o => o.Id == contractPersonId) ?? PersonOption.Shared;
         ImportantDatePerson = PersonOptions.FirstOrDefault(o => o.Id == datePersonId) ?? PersonOption.Shared;
         WarrantyPerson = PersonOptions.FirstOrDefault(o => o.Id == warrantyPersonId) ?? PersonOption.Shared;
+        ViewPersonOptions = [PersonOption.Everyone, .. members];
+        ViewPerson = ViewPersonOptions.FirstOrDefault(o => !o.IsEveryone && o.Id == viewPersonId) ?? PersonOption.Everyone;
         InsurancePersonFilter = insuranceFilterIsEveryone
             ? PersonOption.Everyone
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == insuranceFilterId) ?? PersonOption.Everyone;
@@ -1044,6 +1052,7 @@ public partial class MainViewModel : ViewModelBase
             var settings = await repository.GetSettingsAsync();
             LoadListSorts(settings.ListSorts);
             LoadHiddenCover(settings.HiddenCover);
+            LoadHiddenAttention(settings.HiddenAttention);
             LoadPageLayout(settings.PageLayout);
             LoadTaxSettings(settings.TaxAssessments, settings.TaxRate);
             _checkedPapers = settings.CheckedPapers.Split(',', StringSplitOptions.RemoveEmptyEntries)
@@ -1843,7 +1852,7 @@ public partial class MainViewModel : ViewModelBase
             LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
             ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex,
             AppointmentStatusFilterIndex, AppointmentReminderIndex, AssetKindIndex,
-            PersonBloodTypeIndex, EmploymentReportByIndex, EmploymentReportTimeIndex);
+            PersonBloodTypeIndex, EmploymentReportByIndex, EmploymentReportTimeIndex, DocumentTopicFilterIndex, SettingsTab);
         CategoryFilter = AllCategories;
         OnPropertyChanged(string.Empty);
         (TransactionsTab, ScheduleFilterIndex, FinancialYearStartIndex,
@@ -1852,7 +1861,7 @@ public partial class MainViewModel : ViewModelBase
             LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
             ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex,
             AppointmentStatusFilterIndex, AppointmentReminderIndex, AssetKindIndex,
-            PersonBloodTypeIndex, EmploymentReportByIndex, EmploymentReportTimeIndex) = selections;
+            PersonBloodTypeIndex, EmploymentReportByIndex, EmploymentReportTimeIndex, DocumentTopicFilterIndex, SettingsTab) = selections;
 
         RefreshPersonOptions();
         RefreshDocumentRows();
@@ -1871,6 +1880,10 @@ public partial class MainViewModel : ViewModelBase
         Recalculate();
         RefreshTaxes();
         RefreshDeadlines();
+        RefreshHousehold();
+        RefreshAttentionFilters();
+        RefreshDashboard();
+        NavigationChanged();
         ScheduleReminders();
     }
 

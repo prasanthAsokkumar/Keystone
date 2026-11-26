@@ -9,6 +9,17 @@ using Keystone.Models;
 
 namespace Keystone.ViewModels;
 
+/// <summary>A notice deadline of a contract or an insurance policy, in the one list of all deadlines.</summary>
+public sealed record NoticeDeadlineRow(DateOnly CancelBy, string Name, string Kind, string Person, bool IsInsurance, string DaysLeft,
+    bool IsSoon, Action Open)
+{
+    public string DateText => Format.Date(CancelBy);
+
+    public string DetailText => string.Join(" · ", new[] { Kind, Person }.Where(s => s != ""));
+
+    public string SourceText => Loc.T(IsInsurance ? "Insurance" : "Contract");
+}
+
 /// <summary>The Contracts & dates page: contracts with notice deadlines, important dates and warranties.</summary>
 public partial class MainViewModel
 {
@@ -104,6 +115,7 @@ public partial class MainViewModel
     {
         var documents = Documents.ToDictionary(d => d.Id);
         ContractRows = Sorted("contracts", _contracts
+            .Where(c => InView(c.PersonId))
             .OrderBy(c => c.HasEnded(Today))
             .ThenBy(c => c.NextDeadline(Today)?.CancelBy ?? DateOnly.MaxValue)
             .ThenBy(c => c.Provider, StringComparer.CurrentCultureIgnoreCase)
@@ -122,9 +134,10 @@ public partial class MainViewModel
             ? Loc.T("Add phone, internet, gym or leasing contracts")
             : Loc.F("{0} a month · {1}", Format.Money(yearly / 12), Loc.Plural(running.Count, "{0} contract", "{0} contracts"));
 
-        var next = running.Select(c => (Contract: c, Deadline: c.NextDeadline(Today)))
-            .Where(x => x.Deadline is not null).OrderBy(x => x.Deadline!.Value.CancelBy).FirstOrDefault();
-        if (next.Contract is null)
+        // Contracts and insurance policies together: every notice deadline in one place.
+        AllDeadlineRows = AllNoticeDeadlines();
+        var next = AllDeadlineRows.FirstOrDefault();
+        if (next is null)
         {
             ContractDeadlineText = "–";
             ContractDeadlineDetail = Loc.T("Enter when a contract’s minimum term ends to see its notice deadline");
@@ -132,12 +145,45 @@ public partial class MainViewModel
         }
         else
         {
-            var cancelBy = next.Deadline!.Value.CancelBy;
-            ContractDeadlineText = Format.Date(cancelBy);
-            ContractDeadlineDetail = Loc.F("{0}, {1} · {2}", next.Contract.Provider, Contract.KindName(next.Contract.Kind), DaysLeftText(cancelBy));
-            IsContractDeadlineSoon = cancelBy.DayNumber - Today.DayNumber <= InsuranceDeadlineWarningDays;
+            ContractDeadlineText = Format.Date(next.CancelBy);
+            ContractDeadlineDetail = $"{next.Name}, {next.Kind} · {next.DaysLeft}";
+            IsContractDeadlineSoon = next.IsSoon;
         }
     }
+
+    /// <summary>The notice deadlines of the next 12 months, of contracts and insurance policies, soonest first.</summary>
+    [ObservableProperty]
+    [NotifyPropertyChangedFor(nameof(HasAllDeadlineRows))]
+    public partial IReadOnlyList<NoticeDeadlineRow> AllDeadlineRows { get; set; } = [];
+
+    public bool HasAllDeadlineRows => AllDeadlineRows.Count > 0;
+
+    /// <summary>The first few, for the summary card.</summary>
+    public IReadOnlyList<NoticeDeadlineRow> TopDeadlineRows => AllDeadlineRows.Take(5).ToList();
+
+    partial void OnAllDeadlineRowsChanged(IReadOnlyList<NoticeDeadlineRow> value) => OnPropertyChanged(nameof(TopDeadlineRows));
+
+    private List<NoticeDeadlineRow> AllNoticeDeadlines()
+    {
+        var until = Today.AddYears(1);
+        var rows = new List<NoticeDeadlineRow>();
+        foreach (var c in _contracts.Where(c => !c.HasEnded(Today) && InView(c.PersonId)))
+            if (c.NextDeadline(Today) is { } d && d.CancelBy <= until)
+                rows.Add(new NoticeDeadlineRow(d.CancelBy, c.Provider, Contract.KindName(c.Kind), PersonNameOrEmpty(c.PersonId), false,
+                    DaysLeftText(d.CancelBy), d.CancelBy.DayNumber - Today.DayNumber <= InsuranceDeadlineWarningDays,
+                    () => EditContractCommand.Execute(c)));
+        foreach (var p in _policies.Where(p => !p.HasEnded(Today) && InView(p.PersonId)))
+            if (p.NextDeadline(Today) is { } d && d.CancelBy <= until)
+                rows.Add(new NoticeDeadlineRow(d.CancelBy, p.Insurer, InsurancePolicy.KindName(p.Kind), PersonNameOrEmpty(p.PersonId), true,
+                    DaysLeftText(d.CancelBy), d.CancelBy.DayNumber - Today.DayNumber <= InsuranceDeadlineWarningDays,
+                    () => { CurrentPage = AppPage.Insurance; EditInsuranceCommand.Execute(p); }));
+        return rows.OrderBy(r => r.CancelBy).ThenBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
+    }
+
+    private string PersonNameOrEmpty(int? id) => id is null ? "" : PersonName(id);
+
+    [RelayCommand]
+    private void OpenNoticeDeadline(NoticeDeadlineRow row) => row.Open();
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
@@ -348,6 +394,7 @@ public partial class MainViewModel
     private void RefreshImportantDates()
     {
         ImportantDateRows = Sorted("dates", _dates
+            .Where(d => InView(d.PersonId))
             .OrderBy(d => d.HasPassed(Today))
             .ThenBy(d => d.NextDate(Today))
             .Select(d => new ImportantDateRow(d, PersonName(d.PersonId), Today)), null,
@@ -511,6 +558,7 @@ public partial class MainViewModel
     {
         var documents = Documents.ToDictionary(d => d.Id);
         WarrantyRows = Sorted("warranties", _warranties
+            .Where(w => InView(w.PersonId))
             .OrderBy(w => w.HasExpired(Today))
             .ThenBy(w => w.ExpiresOn)
             .Select(w => new WarrantyRow(w, PersonName(w.PersonId),

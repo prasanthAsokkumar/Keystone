@@ -158,6 +158,32 @@
         <Setter Property="Background" Value="Transparent" />
     </Style>
 
+    <!-- ── Overview week strip ─────────────────────────────────────────────── -->
+    <Style Selector="Border.weekDay">
+        <Setter Property="Background" Value="{DynamicResource SurfaceSunken}" />
+    </Style>
+    <Style Selector="Border.weekDay.today">
+        <Setter Property="Background" Value="{DynamicResource BrandSoft}" />
+    </Style>
+    <Style Selector="Ellipse.weekDot">
+        <Setter Property="Fill" Value="{DynamicResource TextMuted}" />
+    </Style>
+    <Style Selector="Ellipse.weekDot.money">
+        <Setter Property="Fill" Value="{DynamicResource Brand}" />
+    </Style>
+    <Style Selector="Ellipse.weekDot.appointment">
+        <Setter Property="Fill" Value="#3B82F6" />
+    </Style>
+    <Style Selector="Ellipse.weekDot.task">
+        <Setter Property="Fill" Value="#8B5CF6" />
+    </Style>
+    <Style Selector="Ellipse.weekDot.deadline">
+        <Setter Property="Fill" Value="{DynamicResource Warning}" />
+    </Style>
+    <Style Selector="Ellipse.weekDot.health">
+        <Setter Property="Fill" Value="{DynamicResource Negative}" />
+    </Style>
+
     <!-- ── Sidebar navigation ─────────────────────────────────────────────── -->
 
     <Style Selector="RadioButton.nav">
@@ -182,6 +208,12 @@
     <Style Selector="RadioButton.nav:checked">
         <Setter Property="Foreground" Value="{DynamicResource BrandText}" />
         <Setter Property="FontWeight" Value="SemiBold" />
+    </Style>
+    <Style Selector="TextBlock.navHeading">
+        <Setter Property="FontSize" Value="11" />
+        <Setter Property="FontWeight" Value="SemiBold" />
+        <Setter Property="Foreground" Value="{DynamicResource TextMuted}" />
+        <Setter Property="Margin" Value="12,14,0,4" />
     </Style>
     <Style Selector="RadioButton.nav PathIcon">
         <Setter Property="Width" Value="18" />

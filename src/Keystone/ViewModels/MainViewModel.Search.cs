@@ -180,6 +180,7 @@ public partial class MainViewModel
                 () =>
                 {
                     CurrentPage = AppPage.Settings;
+                    SettingsTab = 1;
                     EditBankAccountCommand.Execute(a);
                 })));
 

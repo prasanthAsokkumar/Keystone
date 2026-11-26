@@ -131,6 +131,7 @@ public partial class MainViewModel
     // The Overview is fresh whenever it is shown (the day may have changed) and when scans arrive.
     partial void OnCurrentPageChanged(AppPage value)
     {
+        NavigationChanged();
         if (value == AppPage.Overview)
             RefreshDashboard();
     }
@@ -229,9 +230,10 @@ public partial class MainViewModel
             rows.Add((8, new AttentionRow(AttentionKind.Inbox, InboxText, Loc.T("File them under Documents"), false,
                 () => FileInboxCommand.Execute(null))));
 
-        AttentionRows = rows.OrderBy(r => r.Order).ThenByDescending(r => r.Row.IsUrgent).Select(r => r.Row).ToList();
+        AttentionRows = rows.Where(r => ShowsAttention(r.Row.Kind)).OrderBy(r => r.Order).ThenByDescending(r => r.Row.IsUrgent).Select(r => r.Row).ToList();
 
         RefreshComingUp(now, today);
+        RefreshWeek(now, today);
         RefreshMonth(today);
         OnPropertyChanged(nameof(Greeting));
         OnPropertyChanged(nameof(MonthTitle));

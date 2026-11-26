@@ -41,10 +41,6 @@
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
                                 <ComboBox ItemsSource="{Binding ContractKindNames}" SelectedIndex="{Binding ContractKindIndex}" />
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Spacing="4">
-                                <TextBlock Classes="fieldLabel" Text="{l:T 'Customer number (optional)'}" />
-                                <TextBox Text="{Binding ContractCustomerNumber}" />
-                            </StackPanel>
                         </Grid>
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                             <StackPanel Spacing="4">
@@ -72,23 +68,31 @@
                                 <TextBlock Classes="secondary" FontSize="13" Text="{Binding ContractCancelByText}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="{l:T 'Contract document'}" />
-                            <ComboBox ItemsSource="{Binding ContractDocumentOptions}" SelectedItem="{Binding ContractDocument}" HorizontalAlignment="Stretch">
-                        <ComboBox.ItemTemplate>
-                            <DataTemplate x:DataType="vm:DocumentOption">
-                                <StackPanel Spacing="1">
-                                    <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
-                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" />
+                        <Expander Header="{l:T 'More details'}" IsExpanded="{Binding ContractMoreOpen}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                            <StackPanel Spacing="18">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Customer number (optional)'}" />
+                                    <TextBox Text="{Binding ContractCustomerNumber}" />
                                 </StackPanel>
-                            </DataTemplate>
-                        </ComboBox.ItemTemplate>
-                    </ComboBox>
-                        </StackPanel>
-                        <StackPanel Spacing="4">
-                            <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
-                            <TextBox Text="{Binding ContractNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" />
-                        </StackPanel>
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Contract document'}" />
+                                    <ComboBox ItemsSource="{Binding ContractDocumentOptions}" SelectedItem="{Binding ContractDocument}" HorizontalAlignment="Stretch">
+                                <ComboBox.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:DocumentOption">
+                                        <StackPanel Spacing="1">
+                                            <TextBlock Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" />
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ComboBox.ItemTemplate>
+                                                    </ComboBox>
+                                </StackPanel>
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
+                                    <TextBox Text="{Binding ContractNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" />
+                                </StackPanel>
+                            </StackPanel>
+                        </Expander>
                         <CheckBox IsChecked="{Binding ContractAddToExpenses}" IsVisible="{Binding EditingContract, Converter={x:Static ObjectConverters.IsNull}}"
                                   Content="{l:T 'Add the cost to expenses from next month, so your runway includes it'}" />
                         <TextBlock Classes="error" Text="{Binding ContractError}" IsVisible="{Binding HasContractError}" />

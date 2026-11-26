@@ -18,8 +18,8 @@
 
     <Window.KeyBindings>
         <KeyBinding Gesture="Escape" Command="{Binding ClosePanelCommand}" />
-        <KeyBinding Gesture="Meta+N" Command="{Binding NewEntryCommand}" />
-        <KeyBinding Gesture="Ctrl+N" Command="{Binding NewEntryCommand}" />
+        <KeyBinding Gesture="Meta+N" Command="{Binding OpenNewMenuCommand}" />
+        <KeyBinding Gesture="Ctrl+N" Command="{Binding OpenNewMenuCommand}" />
         <KeyBinding Gesture="Meta+L" Command="{Binding LockNowCommand}" />
     </Window.KeyBindings>
 
@@ -44,6 +44,10 @@
                     </Button>
                 </Grid>
 
+                <!-- Whose things the app shows: everyone, or one person on every page -->
+                <ComboBox DockPanel.Dock="Top" Margin="0,0,0,10" HorizontalAlignment="Stretch"
+                          ItemsSource="{Binding ViewPersonOptions}" SelectedItem="{Binding ViewPerson}"
+                          ToolTip.Tip="{l:T 'Show one person’s things on every page'}" />
                 <Panel DockPanel.Dock="Top" Margin="0,0,0,16">
                     <TextBox x:Name="GlobalSearchBox" Text="{Binding GlobalSearch}" PlaceholderText="{l:T 'Search everything (⌘F)'}">
                         <TextBox.InnerLeftContent>
@@ -89,12 +93,28 @@
                     </Popup>
                 </Panel>
 
-                <Button DockPanel.Dock="Bottom" Classes="primary" HorizontalAlignment="Stretch"
-                        Command="{Binding NewEntryCommand}" ToolTip.Tip="{l:T 'New entry (⌘N)'}">
+                <Button x:Name="NewButton" DockPanel.Dock="Bottom" Classes="primary" HorizontalAlignment="Stretch"
+                        ToolTip.Tip="{l:T 'Add anything: an entry, a bill, a task… (⌘N)'}">
                     <StackPanel Orientation="Horizontal" Spacing="8">
                         <PathIcon Data="{StaticResource IconPlus}" />
-                        <TextBlock Text="{l:T 'New entry'}" />
+                        <TextBlock Text="{l:T 'New'}" />
                     </StackPanel>
+                    <Button.Flyout>
+                        <Flyout Placement="TopEdgeAlignedLeft">
+                            <ItemsControl ItemsSource="{Binding NewMenuItems}" Width="300">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:NewMenuItem">
+                                        <Button Classes="searchResult" HorizontalAlignment="Stretch" Click="NewMenuItem_Click">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Title}" FontWeight="Medium" />
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding Hint}" />
+                                            </StackPanel>
+                                        </Button>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </Flyout>
+                    </Button.Flyout>
                 </Button>
                 <Button DockPanel.Dock="Bottom" Classes="secondary" HorizontalAlignment="Stretch" Margin="0,0,0,8"
                         Click="Import_Click" IsVisible="{Binding IsImportEnabled}" ToolTip.Tip="{l:T 'Or drop a bill, payslip or statement anywhere on the window'}">
@@ -104,6 +124,7 @@
                     </StackPanel>
                 </Button>
 
+                <ScrollViewer>
                 <StackPanel Spacing="2">
                     <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsOverviewPage}">
                         <StackPanel Orientation="Horizontal" Spacing="12">
@@ -111,76 +132,23 @@
                             <TextBlock Text="{l:T 'Overview'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTransactionsPage}" controls:Drag.Target="transactions">
+                    <TextBlock Classes="navHeading" Text="{l:T 'Money'}" />
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTransactionsPlace}" controls:Drag.Target="transactions">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconList}" />
                             <TextBlock Text="{l:T 'Transactions'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsDocumentsPage}" controls:Drag.Target="documents">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <PathIcon Data="{StaticResource IconFolder}" />
-                            <TextBlock Text="{l:T 'Documents'}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTasksPage}">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <PathIcon Data="{StaticResource IconTask}" />
-                            <TextBlock Text="{l:T 'Tasks'}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsAppointmentsPage}">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <PathIcon Data="{StaticResource IconAppointment}" />
-                            <TextBlock Text="{l:T 'Appointments'}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsNotesPage}">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <PathIcon Data="{StaticResource IconNote}" />
-                            <TextBlock Text="{l:T 'Notes'}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsHouseholdPage}">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <PathIcon Data="{StaticResource IconPeople}" />
-                            <TextBlock Text="{l:T 'Household'}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsDebtsPage}">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <PathIcon Data="{StaticResource IconCard}" />
-                            <TextBlock Text="{l:T 'Debts'}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsAssetsPage}">
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsWealthPlace}">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconPiggy}" />
-                            <TextBlock Text="{l:T 'Assets'}" VerticalAlignment="Center" />
+                            <TextBlock Text="{l:T 'Debts &amp; assets'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsRetirementPage}">
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsRetirementPlace}">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconShield}" />
                             <TextBlock Text="{l:T 'Retirement'}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsInsurancePage}" controls:Drag.Target="insurance">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <PathIcon Data="{StaticResource IconUmbrella}" />
-                            <TextBlock Text="{l:T 'Insurance'}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsContractsPage}">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <PathIcon Data="{StaticResource IconCalendarClock}" />
-                            <TextBlock Text="{l:T 'Contracts &amp; dates'}" VerticalAlignment="Center" />
-                        </StackPanel>
-                    </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTaxesPage}" controls:Drag.Target="taxes">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <PathIcon Data="{StaticResource IconReceipt}" />
-                            <TextBlock Text="{l:T 'Taxes'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
                     <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsPlanningPage}">
@@ -189,12 +157,51 @@
                             <TextBlock Text="{l:T 'Planning'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
-                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsYearPage}">
+                    <TextBlock Classes="navHeading" Text="{l:T 'Paperwork'}" />
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsDocumentsPage}" controls:Drag.Target="documents">
                         <StackPanel Orientation="Horizontal" Spacing="12">
-                            <PathIcon Data="{StaticResource IconCalendar}" />
-                            <TextBlock Text="{l:T 'Year'}" VerticalAlignment="Center" />
+                            <PathIcon Data="{StaticResource IconFolder}" />
+                            <TextBlock Text="{l:T 'Documents'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsInsurancePage}" controls:Drag.Target="insurance">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconUmbrella}" />
+                            <TextBlock Text="{l:T 'Insurance'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsTaxesPage}" controls:Drag.Target="taxes">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconReceipt}" />
+                            <TextBlock Text="{l:T 'Taxes'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsContractsPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconCalendarClock}" />
+                            <TextBlock Text="{l:T 'Contracts &amp; dates'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                    <TextBlock Classes="navHeading" Text="{l:T 'Home'}" />
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsHouseholdPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconPeople}" />
+                            <TextBlock Text="{l:T 'Household'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsAgendaPlace}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconCalendar}" />
+                            <TextBlock Text="{l:T 'Agenda'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsNotesPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconNote}" />
+                            <TextBlock Text="{l:T 'Notes'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
+                    <Border Height="10" />
                     <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsSettingsPage}">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconSettings}" />
@@ -202,6 +209,7 @@
                         </StackPanel>
                     </RadioButton>
                 </StackPanel>
+                </ScrollViewer>
             </DockPanel>
         </Border>
 
@@ -213,6 +221,33 @@
                 <StackPanel Spacing="2">
                     <TextBlock Classes="pageTitle" Text="{Binding PageTitle}" />
                     <TextBlock Classes="secondary" Text="{Binding PageSubtitle}" TextTrimming="CharacterEllipsis" />
+                    <!-- One person's view -->
+                    <Border Background="{DynamicResource BrandSoft}" CornerRadius="9" Padding="12,6" Margin="0,10,0,0"
+                            HorizontalAlignment="Left" IsVisible="{Binding ShowsPersonViewBar}">
+                        <StackPanel Orientation="Horizontal" Spacing="10">
+                            <PathIcon Data="{StaticResource IconPeople}" Width="15" Height="15" Foreground="{DynamicResource BrandText}" />
+                            <TextBlock Text="{Binding PersonViewText}" Foreground="{DynamicResource BrandText}" FontWeight="Medium" VerticalAlignment="Center" />
+                            <Button Classes="link" Command="{Binding ShowEveryoneCommand}" Content="{l:T 'Show everyone'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Border>
+                    <!-- Pages that share a place in the sidebar, as tabs -->
+                    <Border Classes="segments" HorizontalAlignment="Left" Margin="0,12,0,0" IsVisible="{Binding HasPageTabs}">
+                        <ItemsControl ItemsSource="{Binding PageTabs}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Orientation="Horizontal" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PageTab">
+                                    <RadioButton Classes="segment" GroupName="PageTabs" MinWidth="110" Content="{Binding Title}"
+                                                 IsChecked="{Binding IsSelected, Mode=OneWay}"
+                                                 Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).GoToPageCommand}"
+                                                 CommandParameter="{Binding Page}" />
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </Border>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Center">
@@ -519,6 +554,8 @@
                                   Width="130" />
                         <ComboBox ItemsSource="{Binding DocumentStatusFilters}"
                                   SelectedIndex="{Binding DocumentStatusFilterIndex}" Width="130" />
+                        <ComboBox ItemsSource="{Binding DocumentTopicFilters}"
+                                  SelectedIndex="{Binding DocumentTopicFilterIndex}" Width="130" />
                     </WrapPanel>
 
                     <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
@@ -609,7 +646,7 @@
                 <DockPanel>
                     <StackPanel DockPanel.Dock="Top" Spacing="6" Margin="12,12,12,4">
                         <Grid ColumnDefinitions="*,170,150,Auto" ColumnSpacing="8">
-                            <TextBox Text="{Binding NewTaskTitle}" PlaceholderText="{l:T 'Add a task, e.g. Renew passport'}">
+                            <TextBox x:Name="NewTaskBox" Text="{Binding NewTaskTitle}" PlaceholderText="{l:T 'Add a task, e.g. Renew passport'}">
                                 <TextBox.InnerLeftContent>
                                     <PathIcon Data="{StaticResource IconPlus}" Width="16" Height="16"
                                               Margin="10,0,0,0" Foreground="{DynamicResource TextMuted}" />
@@ -1138,6 +1175,8 @@
 
             <!-- ═══ Planning ═══ -->
             <pages:PlanningPage Grid.Row="1" IsVisible="{Binding IsPlanningPage}" />
+            <pages:NetWorthPage Grid.Row="1" IsVisible="{Binding IsNetWorthPage}" />
+            <pages:RetirementPlanPage Grid.Row="1" IsVisible="{Binding IsRetirementPlanPage}" />
 
             <!-- ═══ Year ═══ -->
             <Grid Grid.Row="1" RowDefinitions="Auto,*" RowSpacing="16" IsVisible="{Binding IsYearPage}">
@@ -1227,8 +1266,18 @@
             <!-- ═══ Settings ═══ -->
             <ScrollViewer Grid.Row="1" IsVisible="{Binding IsSettingsPage}">
                 <StackPanel Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
+                    <Border Classes="segments" HorizontalAlignment="Left">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'General'}" IsChecked="{Binding IsSettingsGeneralTab}" />
+                            <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'Accounts'}" IsChecked="{Binding IsSettingsAccountsTab}" />
+                            <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'Household'}" IsChecked="{Binding IsSettingsHouseholdTab}" />
+                            <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'Reminders &amp; calendar'}" IsChecked="{Binding IsSettingsRemindersTab}" />
+                            <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'Documents &amp; AI'}" IsChecked="{Binding IsSettingsDocumentsTab}" />
+                            <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'Backup &amp; lock'}" IsChecked="{Binding IsSettingsSecurityTab}" />
+                        </StackPanel>
+                    </Border>
 
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsAccountsTab}">
                         <StackPanel Spacing="14">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
                                 <StackPanel Spacing="2">
@@ -1298,7 +1347,7 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsGeneralTab}">
                         <Grid ColumnDefinitions="*,200" ColumnSpacing="24">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock Classes="sectionTitle" Text="{l:T 'Language'}" />
@@ -1310,7 +1359,7 @@
                         </Grid>
                     </Border>
 
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsGeneralTab}">
                         <Grid ColumnDefinitions="*,200" ColumnSpacing="24">
                             <StackPanel Spacing="2" VerticalAlignment="Center">
                                 <TextBlock Classes="sectionTitle" Text="{l:T 'Financial year'}" />
@@ -1323,7 +1372,7 @@
                     </Border>
 
                     <!-- Reminders -->
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsHouseholdTab}">
                         <StackPanel Spacing="14">
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                 <Border Classes="iconTile">
@@ -1369,7 +1418,7 @@
                     </Border>
 
                     <!-- Calendar -->
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsHouseholdTab}">
                         <StackPanel Spacing="14">
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                 <Border Classes="iconTile">
@@ -1409,7 +1458,7 @@
                     </Border>
 
                     <!-- App lock -->
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsSecurityTab}">
                         <StackPanel Spacing="14">
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
                                 <Border Classes="iconTile">
@@ -1431,7 +1480,7 @@
                     </Border>
 
                     <!-- Backup -->
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsSecurityTab}">
                         <StackPanel Spacing="14">
                             <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
                                 <Border Classes="iconTile">
@@ -1463,7 +1512,7 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsRemindersTab}">
                         <StackPanel Spacing="14">
                             <StackPanel Spacing="2">
                                 <TextBlock Classes="sectionTitle" Text="{l:T 'Household'}" />
@@ -1516,7 +1565,7 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsDocumentsTab}">
                         <StackPanel Spacing="14">
                             <StackPanel Spacing="2">
                                 <TextBlock Classes="sectionTitle" Text="{l:T 'Documents folder'}" />
@@ -1539,7 +1588,7 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsDocumentsTab}">
                         <StackPanel Spacing="14">
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
                                 <StackPanel Spacing="2">
@@ -1582,7 +1631,7 @@
                         </StackPanel>
                     </Border>
 
-                    <Border Classes="card" Padding="24">
+                    <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsGeneralTab}">
                         <StackPanel Spacing="4">
                             <TextBlock Classes="sectionTitle" Text="{l:T 'Your data'}" />
                             <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
