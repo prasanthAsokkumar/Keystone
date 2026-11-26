@@ -41,6 +41,8 @@
                                                 <PathIcon Data="{StaticResource IconBell}" IsVisible="{Binding IsDeadline}" />
                                                 <PathIcon Data="{StaticResource IconAppointment}" IsVisible="{Binding IsAppointment}" />
                                                 <PathIcon Data="{StaticResource IconInbox}" IsVisible="{Binding IsInbox}" />
+                                                <PathIcon Data="{StaticResource IconPill}" IsVisible="{Binding IsMedicine}" />
+                                                <PathIcon Data="{StaticResource IconBriefcase}" IsVisible="{Binding IsSickLeave}" />
                                             </Panel>
                                         </Border>
                                         <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">

@@ -94,6 +94,7 @@ public partial class MainViewModel
             case "policies": RefreshInsurance(); break;
             case "debts": SortDebts(); break;
             case "assets": RefreshAssets(); break;
+            case "medicines" or "sickLeaves": RefreshHousehold(); break;
             default: RefreshOwnPageLists(); break; // premiums, insurance papers, tax payments, tax papers
         }
     }

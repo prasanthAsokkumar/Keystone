@@ -23,6 +23,12 @@ public sealed record WarrantyReminder(int Id, string Item, DateOnly ExpiresOn);
 /// <summary>An appointment, reminded at <paramref name="At"/>; <paramref name="When"/> says when it starts.</summary>
 public sealed record AppointmentReminder(int Id, string Title, DateTime At, string When, string Location = "");
 
+/// <summary>A medicine: reminded a few days before it runs out and before its prescription ends.</summary>
+public sealed record MedicineReminder(int Id, string Name, string Person, DateOnly? RunsOutOn, DateOnly? PrescriptionUntil, string Doctor = "");
+
+/// <summary>A doctor's certificate due for an ongoing time off sick.</summary>
+public sealed record CertificateReminder(int Id, string Person, string Employer, DateOnly DueOn, int Day);
+
 /// <summary>Turns bills, tasks, insurance deadlines and 3a room into dated notifications.</summary>
 public static class ReminderPlanner
 {
@@ -32,11 +38,18 @@ public static class ReminderPlanner
     /// <summary>Days in December to remind about pillar 3a room on.</summary>
     public static readonly int[] Pillar3aDecemberDays = [1, 20];
 
+    /// <summary>Days before a medicine runs out to remind, leaving time to fetch a pack or a prescription.</summary>
+    public const int MedicineRefillDays = 5;
+
+    /// <summary>Days before a prescription ends to remind, to see the doctor in time.</summary>
+    public const int PrescriptionDays = 14;
+
     public static IReadOnlyList<Reminder> Plan(
         IEnumerable<BillReminder> bills, IEnumerable<TaskReminder> tasks, IEnumerable<DeadlineReminder> deadlines,
         IEnumerable<Pillar3aReminder> pillar3a, DateTime now, int hour,
         IEnumerable<DeadlineReminder>? contracts = null, IEnumerable<DateReminder>? dates = null,
-        IEnumerable<WarrantyReminder>? warranties = null, IEnumerable<AppointmentReminder>? appointments = null)
+        IEnumerable<WarrantyReminder>? warranties = null, IEnumerable<AppointmentReminder>? appointments = null,
+        IEnumerable<MedicineReminder>? medicines = null, IEnumerable<CertificateReminder>? certificates = null)
     {
         DateTime At(DateOnly day) => day.ToDateTime(new TimeOnly(Math.Clamp(hour, 0, 23), 0));
         var reminders = new List<Reminder>();
@@ -100,6 +113,28 @@ public static class ReminderPlanner
                 appointment.Title,
                 appointment.Location == "" ? appointment.When : $"{appointment.When} · {appointment.Location}"));
         }
+
+        foreach (var medicine in medicines ?? [])
+        {
+            var what = medicine.Person == "" ? medicine.Name : $"{medicine.Name} · {medicine.Person}";
+            if (medicine.RunsOutOn is { } runsOut)
+                reminders.Add(new Reminder($"medicine-{medicine.Id}-refill-{runsOut:yyyyMMdd}", At(runsOut.AddDays(-MedicineRefillDays)),
+                    Loc.F("Running out soon: {0}", what),
+                    Loc.F("Enough until {0:d}. Time to get a new pack.", runsOut.ToDateTime(TimeOnly.MinValue))));
+            if (medicine.PrescriptionUntil is { } until)
+                reminders.Add(new Reminder($"medicine-{medicine.Id}-prescription-{until:yyyyMMdd}", At(until.AddDays(-PrescriptionDays)),
+                    Loc.F("Prescription ends soon: {0}", what),
+                    medicine.Doctor == ""
+                        ? Loc.F("Valid until {0:d}. Ask the doctor for a new one.", until.ToDateTime(TimeOnly.MinValue))
+                        : Loc.F("Valid until {0:d}. Ask {1} for a new one.", until.ToDateTime(TimeOnly.MinValue), medicine.Doctor)));
+        }
+
+        foreach (var certificate in certificates ?? [])
+            reminders.Add(new Reminder($"sick-{certificate.Id}-certificate-{certificate.DueOn:yyyyMMdd}", At(certificate.DueOn),
+                Loc.T("Doctor’s certificate needed today"),
+                certificate.Employer == ""
+                    ? Loc.F("{0}: day {1} off sick.", certificate.Person, certificate.Day)
+                    : Loc.F("{0}: day {1} off sick. Send it to {2}.", certificate.Person, certificate.Day, certificate.Employer)));
 
         foreach (var room in pillar3a.Where(r => r.Left > 0))
         {

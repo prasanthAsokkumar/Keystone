@@ -1,0 +1,357 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.HouseholdPage"
+             x:DataType="vm:MainViewModel">
+    <!-- One profile per household member: contacts, health, medicines, work and sick days. -->
+    <UserControl.Resources>
+        <!-- A labelled fact with a copy button: "Phone  079 123 45 67  ⧉". -->
+        <DataTemplate x:Key="InfoLineTemplate" x:DataType="vm:InfoLine">
+            <Grid ColumnDefinitions="130,*,Auto" ColumnSpacing="10" Margin="0,3">
+                <TextBlock Classes="muted" FontSize="13" Text="{Binding Label}" TextWrapping="Wrap" VerticalAlignment="Center" />
+                <TextBlock Grid.Column="1" FontSize="13" Text="{Binding Value}" TextWrapping="Wrap" VerticalAlignment="Center"
+                           Classes.negative="{Binding IsWarning}" FontWeight="Medium" />
+                <Button Grid.Column="2" Classes="icon" IsVisible="{Binding CanCopy}" ToolTip.Tip="{l:T 'Copy'}" Width="28" Height="28"
+                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).CopyInfoLineCommand}" CommandParameter="{Binding}">
+                    <PathIcon Data="{StaticResource IconCopy}" Width="13" Height="13" />
+                </Button>
+            </Grid>
+        </DataTemplate>
+    </UserControl.Resources>
+
+    <ScrollViewer>
+    <StackPanel Spacing="16" Margin="0,0,14,0">
+        <!-- No members yet -->
+        <Border Classes="card" IsVisible="{Binding !HasMembers}">
+            <StackPanel Spacing="10">
+                <TextBlock Classes="sectionTitle" Text="{l:T 'Who lives with you?'}" />
+                <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                           Text="{l:T 'Add the members of your household. Each gets a profile with contacts, health basics for the doctor or an emergency, the medicines they take, their job and whom to tell there when they are ill.'}" />
+                <Button Classes="primary" HorizontalAlignment="Left" Command="{Binding NewMemberCommand}">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <PathIcon Data="{StaticResource IconPlus}" />
+                        <TextBlock Text="{l:T 'Add household member'}" />
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+        </Border>
+
+        <!-- The members, one button each -->
+        <ItemsControl ItemsSource="{Binding MemberTabs}" IsVisible="{Binding HasMembers}">
+            <ItemsControl.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal" ItemSpacing="8" LineSpacing="8" />
+                </ItemsPanelTemplate>
+            </ItemsControl.ItemsPanel>
+            <ItemsControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:MemberTab">
+                    <Panel>
+                        <Button Classes="primary" IsVisible="{Binding IsSelected}"
+                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).SelectMemberCommand}" CommandParameter="{Binding}">
+                            <TextBlock Text="{Binding Name}" />
+                        </Button>
+                        <Button Classes="secondary" IsVisible="{Binding !IsSelected}"
+                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).SelectMemberCommand}" CommandParameter="{Binding}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <TextBlock Text="{Binding Name}" />
+                                <Ellipse Width="7" Height="7" Fill="{DynamicResource Warning}" IsVisible="{Binding HasAlert}" VerticalAlignment="Center" />
+                            </StackPanel>
+                        </Button>
+                    </Panel>
+                </DataTemplate>
+            </ItemsControl.ItemTemplate>
+        </ItemsControl>
+
+        <!-- Off sick: what to do, in order -->
+        <Border Classes="card" Background="{DynamicResource WarningSoft}" IsVisible="{Binding IsMemberOffSick}">
+            <StackPanel Spacing="10">
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="sectionTitle" Text="{Binding SickBannerTitle}" TextWrapping="Wrap" />
+                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                   Text="{Binding SickBannerDetail}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
+                        <Button Classes="secondary" Command="{Binding CopySickMessageCommand}"
+                                ToolTip.Tip="{l:T 'A short message to your employer, to paste into a text or email'}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconCopy}" />
+                                <TextBlock Text="{l:T 'Copy message to work'}" />
+                            </StackPanel>
+                        </Button>
+                        <Button Classes="primary" Command="{Binding BackAtWorkCommand}" Content="{l:T 'Back at work'}" />
+                    </StackPanel>
+                </Grid>
+                <ItemsControl ItemsSource="{Binding SickSteps}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:SickStep">
+                            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Margin="0,4">
+                                <CheckBox IsChecked="{Binding IsDone, Mode=OneWay}" IsEnabled="{Binding CanToggle}" VerticalAlignment="Top"
+                                          Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ToggleSickStepCommand}" CommandParameter="{Binding}" />
+                                <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
+                                    <TextBlock Text="{Binding Text}" FontWeight="Medium" TextWrapping="Wrap" Classes.negative="{Binding IsDue}" />
+                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" TextWrapping="Wrap" />
+                                </StackPanel>
+                                <Button Grid.Column="2" Classes="icon" IsVisible="{Binding CanCopy}" ToolTip.Tip="{l:T 'Copy'}" VerticalAlignment="Center"
+                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).CopyInfoCommand}" CommandParameter="{Binding CopyText}">
+                                    <PathIcon Data="{StaticResource IconCopy}" />
+                                </Button>
+                            </Grid>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </Border>
+
+        <Grid ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding HasMembers}">
+            <!-- ═══ Left: the person and their health ═══ -->
+            <StackPanel Spacing="16">
+                <Border Classes="card">
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <StackPanel Spacing="2">
+                                <TextBlock Text="{Binding MemberName}" FontSize="22" FontWeight="Bold" TextTrimming="CharacterEllipsis" />
+                                <TextBlock Classes="muted" FontSize="13" Text="{Binding MemberSummary}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="icon" Command="{Binding EditMemberCommand}" ToolTip.Tip="{l:T 'Edit details'}" VerticalAlignment="Top">
+                                <PathIcon Data="{StaticResource IconEdit}" />
+                            </Button>
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding MemberContactLines}" ItemTemplate="{StaticResource InfoLineTemplate}"
+                                      IsVisible="{Binding HasMemberContactLines}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card">
+                    <StackPanel Spacing="10">
+                        <Grid ColumnDefinitions="*,Auto">
+                            <TextBlock Classes="sectionTitle" Text="{l:T 'Health and emergency'}" VerticalAlignment="Center" />
+                            <Button Grid.Column="1" Classes="secondary" Command="{Binding CopyHealthSummaryCommand}"
+                                    ToolTip.Tip="{l:T 'Allergies, medicines, doctor and emergency contact as text, e.g. for a babysitter or a new doctor'}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <PathIcon Data="{StaticResource IconCopy}" />
+                                    <TextBlock Text="{l:T 'Copy'}" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                   IsVisible="{Binding !HasMemberHealthLines}"
+                                   Text="{l:T 'Allergies, conditions, blood type and the family doctor: what a doctor or the ambulance asks first. Add them with Edit.'}" />
+                        <ItemsControl ItemsSource="{Binding MemberHealthLines}" ItemTemplate="{StaticResource InfoLineTemplate}"
+                                      IsVisible="{Binding HasMemberHealthLines}" />
+                        <ItemsControl ItemsSource="{Binding MemberEmergencyLines}" ItemTemplate="{StaticResource InfoLineTemplate}"
+                                      IsVisible="{Binding HasMemberEmergencyLines}" />
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card" Padding="8">
+                    <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <PathIcon Data="{StaticResource IconPill}" Width="16" Height="16" Foreground="{DynamicResource Brand}" />
+                                <TextBlock Classes="sectionTitle" Text="{l:T 'Medicines'}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="secondary" Command="{Binding NewMedicineCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <PathIcon Data="{StaticResource IconPlus}" />
+                                    <TextBlock Text="{l:T 'Add medicine'}" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasMedicineRows}"
+                                   Text="{l:T 'No medicines. Add the pills or other medicines taken regularly or when needed; with the number on hand, Keystone says when to get a new pack.'}" />
+                        <Grid ColumnDefinitions="*,Auto" Margin="28,4,28,2" IsVisible="{Binding HasMedicineRows}">
+                            <controls:SortHeader Label="{l:T 'Medicine'}" List="medicines" Key="name" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Grid.Column="1" Label="{l:T 'Lasts until'}" List="medicines" Key="supply" Sorts="{Binding ListSorts}" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding MedicineRows}" Margin="12,0,12,4">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:MedicineRow">
+                                    <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,10">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" TextWrapping="Wrap" />
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding SupplyText}" IsVisible="{Binding HasSupply}" TextWrapping="Wrap" />
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding PrescribedText}" IsVisible="{Binding HasPrescribed}" TextWrapping="Wrap" />
+                                                <TextBlock Classes="warning" FontSize="12" FontWeight="SemiBold" Text="{Binding Alert}" IsVisible="{Binding HasAlert}" TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Classes="icon" IsVisible="{Binding CanRefill}" ToolTip.Tip="{Binding RefillTip}"
+                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RefillMedicineCommand}"
+                                                        CommandParameter="{Binding Medicine}">
+                                                    <PathIcon Data="{StaticResource IconRepeat}" />
+                                                </Button>
+                                                <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).EditMedicineCommand}"
+                                                        CommandParameter="{Binding Medicine}">
+                                                    <PathIcon Data="{StaticResource IconEdit}" />
+                                                </Button>
+                                                <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteMedicineCommand}"
+                                                        CommandParameter="{Binding Medicine}">
+                                                    <PathIcon Data="{StaticResource IconDelete}" />
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <StackPanel IsVisible="{Binding HasStoppedMedicineRows}" Margin="12,4,12,8">
+                            <TextBlock Classes="label" Text="{l:T 'Stopped'}" Margin="16,4,16,4" />
+                            <ItemsControl ItemsSource="{Binding StoppedMedicineRows}">
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:MedicineRow">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="16,2" Opacity="0.65">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding Name}" FontSize="13" TextTrimming="CharacterEllipsis" />
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding SupplyText}" />
+                                            </StackPanel>
+                                            <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).EditMedicineCommand}"
+                                                    CommandParameter="{Binding Medicine}">
+                                                <PathIcon Data="{StaticResource IconEdit}" />
+                                            </Button>
+                                            <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteMedicineCommand}"
+                                                    CommandParameter="{Binding Medicine}">
+                                                <PathIcon Data="{StaticResource IconDelete}" />
+                                            </Button>
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <!-- ═══ Right: work and sick days ═══ -->
+            <StackPanel Grid.Column="1" Spacing="16">
+                <Border Classes="card" Padding="8">
+                    <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <PathIcon Data="{StaticResource IconBriefcase}" Width="16" Height="16" Foreground="{DynamicResource Brand}" />
+                                <TextBlock Classes="sectionTitle" Text="{l:T 'Work'}" VerticalAlignment="Center" />
+                            </StackPanel>
+                            <Button Grid.Column="1" Classes="secondary" Command="{Binding NewEmploymentCommand}">
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <PathIcon Data="{StaticResource IconPlus}" />
+                                    <TextBlock Text="{l:T 'Add job'}" />
+                                </StackPanel>
+                            </Button>
+                        </Grid>
+                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasEmploymentRows}"
+                                   Text="{l:T 'No job added. Add the employer with the manager and HR, and how they want to hear when you’re ill, so the numbers are at hand on a bad morning.'}" />
+                        <ItemsControl ItemsSource="{Binding EmploymentRows}" Margin="12,0,12,8">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EmploymentRow">
+                                    <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,12"
+                                            Opacity="{Binding IsEnded, Converter={x:Static vm:Format.EndedOpacityConverter}}">
+                                        <StackPanel Spacing="8">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <StackPanel>
+                                                    <TextBlock Text="{Binding Employer}" FontWeight="SemiBold" TextWrapping="Wrap" />
+                                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
+                                                    <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).EditEmploymentCommand}"
+                                                            CommandParameter="{Binding Job}">
+                                                        <PathIcon Data="{StaticResource IconEdit}" />
+                                                    </Button>
+                                                    <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteEmploymentCommand}"
+                                                            CommandParameter="{Binding Job}">
+                                                        <PathIcon Data="{StaticResource IconDelete}" />
+                                                    </Button>
+                                                </StackPanel>
+                                            </Grid>
+                                            <ItemsControl ItemsSource="{Binding Contacts}" ItemTemplate="{StaticResource InfoLineTemplate}"
+                                                          IsVisible="{Binding HasContacts}" />
+                                            <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="12,10">
+                                                <StackPanel Spacing="4">
+                                                    <TextBlock Classes="label" Text="{l:T 'When you’re ill'}" />
+                                                    <TextBlock FontSize="13" Text="{Binding SickRuleText}" TextWrapping="Wrap" />
+                                                    <TextBlock FontSize="13" Text="{Binding CertificateText}" TextWrapping="Wrap" />
+                                                    <TextBlock Classes="muted" FontSize="12" Text="{Binding SickPayText}" IsVisible="{Binding HasSickPay}" TextWrapping="Wrap" />
+                                                </StackPanel>
+                                            </Border>
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Job.Notes}" IsVisible="{Binding HasNotes}" TextWrapping="Wrap" />
+                                        </StackPanel>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <Border Classes="card" Padding="8">
+                    <StackPanel Spacing="4">
+                        <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
+                            <StackPanel Spacing="2">
+                                <TextBlock Classes="sectionTitle" Text="{l:T 'Sick days'}" />
+                                <TextBlock Classes="muted" FontSize="12" Text="{Binding SickDaysText}" TextWrapping="Wrap" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top" IsVisible="{Binding !IsMemberOffSick}">
+                                <Button Classes="primary" Command="{Binding ReportSickCommand}" CommandParameter="illness"
+                                        ToolTip.Tip="{l:T 'Starts the time off today and shows whom to tell'}">
+                                    <TextBlock Text="{l:T 'Ill today'}" />
+                                </Button>
+                                <Button Classes="secondary" Command="{Binding ReportSickCommand}" CommandParameter="accident"
+                                        ToolTip.Tip="{l:T 'An accident goes to the accident insurer through the employer'}">
+                                    <TextBlock Text="{l:T 'Accident'}" />
+                                </Button>
+                            </StackPanel>
+                        </Grid>
+                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,8" TextWrapping="Wrap" IsVisible="{Binding !HasSickLeaveRows}"
+                                   Text="{l:T 'No sick days. On a day off ill, click “Ill today” to see whom to tell and when a doctor’s certificate is due.'}" />
+                        <Grid ColumnDefinitions="*,Auto" Margin="28,4,28,2" IsVisible="{Binding HasSickLeaveRows}">
+                            <controls:SortHeader Label="{l:T 'When'}" List="sickLeaves" Key="date" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Grid.Column="1" Label="{l:T 'Days'}" List="sickLeaves" Key="days" Sorts="{Binding ListSorts}" Margin="0,0,72,0" />
+                        </Grid>
+                        <ItemsControl ItemsSource="{Binding SickLeaveRows}" Margin="12,0,12,4">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:SickLeaveRow">
+                                    <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,8">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="12">
+                                            <StackPanel VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DatesText}" FontWeight="Medium" FontSize="13" />
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" TextWrapping="Wrap" />
+                                                <TextBlock FontSize="12" Text="{Binding CertificateText}" IsVisible="{Binding HasCertificateText}"
+                                                           Classes="muted" Classes.warning="{Binding CertificateMissing}" />
+                                            </StackPanel>
+                                            <TextBlock Grid.Column="1" Text="{Binding DaysText}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"
+                                                       Classes.warning="{Binding IsOngoing}" />
+                                            <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                                                <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).EditSickLeaveCommand}"
+                                                        CommandParameter="{Binding Leave}">
+                                                    <PathIcon Data="{StaticResource IconEdit}" />
+                                                </Button>
+                                                <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteSickLeaveCommand}"
+                                                        CommandParameter="{Binding Leave}">
+                                                    <PathIcon Data="{StaticResource IconDelete}" />
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <Button Classes="link" Margin="16,4,16,10" Command="{Binding NewSickLeaveCommand}" Content="{l:T 'Add earlier sick days'}" />
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+        </Grid>
+
+        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="4,0" IsVisible="{Binding HasMembers}"
+                   Text="{l:T 'Kept only on this Mac. Medicine amounts are what you enter; follow your doctor and the package leaflet. Sick pay and certificate rules depend on the contract; a guide, not advice.'}" />
+    </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -34,6 +34,7 @@ End a piece of work by giving them that command.
 | Tasks | Due dates, person, notes; repeating weekly/monthly/quarterly/yearly (ticking a repeating task creates the next one). |
 | Appointments | Timed or all-day appointments with place, person, notes and a reminder. Two-way sync with one chosen calendar in the Calendar app through EventKit (`CalendarSync` logic, `MacCalendar` interop): compares 30 days back to a year ahead, the later change wins, deletions go both ways. Needs the app bundle (Info.plist calendar usage strings). |
 | Notes | Notes with projects and pins, saved as you type. |
+| Household | `Views/Pages/HouseholdPage`/`HouseholdPanels`, `MainViewModel.Household.cs`/`.Medicines.cs`/`.Work.cs`, `Models/Health.cs`: one profile per member (`Person`: birth date (sets `BirthYear`), phone, email, AHV number, blood type, allergies, conditions, family doctor, emergency contact; "Copy" gives the health summary as text). Medicines (`Medicine`: dose × morning/noon/evening/night or as needed, course end, stock counted on a day → `RunsOutOn`, pack size for one-click refill, prescription end; alerts 7 days / 14 days ahead on the Overview and as reminders). Jobs (`Employment`: manager/HR contacts, how and by when to report sick, doctor's certificate from day N, sick pay and accident insurer; Bern scale from `SwissSickPay` when no sick pay insurer). Sick days (`SickLeave`): "Ill today"/"Accident" starts one with steps (tell work, certificate due date, accident to the employer), a copyable message to work, "Back at work" ends it (a time off ending today is over); per-year totals. Deleting a member deletes their medicines, jobs and sick days (cascade). Members can also still be added in Settings. |
 | Debts | Monthly, lump-sum and interest-only debts with extra repayments; borrowing more (a `DebtPayment` with a negative amount: the debt grows, the money comes in as income that isn't earnings); edit a debt's terms (the amount stays "owed on" its start date); payments feed the runway. |
 | Assets | Securities, crypto, property, vehicles, valuables, money lent (`Asset`, `AssetValue` in `Models/Asset.cs`; `MainViewModel.Assets.cs`, `Views/Pages/AssetsPage`/`AssetPanel`): values over time (one per day), sold date, change since the last value, a nudge when a value is over a year old. `AssetsOn(date)` counts in `NetWorthOn` (Planning) and in the Taxes page's assets on 31 December (property: note to use the tax value). |
 | Retirement | AHV, pension fund (BVG), vested benefits, pillar 3a/3b accounts per person with yearly statements (balance, projected capital and pension at 65, buy-in). Pillar 3a paid this year vs the legal limit. AI reads pension letters. |
@@ -65,12 +66,13 @@ End a piece of work by giving them that command.
 src/Keystone/
   Models/        EF Core entities and small domain rules (Transaction, BankAccount, HouseholdDocument,
                  InsurancePolicy, Contract/ImportantDate/Warranty/SavingsGoal/DocumentText (Contract.cs),
+                 Medicine/Employment/SickLeave (Health.cs),
                  PensionAccount/PensionStatement (Retirement.cs), TaskItem, Note, Debt, Person, AppSettings,
                  Categories, NoticeDeadline, EntryChange (Transaction.cs))
   Services/      Pure logic: RunwayCalculator, Schedule (expands repeating entries), DebtPlan, FinancialYearReport,
                  BankStatementParser, PdfStatementParser (Revolut PDF), CategoryGuesser, DocumentReader (PdfPig), DocumentStore (OneDrive filing),
                  LocalAi (Ollama), PersonMatcher, ReminderPlanner, RetentionGuide, RetirementPlanner, Scenario,
-                 SwissPension, SwissQrBill, DatabaseBackup, DuplicateFinder, Csv (semicolons, BOM, 1234.50), YearSummaryPdf
+                 SwissPension, SwissQrBill, SwissSickPay, DatabaseBackup, DuplicateFinder, Csv (semicolons, BOM, 1234.50), YearSummaryPdf
   Services/Mac/  macOS integration through P/Invoke: ObjC (runtime, blocks), TouchId (LocalAuthentication),
                  MacNotifications (UserNotifications), MacCalendar (EventKit), QrBillScanner (CoreGraphics/ImageIO + ZXing),
                  TextRecognizer (Vision text recognition for scans and photos)
@@ -110,7 +112,7 @@ docs/screenshots/       README screenshots (made-up family, never real data)
   restores them and refreshes code-built texts. New ComboBox indexes must be added to that tuple.
 - **Reminders**: `PlanReminders` → `ReminderPlanner.Plan` → `MacNotifications.Replace` (debounced 1.5 s via
   `ScheduleReminders()`). Ids must be stable and prefixed (`bill-`, `task-`, `insurance-`, `contract-`, `date-`,
-  `warranty-`, `pillar3a-`). macOS keeps at most 64 pending; we schedule 60.
+  `warranty-`, `pillar3a-`, `medicine-`, `sick-`). macOS keeps at most 64 pending; we schedule 60.
 - **Local AI**: Ollama at `http://localhost:11434`, model `qwen2.5vl:7b` (vision). JSON-schema answers, `keep_alive`
   30m, context size sized to the document. The household's names are sent so the model can say whom a
   document is for; `PersonMatcher` maps that to a member (distinctive words decide; a shared family name alone

@@ -4,6 +4,7 @@ using System.Linq;
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
 using Keystone.Models;
+using Keystone.Services;
 
 namespace Keystone.Data;
 
@@ -145,7 +146,54 @@ public class KeystoneDbContext(string databasePath) : DbContext
             entity.HasIndex(c => new { c.TransactionId, c.Date }).IsUnique();
         });
 
-        modelBuilder.Entity<Person>().Property(p => p.Name).HasMaxLength(100);
+        modelBuilder.Entity<Person>(entity =>
+        {
+            entity.Property(p => p.Name).HasMaxLength(100);
+            foreach (var name in new[] { nameof(Person.Phone), nameof(Person.Email), nameof(Person.AhvNumber), nameof(Person.BloodType),
+                         nameof(Person.DoctorName), nameof(Person.DoctorPhone), nameof(Person.EmergencyName), nameof(Person.EmergencyPhone),
+                         nameof(Person.EmergencyRelation) })
+                entity.Property<string>(name).HasMaxLength(200);
+            entity.Property(p => p.Allergies).HasMaxLength(1000);
+            entity.Property(p => p.Conditions).HasMaxLength(1000);
+            entity.Property(p => p.Notes).HasMaxLength(2000);
+        });
+
+        modelBuilder.Entity<Medicine>(entity =>
+        {
+            entity.ToTable("Medicines");
+            entity.Property(m => m.Name).HasMaxLength(200);
+            entity.Property(m => m.Strength).HasMaxLength(100);
+            entity.Property(m => m.Unit).HasMaxLength(50);
+            entity.Property(m => m.Reason).HasMaxLength(200);
+            entity.Property(m => m.PrescribedBy).HasMaxLength(200);
+            entity.Property(m => m.Notes).HasMaxLength(2000);
+            entity.Ignore(m => m.RunsOutOn);
+            entity.HasOne<Person>().WithMany().HasForeignKey(m => m.PersonId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<Employment>(entity =>
+        {
+            entity.ToTable("Employments");
+            foreach (var name in new[] { nameof(Employment.Employer), nameof(Employment.Role), nameof(Employment.Address), nameof(Employment.Phone),
+                         nameof(Employment.ManagerName), nameof(Employment.ManagerPhone), nameof(Employment.ManagerEmail),
+                         nameof(Employment.HrName), nameof(Employment.HrPhone), nameof(Employment.HrEmail),
+                         nameof(Employment.SickPayInsurer), nameof(Employment.AccidentInsurer) })
+                entity.Property<string>(name).HasMaxLength(200);
+            entity.Property(e => e.Notes).HasMaxLength(2000);
+            entity.Property(e => e.ReportBy).HasConversion<string>().HasMaxLength(16);
+            entity.Property(e => e.CertificateFromDay).HasDefaultValue(SwissSickPay.UsualCertificateDay);
+            entity.Ignore(e => e.FirstContact);
+            entity.HasOne<Person>().WithMany().HasForeignKey(e => e.PersonId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SickLeave>(entity =>
+        {
+            entity.ToTable("SickLeaves");
+            entity.Property(s => s.Reason).HasMaxLength(200);
+            entity.Property(s => s.Notes).HasMaxLength(2000);
+            entity.HasOne<Person>().WithMany().HasForeignKey(s => s.PersonId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne<Employment>().WithMany().HasForeignKey(s => s.EmploymentId).OnDelete(DeleteBehavior.SetNull);
+        });
 
         modelBuilder.Entity<AppSettings>(entity =>
         {

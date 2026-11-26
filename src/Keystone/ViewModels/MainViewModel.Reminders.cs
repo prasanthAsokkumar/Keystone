@@ -103,7 +103,14 @@ public partial class MainViewModel
         _dates.Where(d => !d.HasPassed(Today))
             .Select(d => new DateReminder(d.Id, d.Title, d.NextDate(Today), d.RemindDaysBefore, d.PersonId is null ? "" : PersonName(d.PersonId))),
         _warranties.Where(w => !w.HasExpired(Today)).Select(w => new WarrantyReminder(w.Id, w.Item, w.ExpiresOn)),
-        AppointmentReminders(ReminderHour));
+        AppointmentReminders(ReminderHour),
+        _medicines.Where(m => m.IsTaken(Today) || m.StartedOn > Today)
+            .Select(m => new MedicineReminder(m.Id, $"{m.Name} {m.Strength}".Trim(), m.PersonId is null ? "" : PersonName(m.PersonId),
+                m.EndsOn is { } end && m.RunsOutOn > end ? null : m.RunsOutOn, m.PrescriptionUntil, m.PrescribedBy)),
+        _sickLeaves.Where(l => l.IsOngoing(Today) && !l.CertificateSent)
+            .Select(l => (Leave: l, Day: CertificateDayOf(l)))
+            .Select(x => new CertificateReminder(x.Leave.Id, PersonName(x.Leave.PersonId), JobOf(x.Leave)?.Employer ?? "",
+                x.Leave.CertificateDueOn(x.Day), x.Day)));
 
     /// <summary>Re-plans reminders shortly after a change; many changes in a row plan only once.</summary>
     private void ScheduleReminders()

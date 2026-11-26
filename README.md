@@ -88,6 +88,19 @@ The screenshots show a made-up family with sample data.
 - Tasks with due dates and a person, repeating weekly, monthly, quarterly or yearly if needed
 - Notes for projects and ideas that save as you type, grouped by project and pinnable
 
+**Household**
+- A profile for each member: date of birth, phone, email and AHV number, with copy buttons
+- Health basics for the doctor or an emergency: allergies, conditions, blood type, family doctor and whom to call,
+  copied as text in one click (e.g. for a babysitter or a new doctor)
+- Medicines and pills per person: how much and when (morning, noon, evening, night or when needed), courses with a
+  last day, and with the number on hand, the day they run out; a reminder before that and before a prescription ends,
+  and one click when a new pack arrives
+- Jobs with the manager's and HR's numbers and how they want to hear when you're ill: by phone, email, text or the
+  staff portal, before what time, and from which day a doctor's certificate is needed
+- "Ill today" (or "Accident") lists what to do in order, ticks off what's done, reminds you when the certificate is
+  due and copies a short message to work; sick days are counted per year
+- Without a sick pay insurer, the legal minimum of sick pay for the year of service (Bern scale), as a guide
+
 **Insurance**
 - Every policy with its premium, the end of its term and the last day to cancel it, e.g. 30 November for
   basic health insurance
@@ -116,7 +129,8 @@ The screenshots show a made-up family with sample data.
 
 **Everything else**
 - Search across entries, documents, tasks, appointments, notes, insurance and accounts (⌘F)
-- Reminders as macOS notifications for bills, tasks, appointments, notice deadlines, important dates, warranties and pillar 3a,
+- Reminders as macOS notifications for bills, tasks, appointments, notice deadlines, important dates, warranties, medicines,
+  doctor's certificates and pillar 3a,
   even when Keystone is closed
 - Daily backups of all data next to your documents in OneDrive, kept for 30 days, with restore
 - App lock with Touch ID or your Mac password; it locks when your Mac locks, not every time you switch apps

@@ -11,7 +11,7 @@ using Keystone.Services;
 namespace Keystone.ViewModels;
 
 /// <summary>What kind of thing an Overview line is about; decides its icon and where "Open" goes.</summary>
-public enum AttentionKind { Bill, Task, Deadline, Date, Appointment, Inbox, Warranty, Payment }
+public enum AttentionKind { Bill, Task, Deadline, Date, Appointment, Inbox, Warranty, Payment, Medicine, SickLeave }
 
 /// <summary>One line of "Needs your attention": what, how urgent, and where to deal with it.</summary>
 public sealed record AttentionRow(AttentionKind Kind, string Text, string Detail, bool IsUrgent, Action Open)
@@ -23,6 +23,8 @@ public sealed record AttentionRow(AttentionKind Kind, string Text, string Detail
     public bool IsDeadline => Kind is AttentionKind.Deadline or AttentionKind.Date or AttentionKind.Warranty;
     public bool IsAppointment => Kind == AttentionKind.Appointment;
     public bool IsInbox => Kind == AttentionKind.Inbox;
+    public bool IsMedicine => Kind == AttentionKind.Medicine;
+    public bool IsSickLeave => Kind == AttentionKind.SickLeave;
 }
 
 /// <summary>One line of "Coming up": a payment, appointment, bill or deadline on a day in the next weeks.</summary>
@@ -200,6 +202,28 @@ public partial class MainViewModel
         foreach (var w in _warranties.Where(w => !w.HasExpired(today) && w.ExpiresOn.DayNumber - today.DayNumber <= 30))
             rows.Add((7, new AttentionRow(AttentionKind.Warranty, Loc.F("Warranty for {0} ends {1}", w.Item, Format.Date(w.ExpiresOn)),
                 DaysLeftText(w.ExpiresOn), false, () => { CurrentPage = AppPage.Contracts; DeadlinesTab = 2; })));
+
+        // Someone off sick: what's still to do (tell work, the certificate).
+        foreach (var leave in _sickLeaves.Where(l => l.IsOngoing(today) && l.PersonId is not null))
+        {
+            var day = CertificateDayOf(leave);
+            var todo = new[]
+            {
+                leave.Informed ? "" : Loc.T("tell work"),
+                leave.NeedsCertificate(today, day) ? Loc.T("certificate needed") : "",
+            }.Where(s => s != "").ToList();
+            rows.Add((1, new AttentionRow(AttentionKind.SickLeave,
+                Loc.F("{0} is off sick · day {1}", PersonName(leave.PersonId), leave.Days(today)),
+                todo.Count > 0 ? Loc.F("Still to do: {0}", string.Join(", ", todo)) : Loc.T("Work is told; get well soon"),
+                todo.Count > 0, () => ShowMember(leave.PersonId))));
+        }
+
+        // Medicines running out or prescriptions ending.
+        foreach (var m in _medicines.Where(m => m.PersonId is not null))
+            if (MedicineAlert(m) is { } alert)
+                rows.Add((4, new AttentionRow(AttentionKind.Medicine, $"{m.Name} {m.Strength}".Trim() + " · " + alert,
+                    PersonName(m.PersonId), m.RunsOutOn is { } runsOut && runsOut.DayNumber - today.DayNumber <= 2,
+                    () => ShowMember(m.PersonId))));
 
         if (HasInboxFiles)
             rows.Add((8, new AttentionRow(AttentionKind.Inbox, InboxText, Loc.T("File them under Documents"), false,

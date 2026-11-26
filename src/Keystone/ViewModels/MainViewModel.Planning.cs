@@ -593,6 +593,7 @@ public partial class MainViewModel
         IsGoalPanelOpen = false;
         EditingGoal = null;
         CloseAssetPanel();
+        CloseHouseholdPanels();
     }
 }
 

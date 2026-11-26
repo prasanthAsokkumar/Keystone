@@ -141,6 +141,12 @@
                             <TextBlock Text="{l:T 'Notes'}" VerticalAlignment="Center" />
                         </StackPanel>
                     </RadioButton>
+                    <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsHouseholdPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="12">
+                            <PathIcon Data="{StaticResource IconPeople}" />
+                            <TextBlock Text="{l:T 'Household'}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </RadioButton>
                     <RadioButton Classes="nav" GroupName="Nav" IsChecked="{Binding IsDebtsPage}">
                         <StackPanel Orientation="Horizontal" Spacing="12">
                             <PathIcon Data="{StaticResource IconCard}" />
@@ -340,6 +346,12 @@
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <PathIcon Data="{StaticResource IconPlus}" />
                             <TextBlock Text="{l:T 'Add statement'}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Classes="primary" Command="{Binding NewMemberCommand}" IsVisible="{Binding IsHouseholdPage}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{StaticResource IconPlus}" />
+                            <TextBlock Text="{l:T 'Add household member'}" />
                         </StackPanel>
                     </Button>
                     <Button Classes="primary" Command="{Binding NewAssetCommand}" IsVisible="{Binding IsAssetsPage}">
@@ -1116,6 +1128,7 @@
             <!-- ═══ Insurance ═══ -->
             <pages:InsurancePage Grid.Row="1" IsVisible="{Binding IsInsurancePage}" />
             <pages:AssetsPage Grid.Row="1" IsVisible="{Binding IsAssetsPage}" />
+            <pages:HouseholdPage Grid.Row="1" IsVisible="{Binding IsHouseholdPage}" />
 
             <!-- ═══ Taxes ═══ -->
             <pages:TaxesPage Grid.Row="1" IsVisible="{Binding IsTaxesPage}" />
@@ -1455,7 +1468,8 @@
                             <StackPanel Spacing="2">
                                 <TextBlock Classes="sectionTitle" Text="{l:T 'Household'}" />
                                 <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
-                                           Text="{l:T 'Tie income and expenses to a person. Entries without one are shared. Removing a person keeps their entries as shared.'}" />
+                                           Text="{l:T 'Tie income and expenses to a person. Entries without one are shared. Removing a person keeps their entries as shared; their medicines, jobs and sick days are removed with them.'}" />
+                                <Button Classes="link" Command="{Binding OpenHouseholdCommand}" Content="{l:T 'Details, health and work of each person are on the Household page →'}" Margin="0,4,0,0" />
                             </StackPanel>
                             <ItemsControl ItemsSource="{Binding People}">
                                 <ItemsControl.ItemsPanel>
@@ -2586,6 +2600,7 @@
             <Border Classes="panel" Width="440" HorizontalAlignment="Right" IsVisible="{Binding IsAssetPanelOpen}">
                 <pages:AssetPanel />
             </Border>
+            <pages:HouseholdPanels />
         </Panel>
 
         <!-- While a document is dragged: drop it on a person to make it theirs (its file moves to their folder). -->
