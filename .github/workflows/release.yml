@@ -13,8 +13,8 @@ jobs:
   release:
     runs-on: macos-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-dotnet@v5
         with:
           global-json-file: global.json
       - name: Test
@@ -28,5 +28,12 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          gh release create "$GITHUB_REF_NAME" artifacts/Keystone-*.dmg \
-            --title "Keystone ${GITHUB_REF_NAME#v}" --generate-notes
+          cd artifacts
+          shasum -a 256 Keystone-*.dmg > SHA256SUMS.txt
+          # A release made by hand for this tag gets the files replaced; otherwise a new one is made.
+          if gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" Keystone-*.dmg SHA256SUMS.txt --clobber
+          else
+            gh release create "$GITHUB_REF_NAME" Keystone-*.dmg SHA256SUMS.txt \
+              --title "Keystone ${GITHUB_REF_NAME#v}" --generate-notes
+          fi

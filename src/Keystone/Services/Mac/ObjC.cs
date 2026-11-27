@@ -73,11 +73,20 @@ internal static unsafe class ObjC
 
     public static IntPtr New(string className) => Send(Send(Class(className), Sel("alloc")), Sel("init"));
 
-    /// <summary>The app's bundle identifier; null when not running from an app bundle (e.g. during development).</summary>
+    /// <summary>
+    /// The app's bundle identifier; null when not running from an app bundle (during development and in tests).
+    /// A process outside a .app can still report an identifier (one embedded in its executable, as on build
+    /// servers); macOS frameworks that need a real bundle then throw and end the process, so that counts as none.
+    /// </summary>
     public static string? BundleIdentifier()
     {
         var bundle = Send(Class("NSBundle"), Sel("mainBundle"));
-        return bundle == IntPtr.Zero ? null : ToManagedString(Send(bundle, Sel("bundleIdentifier")));
+        if (bundle == IntPtr.Zero)
+            return null;
+        var path = ToManagedString(Send(bundle, Sel("bundlePath")));
+        if (path is null || !path.TrimEnd('/').EndsWith(".app", StringComparison.OrdinalIgnoreCase))
+            return null;
+        return ToManagedString(Send(bundle, Sel("bundleIdentifier")));
     }
 
     // ── Blocks ────────────────────────────────────────────────────────────────
