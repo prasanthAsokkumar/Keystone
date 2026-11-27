@@ -1,0 +1,32 @@
+# Pushing a tag like v1.2.0 builds Keystone for Apple-silicon and Intel Macs and publishes both disk images
+# as a GitHub release.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+      - name: Test
+        run: dotnet test Keystone.slnx -c Release
+      - name: Build the disk images
+        run: |
+          export VERSION="${GITHUB_REF_NAME#v}"
+          ./scripts/package-mac.sh --dmg --arch arm64
+          ./scripts/package-mac.sh --dmg --arch x64
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" artifacts/Keystone-*.dmg \
+            --title "Keystone ${GITHUB_REF_NAME#v}" --generate-notes

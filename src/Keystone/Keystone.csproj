@@ -6,7 +6,7 @@
     <!-- Talks to macOS (Touch ID, notifications) through the Objective-C runtime. -->
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
     <ApplicationManifest>app.manifest</ApplicationManifest>
-    <Version>1.1.0</Version>
+    <Version>1.2.0</Version>
     <Product>Keystone</Product>
     <Description>Know how long your money lasts.</Description>
   </PropertyGroup>

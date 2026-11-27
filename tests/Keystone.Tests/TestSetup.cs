@@ -10,9 +10,12 @@ internal static class TestSetup
     [ModuleInitializer]
     internal static void UseEnglish() => Loc.Instance.SetLanguage("en");
 
-    /// <summary>Tests never touch the real OneDrive folder: loading the app renames its documents folder.</summary>
+    /// <summary>
+    /// Tests never touch the real documents or OneDrive folders: loading the app creates its documents folder and
+    /// may rename an earlier one, so the home folder they're looked for in is a temporary one.
+    /// </summary>
     [ModuleInitializer]
-    internal static void UseTemporaryOneDrive() =>
-        Environment.SetEnvironmentVariable(DocumentStore.OneDrivePathVariable,
-            Path.Combine(Path.GetTempPath(), $"runway-tests-onedrive-{Guid.NewGuid():N}"));
+    internal static void UseTemporaryHome() =>
+        Environment.SetEnvironmentVariable(DocumentStore.HomeVariable,
+            Path.Combine(Path.GetTempPath(), $"keystone-tests-home-{Guid.NewGuid():N}"));
 }

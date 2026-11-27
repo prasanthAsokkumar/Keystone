@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Keystone.Models;
@@ -7,7 +8,7 @@ using Keystone.Models;
 namespace Keystone.Services;
 
 /// <summary>
-/// Files household documents in a folder, by default in OneDrive, laid out as
+/// Files household documents in a folder (by default ~/Documents/Keystone; often one in OneDrive or iCloud Drive), laid out as
 /// <c>&lt;Person&gt;/&lt;Year&gt;/&lt;Type&gt;/&lt;yyyy-MM-dd&gt; &lt;Title&gt;.pdf</c> so the folder also makes sense
 /// when browsed in Finder or the OneDrive app.
 /// </summary>
@@ -18,43 +19,66 @@ public sealed class DocumentStore(string rootFolder)
     /// <summary>Deleted documents are moved here rather than removed, so nothing is lost by accident.</summary>
     public const string DeletedFolder = "Deleted";
 
-    /// <summary>The documents folder's name, matching the app's name.</summary>
-    public const string DefaultFolderName = "KeystoneApp";
+    /// <summary>The documents folder's name: Documents/Keystone in the home folder.</summary>
+    public const string DefaultFolderName = "Keystone";
+
+    /// <summary>
+    /// The folder's name in earlier versions, which kept documents in a folder inside OneDrive
+    /// (OneDrive/&lt;a folder&gt;/KeystoneApp) without saving that choice.
+    /// </summary>
+    public const string EarlierFolderName = "KeystoneApp";
 
     /// <summary>The folder's name from when the app was called Runway.</summary>
     public const string LegacyFolderName = "RunwayApp";
 
+    /// <summary>Set this environment variable to use another folder as the home folder, e.g. in tests.</summary>
+    public const string HomeVariable = "KEYSTONE_HOME";
+
+    private static string Home() =>
+        Environment.GetEnvironmentVariable(HomeVariable) is { Length: > 0 } custom
+            ? custom
+            : Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
+
+    /// <summary>Where documents go unless the user picks a folder: ~/Documents/Keystone.</summary>
+    public static string DefaultRootFolder() => Path.Combine(Home(), "Documents", DefaultFolderName);
+
     /// <summary>
-    /// OneDrive/PRAS/KeystoneApp. Uses the ~/OneDrive shortcut when there is one, otherwise the
-    /// OneDrive folder macOS keeps under Library/CloudStorage.
+    /// A documents folder an earlier version used by default (OneDrive/&lt;a folder&gt;/KeystoneApp, or RunwayApp
+    /// before the rename), so an existing household keeps its folder; null when there is none.
     /// </summary>
-    /// <summary>Set this environment variable to use another folder as OneDrive, e.g. in tests.</summary>
-    public const string OneDrivePathVariable = "KEYSTONE_ONEDRIVE_PATH";
-
-    public static string DefaultRootFolder()
+    public static string? FindEarlierFolder()
     {
-        if (Environment.GetEnvironmentVariable(OneDrivePathVariable) is { Length: > 0 } custom)
-            return Path.Combine(custom, "PRAS", DefaultFolderName);
-
-        var home = Environment.GetFolderPath(Environment.SpecialFolder.UserProfile);
-        var oneDrive = Path.Combine(home, "OneDrive");
-        if (!Directory.Exists(oneDrive))
+        var home = Home();
+        var roots = new List<string> { Path.Combine(home, "OneDrive") };
+        try
         {
+            roots.AddRange(Directory.EnumerateDirectories(Path.Combine(home, "Library", "CloudStorage"), "OneDrive*").Order());
+        }
+        catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
+        {
+            // No cloud folders: only ~/OneDrive is looked at.
+        }
+
+        foreach (var root in roots.Where(Directory.Exists))
+        {
+            IEnumerable<string> folders;
             try
             {
-                oneDrive = Directory.EnumerateDirectories(Path.Combine(home, "Library", "CloudStorage"), "OneDrive*")
-                    .Order().FirstOrDefault() ?? oneDrive;
+                folders = Directory.EnumerateDirectories(root).Order().ToList();
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
-                // Keep ~/OneDrive; the user can pick the folder in Settings.
+                continue;
             }
+            foreach (var folder in folders)
+                foreach (var name in new[] { EarlierFolderName, LegacyFolderName })
+                    if (Directory.Exists(Path.Combine(folder, name)))
+                        return Path.Combine(folder, name);
         }
-
-        return Path.Combine(oneDrive, "PRAS", DefaultFolderName);
+        return null;
     }
 
-    /// <summary>The Runway-era folder next to <paramref name="root"/>, e.g. OneDrive/PRAS/RunwayApp.</summary>
+    /// <summary>The Runway-era folder next to <paramref name="root"/>: RunwayApp next to KeystoneApp.</summary>
     public static string LegacyFolderFor(string root) =>
         Path.Combine(Path.GetDirectoryName(Path.TrimEndingDirectorySeparator(root)) ?? "", LegacyFolderName);
 
@@ -76,7 +100,7 @@ public sealed class DocumentStore(string rootFolder)
             if (Directory.Exists(root) && !Directory.EnumerateFileSystemEntries(root).Any())
                 Directory.Delete(root);
             if (Directory.Exists(root))
-                return (legacy, $"both “{LegacyFolderName}” and “{DefaultFolderName}” exist and hold files");
+                return (legacy, $"both “{LegacyFolderName}” and “{EarlierFolderName}” exist and hold files");
 
             Directory.Move(legacy, root);
             return (root, null);

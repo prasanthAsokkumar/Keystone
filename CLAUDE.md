@@ -2,7 +2,7 @@
 
 A macOS desktop app that keeps a Swiss household in order: money, paperwork, deadlines, plans and retirement
 provision. Built with .NET 10, Avalonia 12 and SQLite. Everything stays on the Mac: the database is local,
-documents live in the owner's OneDrive folder, and the optional AI runs locally through Ollama.
+documents live in a folder the user picks (default `~/Documents/Keystone`; the owner's is in OneDrive), and the optional AI runs locally through Ollama.
 
 The app was first called **Runway** and was renamed to **Keystone**. The code, folders and data paths are all
 Keystone now. "Runway" survives in code names for how long the money lasts (`RunwayCalculator`, `RunwayText`; the
@@ -16,6 +16,7 @@ dotnet test                                  # all tests (run from the repo root
 dotnet build Keystone.slnx -c Release        # release build; keep it at 0 warnings (use --no-incremental to be sure)
 ./scripts/package-mac.sh                     # build artifacts/Keystone.app
 ./scripts/package-mac.sh --install           # also install to /Applications (removes an old Runway.app)
+./scripts/package-mac.sh --dmg --arch x64    # disk image for sharing (arm64 or x64); releases: push a tag v1.2.0
 cd src/Keystone && dotnet ef migrations add <Name> -o Data/Migrations
 python3 scripts/make-logo.py                 # redraw Assets/keystone.png and keystone.ico (needs Pillow)
 ```
@@ -30,7 +31,7 @@ End a piece of work by giving them that command.
 | Overview | `Views/Pages/OverviewPage.axaml`, `MainViewModel.Dashboard.cs`/`.Week.cs`: a greeting; "This week" (seven days with appointments, tasks, bills and payments, deadlines and medicines running out; overdue things on today); "Needs your attention" (overdue/this week's bills, tasks due, today's appointments, notice deadlines within 60 days, important dates in their lead time, warranties ending, inbox scans, medicines running out, someone off sick; each with "Open"; kinds can be hidden with the filter button, `AppSettings.HiddenAttention`); Money tiles (cash today per account, "Money lasts" (the runway as a date) with status and months without income, this month in/out, saving this financial year); "Coming up" for 3 weeks (payments, appointments, bills without an expense entry, deadlines, dates); cash chart. Movable and foldable sections like Insurance. Refreshed with reminders, on Recalculate and when the page is shown. |
 | Transactions | Income/expense/transfer entries: one-time, monthly, quarterly, yearly, with end dates; per person and account. Income, Expenses (one-time only), Recurring (monthly/quarterly/yearly expenses) and Transfers are separate tabs (`TransactionsTab`: 0 income, 1 expenses, 2 transfers, 3 recurring, decided by `TabOf`; Transfers only with several accounts; dropping an entry on Expenses/Recurring makes it one-time/monthly), each with its own headline total, filters, sort, totals and CSV export; "New income/expense/transfer" follows the tab, and a saved or edited entry opens its tab. Change or skip a single time of a repeating entry (`EntryChange`, edited in the entry form). Import bank statements (camt.053/054/052 XML, CSV, and Revolut PDF statements via `PdfStatementParser`: CHF part only, direction from the balance change, reference = date+amount+balance). AI import of entries from documents. Export the listed entries as CSV. |
 | Accounts | Several accounts (current, savings, credit card, cash) with IBAN, opening balance and overdraft/credit limit. Transfers move money between them without counting as income or spending. "Match my bank balance" adjusts the opening balance. |
-| Documents | Bills, invoices, letters, notices, contracts, policies, statements, payslips per person, filed in OneDrive as `Person/Year/Type/yyyy-MM-dd Title.ext`. Due dates and paid status; bills can be added to expenses. A bill too big to pay at once can be paid in instalments (`BillInstalment`, split by `InstalmentPlan`: equal parts in whole 5 centimes, every N months, each part editable): each part has its own reminder, its own one-time expense (replacing the bill's single one, keeping its category) and is ticked off on its own; the bill is paid with its last part (`MainViewModel.Instalments.cs`). Use `NextDueDate`/`NextAmount`/`AmountLeft` for open bills, not `DueDate`/`Amount`. Single and bulk import (drop many files). Swiss QR-bill reading. Inbox folder for phone scans. Search inside PDFs/text. Scans (PDFs that are only page pictures, e.g. from the OneDrive app) and photos are read with macOS text recognition (`TextRecognizer`, Vision) for search, the AI import and the inbox. Retention guide ("Past keeping time" filter). Deleted files go to `Deleted/`. Duplicates are noticed (`DuplicateFinder`: same file by SHA-256 `FileHash`, same QR reference, or same sender + amount + date) with "Show it / Skip / File anyway"; in bulk they arrive unticked and inbox copies of filed scans go to `Deleted/`. Follow-ups: a filed insurance policy or premium letter is saved under Insurance straight away (`MainViewModel.PolicyAuto.cs`: policy added/updated, premium as a repeating expense from `PremiumStart`, an existing premium entry — matched by insurer name or old amount — ended the day before the new one, paper put in the Insurance section; one notice with Undo). "Check filed papers" on the Insurance page (`MainViewModel.CheckPapers.cs`) reads insurance papers filed earlier (AI on; without it only type Policy) oldest first and does the same, with one Undo; read papers are remembered in `AppSettings.CheckedPapers` so an old premium letter can't bring back an old premium. A contract, ID/passport/MFK notice or purchase receipt offers to add or update the record under Contracts & dates (AI fields `record`, `record_kind`… in `DocumentDetailsExtraction`; without AI the type Policy/Contract alone); one document opens the filled-in form, bulk saves records directly. |
+| Documents | Bills, invoices, letters, notices, contracts, policies, statements, payslips per person, filed in the documents folder as `Person/Year/Type/yyyy-MM-dd Title.ext`. Due dates and paid status; bills can be added to expenses. A bill too big to pay at once can be paid in instalments (`BillInstalment`, split by `InstalmentPlan`: equal parts in whole 5 centimes, every N months, each part editable): each part has its own reminder, its own one-time expense (replacing the bill's single one, keeping its category) and is ticked off on its own; the bill is paid with its last part (`MainViewModel.Instalments.cs`). Use `NextDueDate`/`NextAmount`/`AmountLeft` for open bills, not `DueDate`/`Amount`. Single and bulk import (drop many files). Swiss QR-bill reading. Inbox folder for phone scans. Search inside PDFs/text. Scans (PDFs that are only page pictures, e.g. from the OneDrive app) and photos are read with macOS text recognition (`TextRecognizer`, Vision) for search, the AI import and the inbox. Retention guide ("Past keeping time" filter). Deleted files go to `Deleted/`. Duplicates are noticed (`DuplicateFinder`: same file by SHA-256 `FileHash`, same QR reference, or same sender + amount + date) with "Show it / Skip / File anyway"; in bulk they arrive unticked and inbox copies of filed scans go to `Deleted/`. Follow-ups: a filed insurance policy or premium letter is saved under Insurance straight away (`MainViewModel.PolicyAuto.cs`: policy added/updated, premium as a repeating expense from `PremiumStart`, an existing premium entry — matched by insurer name or old amount — ended the day before the new one, paper put in the Insurance section; one notice with Undo). "Check filed papers" on the Insurance page (`MainViewModel.CheckPapers.cs`) reads insurance papers filed earlier (AI on; without it only type Policy) oldest first and does the same, with one Undo; read papers are remembered in `AppSettings.CheckedPapers` so an old premium letter can't bring back an old premium. A contract, ID/passport/MFK notice or purchase receipt offers to add or update the record under Contracts & dates (AI fields `record`, `record_kind`… in `DocumentDetailsExtraction`; without AI the type Policy/Contract alone); one document opens the filled-in form, bulk saves records directly. |
 | Tasks | Due dates, person, notes; repeating weekly/monthly/quarterly/yearly (ticking a repeating task creates the next one). |
 | Appointments | Timed or all-day appointments with place, person, notes and a reminder. Two-way sync with one chosen calendar in the Calendar app through EventKit (`CalendarSync` logic, `MacCalendar` interop): compares 30 days back to a year ahead, the later change wins, deletions go both ways. Needs the app bundle (Info.plist calendar usage strings). |
 | Notes | Notes with projects and pins, saved as you type. |
@@ -70,7 +71,7 @@ src/Keystone/
                  PensionAccount/PensionStatement (Retirement.cs), TaskItem, Note, Debt, Person, AppSettings,
                  Categories, NoticeDeadline, EntryChange (Transaction.cs))
   Services/      Pure logic: RunwayCalculator, Schedule (expands repeating entries), DebtPlan, FinancialYearReport,
-                 BankStatementParser, PdfStatementParser (Revolut PDF), CategoryGuesser, DocumentReader (PdfPig), DocumentStore (OneDrive filing),
+                 BankStatementParser, PdfStatementParser (Revolut PDF), CategoryGuesser, DocumentReader (PdfPig), DocumentStore (filing in the documents folder),
                  LocalAi (Ollama), PersonMatcher, ReminderPlanner, RetentionGuide, RetirementPlanner, Scenario,
                  SwissPension, SwissQrBill, SwissSickPay, DatabaseBackup, DuplicateFinder, Csv (semicolons, BOM, 1234.50), YearSummaryPdf
   Services/Mac/  macOS integration through P/Invoke: ObjC (runtime, blocks), TouchId (LocalAuthentication),
@@ -183,8 +184,8 @@ docs/screenshots/       README screenshots (made-up family, never real data)
 
 - **`Dictionary<int?, …>` with a null key throws.** Shared items have `PersonId == null`. Group with
   `GroupBy(...).Select(...)` into lists or use a lookup function, never `ToDictionary` keyed by `PersonId`.
-- **Tests must never touch real data.** `TestSetup` points `KEYSTONE_ONEDRIVE_PATH` at a temp folder because
-  `LoadAsync` renames/creates folders in OneDrive and writes backups there. Any test that loads the view model
+- **Tests must never touch real data.** `TestSetup` points `KEYSTONE_HOME` at a temp folder because
+  `LoadAsync` creates the documents folder, may rename/adopt one in OneDrive, and writes backups there. Any test that loads the view model
   inherits that; tests that change the documents folder use their own temp folder. The debug build uses
   `keystone-dev.db` and backups named `keystone-dev-*` so they never mix with real ones.
 - Tests that format text or change the language belong to `[Collection(nameof(LanguageCollection))]` (no
@@ -208,7 +209,7 @@ docs/screenshots/       README screenshots (made-up family, never real data)
 | What | Where |
 | --- | --- |
 | Database | `~/Library/Application Support/Keystone/keystone.db` (debug: `keystone-dev.db`); override with `KEYSTONE_DB_PATH` |
-| Documents | `~/OneDrive/PRAS/KeystoneApp` by default (Settings can change it); override OneDrive with `KEYSTONE_ONEDRIVE_PATH` |
+| Documents | `~/Documents/Keystone` by default (Settings can change it); `KEYSTONE_HOME` replaces the home folder (tests) |
 | Inbox | `<documents>/Inbox` — files older than 5 s are offered for filing and deleted from the inbox once filed |
 | Backups | `<documents>/Backups/keystone-yyyy-MM-dd-HHmm.db`, daily, last 30 kept |
 | Deleted documents | `<documents>/Deleted` |
@@ -217,7 +218,8 @@ docs/screenshots/       README screenshots (made-up family, never real data)
 ### Legacy names
 
 On start, Keystone moves `Application Support/Runway/runway.db` to `Application Support/Keystone/keystone.db`
-(`KeystoneDbContext.ResolveDatabasePath`) and renames `OneDrive/PRAS/RunwayApp` to `KeystoneApp`
+(`KeystoneDbContext.ResolveDatabasePath`), renames a `OneDrive/<folder>/RunwayApp` to `KeystoneApp`, and keeps a
+`OneDrive/<folder>/KeystoneApp` (the earlier default) as the chosen documents folder (`DocumentStore.FindEarlierFolder`)
 (`DocumentStore.MoveLegacyFolder`); the package script removes `/Applications/Runway.app`. Keep these; they
 are why "Runway" still appears in a few strings.
 
@@ -228,7 +230,7 @@ in a scratch folder) that references `src/Keystone/Keystone.csproj` plus `Avalon
 creates `MainWindow` with a `MainViewModel` over a **new, empty** database, seeds made-up data (the README uses
 the fictional Meier family in Basel), sets `CurrentPage`, and saves `window.CaptureRenderedFrame()`. Wait for
 async work by pumping `Dispatcher.UIThread.RunJobs()` — never block with `.GetResult()` on the UI thread.
-Set `KEYSTONE_ONEDRIVE_PATH` to a temp folder first and never copy the owner's real database.
+Set `KEYSTONE_HOME` to a temp folder first and never copy the owner's real database.
 
 ## Working with the owner
 

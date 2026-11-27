@@ -180,26 +180,41 @@ public partial class MainViewModel
     // ── Documents folder ────────────────────────────────────────────────────
 
     /// <summary>
-    /// The app was renamed from Runway to Keystone; its OneDrive folder follows, from RunwayApp to KeystoneApp.
-    /// If the rename isn't possible the old folder keeps being used, so documents are never split.
+    /// Earlier versions kept documents in OneDrive/&lt;a folder&gt;/KeystoneApp (RunwayApp before the app was renamed)
+    /// without saving that as a choice. Such a folder is kept in use and saved as the chosen folder, so a household
+    /// that started then never loses its documents to the new default. A RunwayApp folder is renamed to KeystoneApp;
+    /// if that isn't possible it stays in use, so documents are never split.
     /// </summary>
     private async Task MoveLegacyDocumentsFolderAsync(AppSettings settings)
     {
-        var defaultRoot = DocumentStore.DefaultRootFolder();
         var configured = settings.DocumentsFolder;
-        var pointsAtLegacy = configured != "" &&
-            Path.TrimEndingDirectorySeparator(Path.GetFullPath(configured)) == DocumentStore.LegacyFolderFor(defaultRoot);
-        if (configured != "" && !pointsAtLegacy)
-            return; // a folder the user picked; leave it alone
+        string? folder;
+        if (configured != "")
+        {
+            var full = Path.TrimEndingDirectorySeparator(Path.GetFullPath(configured));
+            if (Path.GetFileName(full) != DocumentStore.LegacyFolderName)
+                return; // a folder the user picked; leave it alone
+            folder = full;
+        }
+        else
+        {
+            folder = await Task.Run(DocumentStore.FindEarlierFolder);
+            if (folder is null)
+                return; // a new household: the default folder
+        }
 
-        var (folder, problem) = await Task.Run(() => DocumentStore.MoveLegacyFolder(defaultRoot));
-        var newSetting = folder == defaultRoot ? "" : folder;
-        if (newSetting != configured)
+        string? problem = null;
+        if (Path.GetFileName(folder) == DocumentStore.LegacyFolderName)
+        {
+            var renamed = Path.Combine(Path.GetDirectoryName(folder)!, DocumentStore.EarlierFolderName);
+            (folder, problem) = await Task.Run(() => DocumentStore.MoveLegacyFolder(renamed));
+        }
+        if (folder != configured)
         {
             try
             {
-                await repository.SetDocumentsFolderAsync(newSetting);
-                settings.DocumentsFolder = newSetting;
+                await repository.SetDocumentsFolderAsync(folder);
+                settings.DocumentsFolder = folder;
             }
             catch (Exception ex)
             {
@@ -208,7 +223,7 @@ public partial class MainViewModel
         }
         if (problem is not null)
             ErrorMessage = Loc.F("Couldn’t rename the documents folder to {0}, so {1} is still used: {2}",
-                DocumentStore.DefaultFolderName, DocumentStore.LegacyFolderName, problem);
+                DocumentStore.EarlierFolderName, DocumentStore.LegacyFolderName, problem);
     }
 
     [ObservableProperty]

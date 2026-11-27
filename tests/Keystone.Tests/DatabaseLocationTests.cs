@@ -9,8 +9,8 @@ public sealed class DatabaseLocationTests : IDisposable
 
     private string NewPath => Path.Combine(_appData, "Keystone", KeystoneDbContext.DatabaseFileName);
 
-    // Tests build in Debug, which uses the development database names.
-    private string OldPath => Path.Combine(_appData, "Runway", "runway-dev.db");
+    // Debug and Release builds use different database names (development data apart from real data).
+    private string OldPath => Path.Combine(_appData, "Runway", KeystoneDbContext.LegacyDatabaseFileName);
 
     public void Dispose()
     {

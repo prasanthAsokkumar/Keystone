@@ -63,10 +63,10 @@ public class KeystoneDbContext(string databasePath) : DbContext
     /// <summary>Debug builds (development) keep their own database so they never touch real data.</summary>
 #if DEBUG
     public const string DatabaseFileName = "keystone-dev.db";
-    private const string LegacyDatabaseFileName = "runway-dev.db";
+    internal const string LegacyDatabaseFileName = "runway-dev.db";
 #else
     public const string DatabaseFileName = "keystone.db";
-    private const string LegacyDatabaseFileName = "runway.db";
+    internal const string LegacyDatabaseFileName = "runway.db";
 #endif
 
     /// <summary>The app's folder from before it was renamed to Keystone.</summary>

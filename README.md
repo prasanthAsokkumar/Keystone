@@ -11,8 +11,11 @@
 ---
 
 Keystone runs on your Mac and keeps everything on your Mac. Your finances are stored in a local database, your
-documents in your own OneDrive folder, and the optional AI that reads letters runs locally through
-[Ollama](https://ollama.com). Nothing is sent to a cloud service.
+documents in a folder you choose (put it in OneDrive or iCloud Drive to see your papers on other devices), and the
+optional AI that reads letters runs locally through [Ollama](https://ollama.com). Nothing is sent to a cloud
+service, and there is no account, no tracking and no telemetry.
+
+Keystone is free and open source under the [MIT License](LICENSE).
 
 The interface is available in English and German (Swiss spelling), and follows the Mac's language by default.
 
@@ -144,7 +147,7 @@ The screenshots show a made-up family with sample data.
 - Reminders as macOS notifications for bills, tasks, appointments, notice deadlines, important dates, warranties, medicines,
   doctor's certificates and pillar 3a,
   even when Keystone is closed
-- Daily backups of all data next to your documents in OneDrive, kept for 30 days, with restore
+- Daily backups of all data next to your documents, kept for 30 days, with restore
 - App lock with Touch ID or your Mac password; it locks when your Mac locks, not every time you switch apps
 
 **Assets**
@@ -159,13 +162,39 @@ The screenshots show a made-up family with sample data.
 > The retirement figures and rules are a guide, not tax or financial advice. Your own letters and your canton's
 > rules are what count.
 
-## Requirements
+## Install
 
-- macOS on Apple Silicon (the packaging script also builds for Intel Macs)
-- [.NET SDK 10.0.300](https://dotnet.microsoft.com/download) or later
+Keystone needs **macOS 14 Sonoma or later**, on an Apple-silicon or Intel Mac.
+
+1. Download the disk image from the [latest release](https://github.com/prasanthAsokkumar/Keystone/releases/latest):
+   `Keystone-<version>-arm64.dmg` for Apple silicon (M1 and later), `Keystone-<version>-x64.dmg` for Intel.
+   Not sure? Apple menu → About This Mac: "Chip: Apple M…" means Apple silicon.
+2. Open the disk image and drag **Keystone** onto **Applications**.
+3. Open Keystone from Applications. The first time, macOS says it can't check the app for malicious software,
+   because Keystone isn't notarized by Apple (that needs a paid developer account). To open it anyway:
+   - click **Done**, then open **System Settings → Privacy & Security**, scroll down and click **Open Anyway**
+     next to the message about Keystone, and confirm; or
+   - in Terminal, run `xattr -dr com.apple.quarantine /Applications/Keystone.app` and open it again.
+
+   macOS remembers this; later starts open normally.
+
+Your data starts empty. Add your household members in **Settings → Household**, your accounts in
+**Settings → Accounts**, and you're set. The local AI is optional; see [Setting up the local AI](#setting-up-the-local-ai).
+
+**Updating:** download the new disk image and drag Keystone onto Applications again, replacing the old copy.
+Your data is kept, as it lives outside the app (see [Where your data lives](#where-your-data-lives)).
+
+**Uninstalling:** delete Keystone from Applications. To remove your data too, delete
+`~/Library/Application Support/Keystone` and your documents folder.
+
+## Building from source
+
+You need:
+
+- macOS 14 or later, and the [.NET SDK 10.0.300](https://dotnet.microsoft.com/download) or later
+- For the desktop widget: the Xcode command line tools (`xcode-select --install`); without them the app is built
+  without the widget
 - Optional, for the AI features: [Ollama](https://ollama.com) with the `qwen2.5vl:7b` model (about 6 GB)
-
-## Getting started
 
 Run the app from source:
 
@@ -187,8 +216,15 @@ Build `Keystone.app` and install it in `/Applications`:
 ./scripts/package-mac.sh --install
 ```
 
-The app is signed ad hoc, which is enough to run on the Mac that built it. It isn't notarized, so it isn't meant
-to be shared with other Macs.
+Build the disk images that a release publishes, for both kinds of Mac:
+
+```bash
+./scripts/package-mac.sh --dmg --arch arm64
+./scripts/package-mac.sh --dmg --arch x64
+```
+
+The app is signed ad hoc, not notarized. Releases are made by pushing a version tag (for example `v1.2.0`):
+GitHub Actions then tests, builds both disk images and publishes them (`.github/workflows/release.yml`).
 
 ## Setting up the local AI
 
@@ -216,7 +252,8 @@ Settings.
 | What | Where |
 | --- | --- |
 | Database | `~/Library/Application Support/Keystone/keystone.db` |
-| Documents | `~/OneDrive/PRAS/KeystoneApp`, changeable in Settings |
+| Documents | `~/Documents/Keystone` by default; choose another folder in **Settings → Documents & AI**, for example one in OneDrive or iCloud Drive |
+| Backups | The `Backups` folder inside the documents folder: one copy a day, the last 30 kept |
 | Deleted documents | The `Deleted` folder inside the documents folder, so nothing is lost by accident |
 
 Two environment variables override these locations, which is useful for testing:
@@ -224,7 +261,7 @@ Two environment variables override these locations, which is useful for testing:
 | Variable | Effect |
 | --- | --- |
 | `KEYSTONE_DB_PATH` | Use a different database file |
-| `KEYSTONE_ONEDRIVE_PATH` | Use a different folder as OneDrive |
+| `KEYSTONE_HOME` | Use a different folder as the home folder (for the default documents folder) |
 
 ## Project structure
 
@@ -244,11 +281,16 @@ Built with [Avalonia](https://avaloniaui.net), [CommunityToolkit.Mvvm](https://g
 [EF Core](https://learn.microsoft.com/ef/core/) with SQLite, and [PdfPig](https://github.com/UglyToad/PdfPig).
 
 The app was first called Runway. On its first start, Keystone moves data from that time to the new places: the
-database from `Application Support/Runway` and the documents folder from `OneDrive/PRAS/RunwayApp`. "Runway"
-survives in the code for how long your money lasts.
+database from `Application Support/Runway`, and a `RunwayApp` documents folder in OneDrive to `KeystoneApp`.
+Early versions kept documents in OneDrive by default; such a folder stays in use. "Runway" survives in the code
+for how long your money lasts.
 
 ## Contributing
 
+Bug reports, ideas and pull requests are welcome. Please never put real personal or financial data in issues,
+tests or screenshots: use made-up people (the screenshots use the fictional Meier family in Basel).
+
+- Run `dotnet test` before sending a change; every feature has tests, and the release build has no warnings.
 - Every text in the interface needs a German translation in `src/Keystone/Localization/German.cs`. A test fails if
   one is missing.
 - Changes to the data model need a migration:
@@ -258,3 +300,8 @@ survives in the code for how long your money lasts.
   ```
 
 - The logo is drawn by `scripts/make-logo.py` (needs Pillow). Run it to regenerate `keystone.png` and `keystone.ico`.
+
+## License
+
+Keystone is released under the [MIT License](LICENSE). The Swiss rules built in (pension limits, notice deadlines,
+how long to keep papers) are a guide, not legal, tax or financial advice.
