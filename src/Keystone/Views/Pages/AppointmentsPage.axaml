@@ -21,8 +21,8 @@
             <Border Classes="card">
                 <StackPanel Spacing="4">
                     <TextBlock Classes="label" Text="{l:T 'Next appointment'}" />
-                    <TextBlock Classes="value" Text="{Binding NextAppointmentText}" TextTrimming="CharacterEllipsis" />
-                    <TextBlock Classes="muted" FontSize="13" Text="{Binding NextAppointmentDetail}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="value" Text="{Binding Appointments.NextAppointmentText}" TextTrimming="CharacterEllipsis" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Appointments.NextAppointmentDetail}" TextTrimming="CharacterEllipsis" />
                 </StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="card">
@@ -31,31 +31,31 @@
                         <TextBlock Classes="label" Text="{l:T 'Calendar'}" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <PathIcon Data="{StaticResource IconSync}" Width="16" Height="16" Foreground="{DynamicResource Brand}"
-                                      IsVisible="{Binding IsCalendarSyncEnabled}" />
-                            <TextBlock Text="{Binding CalendarSyncSummary}" FontWeight="SemiBold" FontSize="15"
+                                      IsVisible="{Binding Appointments.IsCalendarSyncEnabled}" />
+                            <TextBlock Text="{Binding Appointments.CalendarSyncSummary}" FontWeight="SemiBold" FontSize="15"
                                        TextTrimming="CharacterEllipsis" />
                         </StackPanel>
-                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding !IsCalendarSyncEnabled}"
+                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding !Appointments.IsCalendarSyncEnabled}"
                                    Text="{l:T 'Turn on calendar sync to see your appointments in the Calendar app and on your iPhone, and to bring in the ones you add there.'}" />
-                        <TextBlock Classes="error" FontSize="13" TextWrapping="Wrap" Text="{Binding CalendarSyncError}"
-                                   IsVisible="{Binding HasCalendarSyncError}" />
+                        <TextBlock Classes="error" FontSize="13" TextWrapping="Wrap" Text="{Binding Appointments.CalendarSyncError}"
+                                   IsVisible="{Binding Appointments.HasCalendarSyncError}" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="8" VerticalAlignment="Center">
-                        <Button Classes="secondary" Command="{Binding SyncCalendarNowCommand}" IsVisible="{Binding ShowsCalendarChoice}"
-                                IsEnabled="{Binding !IsCalendarSyncing}" HorizontalAlignment="Stretch">
+                        <Button Classes="secondary" Command="{Binding Appointments.SyncCalendarNowCommand}" IsVisible="{Binding Appointments.ShowsCalendarChoice}"
+                                IsEnabled="{Binding !Appointments.IsCalendarSyncing}" HorizontalAlignment="Stretch">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <PathIcon Data="{StaticResource IconSync}" />
                                 <TextBlock Text="{l:T 'Sync now'}" />
                             </StackPanel>
                         </Button>
-                        <Button Classes="secondary" Command="{Binding OpenCalendarAppCommand}" IsVisible="{Binding ShowsCalendarChoice}"
+                        <Button Classes="secondary" Command="{Binding Appointments.OpenCalendarAppCommand}" IsVisible="{Binding Appointments.ShowsCalendarChoice}"
                                 HorizontalAlignment="Stretch">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <PathIcon Data="{StaticResource IconOpen}" />
                                 <TextBlock Text="{l:T 'Open Calendar'}" />
                             </StackPanel>
                         </Button>
-                        <Button Classes="secondary" Command="{Binding ShowCalendarSettingsCommand}" IsVisible="{Binding !ShowsCalendarChoice}">
+                        <Button Classes="secondary" Command="{Binding Appointments.ShowCalendarSettingsCommand}" IsVisible="{Binding !Appointments.ShowsCalendarChoice}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <PathIcon Data="{StaticResource IconSettings}" />
                                 <TextBlock Text="{l:T 'Set up'}" />
@@ -70,17 +70,17 @@
             <DockPanel>
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="12,12,12,8">
                     <WrapPanel ItemSpacing="8" LineSpacing="8">
-                        <TextBox Text="{Binding AppointmentSearch}" PlaceholderText="{l:T 'Search appointments'}" Width="220">
+                        <TextBox Text="{Binding Appointments.AppointmentSearch}" PlaceholderText="{l:T 'Search appointments'}" Width="220">
                             <TextBox.InnerLeftContent>
                                 <PathIcon Data="{StaticResource IconSearch}" Width="16" Height="16"
                                           Margin="10,0,0,0" Foreground="{DynamicResource TextMuted}" />
                             </TextBox.InnerLeftContent>
                         </TextBox>
-                        <ComboBox ItemsSource="{Binding PersonFilters}" SelectedItem="{Binding AppointmentPersonFilter}" Width="140" />
-                        <ComboBox ItemsSource="{Binding AppointmentStatusFilters}" SelectedIndex="{Binding AppointmentStatusFilterIndex}"
+                        <ComboBox ItemsSource="{Binding PersonFilters}" SelectedItem="{Binding Appointments.AppointmentPersonFilter}" Width="140" />
+                        <ComboBox ItemsSource="{Binding Appointments.AppointmentStatusFilters}" SelectedIndex="{Binding Appointments.AppointmentStatusFilterIndex}"
                                   Width="170" />
                     </WrapPanel>
-                    <TextBlock Grid.Column="1" Classes="muted" Text="{Binding AppointmentCountText}" VerticalAlignment="Center"
+                    <TextBlock Grid.Column="1" Classes="muted" Text="{Binding Appointments.AppointmentCountText}" VerticalAlignment="Center"
                                Margin="0,0,8,0" />
                 </Grid>
 
@@ -91,16 +91,16 @@
                 <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Margin="12,0,12,4" />
 
                 <Panel>
-                    <TextBlock Classes="secondary" Text="{Binding AppointmentsEmptyText}" IsVisible="{Binding !HasAppointmentRows}"
+                    <TextBlock Classes="secondary" Text="{Binding Appointments.AppointmentsEmptyText}" IsVisible="{Binding !Appointments.HasAppointmentRows}"
                                HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
                                TextWrapping="Wrap" MaxWidth="400" />
-                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,6" IsVisible="{Binding HasAppointmentRows}" VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,6" IsVisible="{Binding Appointments.HasAppointmentRows}" VerticalAlignment="Top">
                         <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
                         <controls:SortHeader Label="{l:T 'Title'}" List="appointments" Key="title" Sorts="{Binding ListSorts}" />
                         <controls:SortHeader Label="{l:T 'Person'}" List="appointments" Key="person" Sorts="{Binding ListSorts}" />
                         <controls:SortHeader Label="{l:T 'Date'}" List="appointments" Key="date" Sorts="{Binding ListSorts}" />
                     </StackPanel>
-                    <ListBox Classes="table" ItemsSource="{Binding AppointmentRows}" IsVisible="{Binding HasAppointmentRows}" Margin="12,30,12,0">
+                    <ListBox Classes="table" ItemsSource="{Binding Appointments.AppointmentRows}" IsVisible="{Binding Appointments.HasAppointmentRows}" Margin="12,30,12,0">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:AppointmentRow">
                                 <Grid ColumnDefinitions="Auto,*,130,72" ColumnSpacing="16" Background="Transparent"
@@ -138,12 +138,12 @@
                                     </Border>
                                     <Grid Grid.Column="3" ColumnDefinitions="34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
                                         <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
-                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditAppointmentCommand}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Appointments.EditAppointmentCommand}"
                                                 CommandParameter="{Binding Appointment}">
                                             <PathIcon Data="{StaticResource IconEdit}" />
                                         </Button>
                                         <Button Grid.Column="1" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
-                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteAppointmentCommand}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Appointments.DeleteAppointmentCommand}"
                                                 CommandParameter="{Binding Appointment}">
                                             <PathIcon Data="{StaticResource IconDelete}" />
                                         </Button>

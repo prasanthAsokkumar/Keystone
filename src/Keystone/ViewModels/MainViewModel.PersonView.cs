@@ -13,6 +13,10 @@ namespace Keystone.ViewModels;
 /// </summary>
 public partial class MainViewModel
 {
+    /// <summary>A member's name, or "Shared" for things that belong to the household.</summary>
+    internal string PersonName(int? personId) =>
+        personId is { } id && People.FirstOrDefault(p => p.Id == id) is { } person ? person.Name : PersonOption.Shared.ToString();
+
     [ObservableProperty]
     public partial IReadOnlyList<PersonOption> ViewPersonOptions { get; set; } = [PersonOption.Everyone];
 
@@ -40,19 +44,19 @@ public partial class MainViewModel
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == value.Id) ?? PersonOption.Everyone;
         PersonFilter = Filter();
         DocumentPersonFilter = Filter();
-        TaskPersonFilter = Filter();
-        AppointmentPersonFilter = Filter();
+        Tasks.TaskPersonFilter = Filter();
+        Appointments.AppointmentPersonFilter = Filter();
         InsurancePersonFilter = Filter();
         TaxPersonFilter = Filter();
-        RetirementPersonFilter = Filter();
+        Retirement.RetirementPersonFilter = Filter();
         if (!value.IsEveryone)
             SelectedMemberId = value.Id;
         if (_isLoading)
             return;
-        RefreshContracts();
-        RefreshImportantDates();
-        RefreshWarranties();
-        RefreshAssets();
+        Deadlines.RefreshContracts();
+        Deadlines.RefreshImportantDates();
+        Deadlines.RefreshWarranties();
+        Assets.RefreshAssets();
         RefreshHousehold();
     }
 

@@ -1,0 +1,140 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.TransactionsPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Income, expenses, recurring entries and transfers, each on its own tab. -->
+    <Grid RowDefinitions="Auto,*" RowSpacing="16">
+    <!-- Income, expenses and transfers each on their own tab -->
+    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="24">
+        <Border Classes="segments" HorizontalAlignment="Left" VerticalAlignment="Center">
+            <UniformGrid Rows="1">
+                <RadioButton Classes="segment" GroupName="TransactionTabs" Content="{l:T 'Income'}" MinWidth="130"
+                             IsChecked="{Binding IsIncomeTab}" controls:Drag.Target="income" />
+                <RadioButton Classes="segment" GroupName="TransactionTabs" Content="{l:T 'Expenses'}" MinWidth="130"
+                             IsChecked="{Binding IsExpensesTab}" controls:Drag.Target="expenses" />
+                <RadioButton Classes="segment" GroupName="TransactionTabs" Content="{l:T 'Recurring'}" MinWidth="130"
+                             IsChecked="{Binding IsRecurringTab}" controls:Drag.Target="recurring" />
+                <RadioButton Classes="segment" GroupName="TransactionTabs" Content="{l:T 'Transfers'}" MinWidth="130"
+                             IsChecked="{Binding IsTransfersTab}" IsVisible="{Binding ShowTransfersTab}" />
+            </UniformGrid>
+        </Border>
+        <StackPanel Grid.Column="1" HorizontalAlignment="Right" VerticalAlignment="Center" Spacing="2">
+            <TextBlock Text="{Binding TransactionsTabTotal}" FontSize="18" FontWeight="Bold" HorizontalAlignment="Right"
+                       Classes.positive="{Binding IsIncomeTab}" />
+            <TextBlock Classes="muted" FontSize="12" Text="{Binding TransactionsTabDetail}" HorizontalAlignment="Right"
+                       TextTrimming="CharacterEllipsis" />
+        </StackPanel>
+    </Grid>
+    <Border Grid.Row="1" Classes="card" Padding="8">
+        <DockPanel>
+            <!-- Filters -->
+            <WrapPanel DockPanel.Dock="Top" ItemSpacing="8" LineSpacing="8" Margin="12,12,12,8">
+                <TextBox Text="{Binding SearchText}" PlaceholderText="{l:T 'Search'}" Width="160">
+                    <TextBox.InnerLeftContent>
+                        <PathIcon Data="{StaticResource IconSearch}" Width="16" Height="16"
+                                  Margin="10,0,0,0" Foreground="{DynamicResource TextMuted}" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <ComboBox ItemsSource="{Binding PersonFilters}" SelectedItem="{Binding PersonFilter}" Width="120" />
+                <ComboBox ItemsSource="{Binding AccountFilters}" SelectedItem="{Binding AccountFilter}" Width="150"
+                          IsVisible="{Binding HasSeveralAccounts}" />
+                <ComboBox ItemsSource="{Binding CategoryFilters}" SelectedItem="{Binding CategoryFilter}" Width="150" />
+                <ComboBox ItemsSource="{Binding ScheduleFilters}" SelectedIndex="{Binding ScheduleFilterIndex}" Width="152"
+                          IsVisible="{Binding ShowScheduleFilter}" />
+                <Button Classes="icon" Command="{Binding ClearFiltersCommand}" ToolTip.Tip="{l:T 'Clear filters'}"
+                        VerticalAlignment="Center">
+                    <PathIcon Data="{StaticResource IconClose}" />
+                </Button>
+            </WrapPanel>
+
+            <!-- Premiums and tax payments are listed on their own pages -->
+            <Border DockPanel.Dock="Bottom" Background="{DynamicResource SurfaceSunken}" CornerRadius="8"
+                    Padding="14,8" Margin="12,4,12,0" IsVisible="{Binding HasMovedExpenses}">
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                    <TextBlock Classes="secondary" FontSize="13" Text="{Binding MovedExpensesText}" TextWrapping="Wrap"
+                               VerticalAlignment="Center" />
+                    <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Insurance'}" Command="{Binding ShowInsuranceCommand}" />
+                    <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Taxes'}" Command="{Binding ShowTaxesCommand}" />
+                </Grid>
+            </Border>
+
+            <!-- Totals for the filtered rows -->
+            <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
+                    Padding="16,12,16,6" Margin="0,4,0,0">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="error" Text="{Binding ErrorMessage}"
+                               IsVisible="{Binding HasError}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding EntriesSummaryText}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <!-- Column headers -->
+            <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,0,0,1"
+                    Padding="28,10,28,10" Margin="0,4,0,4">
+                <Grid ColumnDefinitions="*,130,110,150,108" ColumnSpacing="16">
+                    <controls:SortHeader Label="{l:T 'Description'}" List="transactions" Key="description" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="1" Label="{l:T 'Person'}" List="transactions" Key="person" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="2" Label="{l:T 'Date'}" List="transactions" Key="date" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="3" Label="{l:T 'Amount'}" List="transactions" Key="amount" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
+                </Grid>
+            </Border>
+
+            <Panel>
+                <StackPanel IsVisible="{Binding !HasEntryRows}" HorizontalAlignment="Center"
+                            VerticalAlignment="Center" Spacing="12">
+                    <TextBlock Classes="secondary" Text="{Binding EntriesEmptyText}" TextAlignment="Center"
+                               TextWrapping="Wrap" MaxWidth="360" />
+                </StackPanel>
+                <ListBox Classes="table" ItemsSource="{Binding EntryRows}" IsVisible="{Binding HasEntryRows}"
+                         Margin="12,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:EntryRow">
+                            <Grid ColumnDefinitions="*,130,110,150,108" ColumnSpacing="16" Background="Transparent"
+                                  DoubleTapped="EntryRow_DoubleTapped" controls:Drag.Item="{Binding}">
+                                <StackPanel VerticalAlignment="Center" MinWidth="140" ToolTip.Tip="{Binding Description}">
+                                    <TextBlock Text="{Binding Description}" FontWeight="Medium"
+                                               TextTrimming="CharacterEllipsis" />
+                                    <TextBlock Classes="muted" Text="{Binding DetailText}"
+                                               TextTrimming="CharacterEllipsis" />
+                                </StackPanel>
+                                <Border Grid.Column="1" Classes="pill" Classes.brand="{Binding !IsShared}">
+                                    <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                </Border>
+                                <TextBlock Grid.Column="2" Classes="secondary" FontSize="13" Text="{Binding DateText}"
+                                           VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Text="{Binding AmountText}" FontWeight="SemiBold"
+                                           TextAlignment="Right" VerticalAlignment="Center"
+                                           Classes.positive="{Binding IsIncome}" />
+                                <Grid Grid.Column="4" ColumnDefinitions="34,34,34" HorizontalAlignment="Right"
+                                      VerticalAlignment="Center">
+                                    <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                            Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditTransactionCommand}"
+                                            CommandParameter="{Binding Transaction}">
+                                        <PathIcon Data="{StaticResource IconEdit}" />
+                                    </Button>
+                                    <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Stop repeating from today'}"
+                                            IsVisible="{Binding CanStop}"
+                                            Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).StopTransactionCommand}"
+                                            CommandParameter="{Binding Transaction}">
+                                        <PathIcon Data="{StaticResource IconStop}" />
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Delete (removes every repeat)'}"
+                                            Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteTransactionCommand}"
+                                            CommandParameter="{Binding Transaction}">
+                                        <PathIcon Data="{StaticResource IconDelete}" />
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Panel>
+        </DockPanel>
+    </Border>
+
+    </Grid>
+</UserControl>

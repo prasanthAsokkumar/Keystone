@@ -6,14 +6,14 @@
              x:DataType="vm:MainViewModel">
     <DockPanel>
         <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
-            <TextBlock Text="{Binding GoalFormTitle}" FontSize="20" FontWeight="Bold" />
+            <TextBlock Text="{Binding Planning.GoalFormTitle}" FontSize="20" FontWeight="Bold" />
             <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}">
                 <PathIcon Data="{StaticResource IconClose}" />
             </Button>
         </Grid>
         <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="28,16">
             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding SaveGoalCommand}" />
+                <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding Planning.SaveGoalCommand}" />
                 <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}" Command="{Binding ClosePanelCommand}" />
             </Grid>
         </Border>
@@ -21,29 +21,29 @@
             <StackPanel Spacing="18" Margin="28,12,28,20">
                 <StackPanel Spacing="4">
                     <TextBlock Classes="fieldLabel" Text="{l:T 'Name'}" />
-                    <TextBox Text="{Binding GoalName}" PlaceholderText="{l:T 'e.g. Summer holiday, new car'}" />
+                    <TextBox Text="{Binding Planning.GoalName}" PlaceholderText="{l:T 'e.g. Summer holiday, new car'}" />
                 </StackPanel>
                 <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                     <StackPanel Spacing="4">
                         <TextBlock Classes="fieldLabel" Text="{l:T 'Amount'}" />
-                        <NumericUpDown Value="{Binding GoalTarget}" Minimum="0" FormatString="N0" PlaceholderText="0" ShowButtonSpinner="False" />
+                        <NumericUpDown Value="{Binding Planning.GoalTarget}" Minimum="0" FormatString="N0" PlaceholderText="0" ShowButtonSpinner="False" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Spacing="4">
                         <TextBlock Classes="fieldLabel" Text="{l:T 'By (optional)'}" />
-                        <CalendarDatePicker SelectedDate="{Binding GoalDate}" />
+                        <CalendarDatePicker SelectedDate="{Binding Planning.GoalDate}" />
                     </StackPanel>
                 </Grid>
                 <StackPanel Spacing="4">
                     <TextBlock Classes="fieldLabel" Text="{l:T 'Kept in'}" />
-                    <ComboBox ItemsSource="{Binding GoalAccountOptions}" SelectedItem="{Binding GoalAccount}" />
+                    <ComboBox ItemsSource="{Binding Planning.GoalAccountOptions}" SelectedItem="{Binding Planning.GoalAccount}" />
                     <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
                                Text="{l:T 'With an account, its balance is the progress. Use a savings account kept for this goal.'}" />
                 </StackPanel>
-                <StackPanel Spacing="4" IsVisible="{Binding GoalTracksByHand}">
+                <StackPanel Spacing="4" IsVisible="{Binding Planning.GoalTracksByHand}">
                     <TextBlock Classes="fieldLabel" Text="{l:T 'Saved so far'}" />
-                    <NumericUpDown Value="{Binding GoalSavedByHand}" Minimum="0" FormatString="N0" PlaceholderText="0" ShowButtonSpinner="False" />
+                    <NumericUpDown Value="{Binding Planning.GoalSavedByHand}" Minimum="0" FormatString="N0" PlaceholderText="0" ShowButtonSpinner="False" />
                 </StackPanel>
-                <TextBlock Classes="error" Text="{Binding GoalError}" IsVisible="{Binding HasGoalError}" />
+                <TextBlock Classes="error" Text="{Binding Planning.GoalError}" IsVisible="{Binding Planning.HasGoalError}" />
             </StackPanel>
         </ScrollViewer>
     </DockPanel>

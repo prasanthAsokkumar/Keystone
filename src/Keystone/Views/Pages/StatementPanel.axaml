@@ -1,0 +1,125 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.StatementPanel"
+             x:DataType="vm:MainViewModel">
+    <!-- The form for a yearly pension statement. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <StackPanel Spacing="2">
+                <TextBlock Text="{Binding Retirement.StatementFormTitle}" FontSize="20" FontWeight="Bold" />
+                <TextBlock Classes="muted" FontSize="13" Text="{Binding Retirement.StatementLetterName}"
+                           TextTrimming="CharacterEllipsis" IsVisible="{Binding Retirement.HasStatementLetter}" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}"
+                    VerticalAlignment="Top">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
+                Padding="28,16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Button Classes="primary" Content="{l:T 'Save statement'}" HorizontalAlignment="Stretch"
+                        Command="{Binding Retirement.SaveStatementCommand}" />
+                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}"
+                        Command="{Binding ClosePanelCommand}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Spacing="18" Margin="28,12,28,20">
+                <StackPanel Spacing="8" IsVisible="{Binding Retirement.HasStatementAiStatus}">
+                    <ProgressBar Classes="thin" IsIndeterminate="True" IsVisible="{Binding Retirement.IsStatementAiBusy}" />
+                    <TextBlock Classes="muted" Text="{Binding Retirement.StatementAiStatus}" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10" IsVisible="{Binding Retirement.CanChooseStatementAccount}">
+                    <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center"
+                               Text="{l:T 'Attach the letter to file it in Documents. With local AI on, the figures are read from it.'}" />
+                    <Button Grid.Column="1" Classes="secondary" Click="AttachStatementLetter_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{StaticResource IconImport}" />
+                            <TextBlock Text="{l:T 'Attach letter'}" />
+                        </StackPanel>
+                    </Button>
+                </Grid>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Account'}" />
+                    <ComboBox ItemsSource="{Binding Retirement.StatementAccountOptions}" SelectedItem="{Binding Retirement.StatementAccount}"
+                              IsEnabled="{Binding Retirement.CanChooseStatementAccount}" />
+                </StackPanel>
+
+                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14"
+                        IsVisible="{Binding Retirement.IsNewStatementAccount}">
+                    <StackPanel Spacing="12">
+                        <StackPanel Spacing="4">
+                            <TextBlock Classes="fieldLabel" Text="{l:T 'Pension fund, bank or insurer'}" />
+                            <TextBox Text="{Binding Retirement.NewPensionAccountName}"
+                                     PlaceholderText="{l:T 'e.g. Pensionskasse Basel-Stadt'}" />
+                        </StackPanel>
+                        <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
+                                <ComboBox ItemsSource="{Binding Retirement.PillarNames}" SelectedIndex="{Binding Retirement.NewPensionPillarIndex}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
+                                <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding Retirement.NewPensionPerson}" />
+                            </StackPanel>
+                        </Grid>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Figures as of'}" />
+                    <CalendarDatePicker SelectedDate="{Binding Retirement.StatementDate}" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsVisible="{Binding Retirement.StatementShowsBalance}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{Binding Retirement.StatementBalanceLabel}" />
+                        <NumericUpDown Value="{Binding Retirement.StatementBalance}" Minimum="0" FormatString="N2"
+                                       PlaceholderText="0.00" ShowButtonSpinner="False" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Paid in that year (optional)'}" />
+                        <NumericUpDown Value="{Binding Retirement.StatementPaidIn}" Minimum="0" FormatString="N2"
+                                       PlaceholderText="0.00" ShowButtonSpinner="False" />
+                    </StackPanel>
+                </Grid>
+
+                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14"
+                        IsVisible="{Binding Retirement.StatementShowsPension}">
+                    <StackPanel Spacing="12">
+                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                   Text="{l:T 'Projections at 65, as shown in the letter'}" />
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <StackPanel Spacing="4" IsVisible="{Binding Retirement.StatementShowsPensionFund}">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Savings at 65'}" />
+                                <NumericUpDown Value="{Binding Retirement.StatementProjectedCapital}" Minimum="0" FormatString="N2"
+                                               PlaceholderText="0.00" ShowButtonSpinner="False" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Pension per year'}" />
+                                <NumericUpDown Value="{Binding Retirement.StatementProjectedPension}" Minimum="0" FormatString="N2"
+                                               PlaceholderText="0.00" ShowButtonSpinner="False" />
+                            </StackPanel>
+                        </Grid>
+                        <StackPanel Spacing="4" IsVisible="{Binding Retirement.StatementShowsPensionFund}">
+                            <TextBlock Classes="fieldLabel" Text="{l:T 'Possible buy-in (optional)'}" />
+                            <NumericUpDown Value="{Binding Retirement.StatementBuyIn}" Minimum="0" FormatString="N2"
+                                           PlaceholderText="0.00" ShowButtonSpinner="False" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Classes="error" Text="{Binding Retirement.StatementError}" IsVisible="{Binding Retirement.HasStatementError}" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

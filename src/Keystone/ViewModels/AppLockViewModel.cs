@@ -3,13 +3,21 @@ using System.Collections.Generic;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Keystone.Data;
 using Keystone.Localization;
 using Keystone.Services.Mac;
 
 namespace Keystone.ViewModels;
 
-/// <summary>Locking Keystone behind Touch ID (or the Mac's password) at start and after time away.</summary>
-public partial class MainViewModel
+/// <summary>
+/// Locking Keystone behind Touch ID (or the Mac's password) at start and after time away. Its own view model:
+/// the rest of the app only asks whether it is locked and tells it when the window loses or gains focus.
+/// </summary>
+/// <param name="lockChanged">The lock was turned on or off (the widget hides titles while it is on).</param>
+/// <param name="returned">The owner came back to the window (check the inbox, sync the calendar).</param>
+public sealed partial class AppLockViewModel(
+    KeystoneRepository repository, Func<bool> isLoading, Action<string> reportError, Action lockChanged, Action returned)
+    : ViewModelBase
 {
     /// <summary>Checks the user; replaceable in tests.</summary>
     public Func<string, Task<bool>> Authenticate { get; set; } = TouchId.AuthenticateAsync;
@@ -68,7 +76,7 @@ public partial class MainViewModel
         return new OwnWindowScope(this);
     }
 
-    private sealed class OwnWindowScope(MainViewModel owner) : IDisposable
+    private sealed class OwnWindowScope(AppLockViewModel owner) : IDisposable
     {
         private bool _disposed;
 
@@ -81,6 +89,16 @@ public partial class MainViewModel
         }
     }
 
+    /// <summary>After the language changed: the timing choices, keeping the one chosen.</summary>
+    internal override void RefreshTexts()
+    {
+        var delay = LockDelayIndex;
+        _isChangingLock = true;
+        OnPropertyChanged(string.Empty);
+        LockDelayIndex = delay;
+        _isChangingLock = false;
+    }
+
     /// <summary>Files can be dropped on the window only while it is unlocked.</summary>
     public bool CanAcceptDrop => !IsLocked;
 
@@ -91,7 +109,7 @@ public partial class MainViewModel
             return await Authenticate(reason);
     }
 
-    private void ApplyLockSettings(bool enabled, int minutes)
+    internal void Apply(bool enabled, int minutes)
     {
         _isChangingLock = true;
         IsLockEnabled = enabled && CanLock;
@@ -104,8 +122,8 @@ public partial class MainViewModel
     /// <summary>Turning the lock on first checks that unlocking works, so nobody locks themselves out.</summary>
     partial void OnIsLockEnabledChanged(bool value)
     {
-        ScheduleReminders(); // the widget hides titles while the lock is on
-        if (_isChangingLock || _isLoading)
+        lockChanged();
+        if (_isChangingLock || isLoading())
             return;
         _ = ChangeLockAsync(value);
     }
@@ -124,7 +142,7 @@ public partial class MainViewModel
 
     partial void OnLockDelayIndexChanged(int value)
     {
-        if (!_isChangingLock && !_isLoading)
+        if (!_isChangingLock && !isLoading())
             _ = SaveLockSettingsAsync();
     }
 
@@ -136,7 +154,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            reportError(Loc.F("Could not save: {0}", ex.Message));
         }
     }
 
@@ -197,8 +215,7 @@ public partial class MainViewModel
         if (IsLockEnabled && LockMinutes != WhenMacLocks && _leftAt is { } left && now - left >= TimeSpan.FromMinutes(LockMinutes))
             IsLocked = true;
         _leftAt = null;
-        CheckInbox(); // scans may have arrived while away
-        ScheduleCalendarSync(); // appointments may have changed in Calendar meanwhile
+        returned(); // scans may have arrived and appointments changed while away
         if (IsLocked)
             _ = UnlockAsync();
     }

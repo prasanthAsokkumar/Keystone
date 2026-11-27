@@ -93,10 +93,10 @@ public sealed class NotesAndTasksTests : IDisposable
         var vm = new MainViewModel(_repository);
         await vm.LoadAsync();
 
-        Assert.Equal("2 tasks due this week · 1 overdue", vm.TasksDueText);
-        Assert.True(vm.HasOverdueTasks);
+        Assert.Equal("2 tasks due this week · 1 overdue", vm.Tasks.TasksDueText);
+        Assert.True(vm.Tasks.HasOverdueTasks);
         // Open tasks, soonest first and undated last.
-        Assert.Equal(["Overdue", "Soon", "Later", "Whenever"], vm.TaskRows.Select(r => r.Title));
+        Assert.Equal(["Overdue", "Soon", "Later", "Whenever"], vm.Tasks.TaskRows.Select(r => r.Title));
     }
 
     [Fact]
@@ -105,18 +105,18 @@ public sealed class NotesAndTasksTests : IDisposable
         var vm = new MainViewModel(_repository);
         await vm.LoadAsync();
 
-        vm.NewTaskTitle = "  ";
-        await vm.AddTaskCommand.ExecuteAsync(null);
-        Assert.True(vm.HasNewTaskError);
+        vm.Tasks.NewTaskTitle = "  ";
+        await vm.Tasks.AddTaskCommand.ExecuteAsync(null);
+        Assert.True(vm.Tasks.HasNewTaskError);
 
-        vm.NewTaskTitle = "Call the landlord";
-        vm.NewTaskDueDate = DateTime.Today;
-        await vm.AddTaskCommand.ExecuteAsync(null);
-        Assert.Equal("", vm.NewTaskTitle);
-        var row = Assert.Single(vm.TaskRows);
+        vm.Tasks.NewTaskTitle = "Call the landlord";
+        vm.Tasks.NewTaskDueDate = DateTime.Today;
+        await vm.Tasks.AddTaskCommand.ExecuteAsync(null);
+        Assert.Equal("", vm.Tasks.NewTaskTitle);
+        var row = Assert.Single(vm.Tasks.TaskRows);
 
-        await vm.ToggleTaskCommand.ExecuteAsync(row.Task);
-        Assert.Empty(vm.TaskRows); // the To do list hides finished tasks
+        await vm.Tasks.ToggleTaskCommand.ExecuteAsync(row.Task);
+        Assert.Empty(vm.Tasks.TaskRows); // the To do list hides finished tasks
         Assert.Equal(Today, Assert.Single(await _repository.GetTasksAsync()).CompletedOn);
     }
 
@@ -126,21 +126,21 @@ public sealed class NotesAndTasksTests : IDisposable
         var vm = new MainViewModel(_repository);
         await vm.LoadAsync();
 
-        await vm.NewNoteCommand.ExecuteAsync(null);
-        Assert.NotNull(vm.SelectedNoteItem);
-        vm.NoteTitle = "Holiday plans";
-        vm.NoteBody = "Ticino in May";
-        Assert.True(vm.HasUnsavedNote);
-        await vm.SaveNoteNowAsync();
+        await vm.Notes.NewNoteCommand.ExecuteAsync(null);
+        Assert.NotNull(vm.Notes.SelectedNoteItem);
+        vm.Notes.NoteTitle = "Holiday plans";
+        vm.Notes.NoteBody = "Ticino in May";
+        Assert.True(vm.Notes.HasUnsavedNote);
+        await vm.Notes.SaveNoteNowAsync();
         Assert.Equal("Ticino in May", Assert.Single(await _repository.GetNotesAsync()).Body);
 
         // A second note left empty disappears once another note is picked.
-        await vm.NewNoteCommand.ExecuteAsync(null);
+        await vm.Notes.NewNoteCommand.ExecuteAsync(null);
         Assert.Equal(2, (await _repository.GetNotesAsync()).Count);
-        vm.SelectedNoteItem = vm.NoteItems.First(i => i.Title == "Holiday plans");
+        vm.Notes.SelectedNoteItem = vm.Notes.NoteItems.First(i => i.Title == "Holiday plans");
         await Task.Delay(200);
         Assert.Single(await _repository.GetNotesAsync());
-        Assert.Single(vm.NoteItems);
+        Assert.Single(vm.Notes.NoteItems);
     }
 
     [Fact]

@@ -69,7 +69,7 @@ public partial class MainViewModel
                     EditDocumentCommand.Execute(d);
                 })));
 
-        results.AddRange(_tasks
+        results.AddRange(Tasks.All
             .Where(t => Has(t.Title, t.Notes))
             .OrderBy(t => t.IsDone)
             .ThenBy(t => t.DueDate ?? DateOnly.MaxValue)
@@ -78,11 +78,11 @@ public partial class MainViewModel
                 () =>
                 {
                     CurrentPage = AppPage.Tasks;
-                    EditTaskCommand.Execute(t);
+                    Tasks.EditTaskCommand.Execute(t);
                 })));
 
         var now = DateTime.Now;
-        results.AddRange(_appointments
+        results.AddRange(Appointments.All
             .Where(a => Has(a.Title, a.Location, a.Notes))
             // Upcoming ones first, soonest first; then the most recent past ones.
             .OrderBy(a => a.HasPassed(now))
@@ -92,10 +92,10 @@ public partial class MainViewModel
                 () =>
                 {
                     CurrentPage = AppPage.Appointments;
-                    EditAppointmentCommand.Execute(a);
+                    Appointments.EditAppointmentCommand.Execute(a);
                 })));
 
-        results.AddRange(_notes
+        results.AddRange(Notes.All
             .Where(n => Has(n.Title, n.Body, n.Project))
             .OrderByDescending(n => n.UpdatedAt)
             .Take(MaxResultsPerKind)
@@ -104,9 +104,7 @@ public partial class MainViewModel
                 () =>
                 {
                     CurrentPage = AppPage.Notes;
-                    NoteSearch = "";
-                    NoteProjectFilter = AllProjects;
-                    SelectedNoteItem = NoteItems.FirstOrDefault(i => i.Note == n);
+                    Notes.Show(n);
                 })));
 
         results.AddRange(_policies
@@ -119,58 +117,58 @@ public partial class MainViewModel
                     EditInsuranceCommand.Execute(p);
                 })));
 
-        results.AddRange(_pensionAccounts
+        results.AddRange(Retirement.All
             .Where(a => Has(a.Name, a.Notes))
             .Take(MaxResultsPerKind)
             .Select(a => new SearchResult(Loc.T("Retirement"), a.Name, PensionAccount.PillarName(a.Pillar),
                 () =>
                 {
                     CurrentPage = AppPage.Retirement;
-                    EditPensionAccountCommand.Execute(a);
+                    Retirement.EditPensionAccountCommand.Execute(a);
                 })));
 
-        results.AddRange(_contracts
+        results.AddRange(Deadlines.Contracts
             .Where(c => Has(c.Provider, c.CustomerNumber, c.Notes, Contract.KindName(c.Kind)))
             .Take(MaxResultsPerKind)
             .Select(c => new SearchResult(Loc.T("Contract"), c.Provider, Contract.KindName(c.Kind),
                 () =>
                 {
                     CurrentPage = AppPage.Contracts;
-                    DeadlinesTab = 0;
-                    EditContractCommand.Execute(c);
+                    Deadlines.DeadlinesTab = 0;
+                    Deadlines.EditContractCommand.Execute(c);
                 })));
 
-        results.AddRange(_dates
+        results.AddRange(Deadlines.Dates
             .Where(d => Has(d.Title, d.Notes, ImportantDate.KindName(d.Kind)))
             .Take(MaxResultsPerKind)
             .Select(d => new SearchResult(Loc.T("Date"), d.Title, Format.Date(d.NextDate(Today)),
                 () =>
                 {
                     CurrentPage = AppPage.Contracts;
-                    DeadlinesTab = 1;
-                    EditImportantDateCommand.Execute(d);
+                    Deadlines.DeadlinesTab = 1;
+                    Deadlines.EditImportantDateCommand.Execute(d);
                 })));
 
-        results.AddRange(_warranties
+        results.AddRange(Deadlines.Warranties
             .Where(w => Has(w.Item, w.Store, w.Notes))
             .Take(MaxResultsPerKind)
             .Select(w => new SearchResult(Loc.T("Warranty"), w.Item, Loc.F("Until {0}", Format.Date(w.ExpiresOn)),
                 () =>
                 {
                     CurrentPage = AppPage.Contracts;
-                    DeadlinesTab = 2;
-                    EditWarrantyCommand.Execute(w);
+                    Deadlines.DeadlinesTab = 2;
+                    Deadlines.EditWarrantyCommand.Execute(w);
                 })));
 
-        results.AddRange(_goals
+        results.AddRange(Planning.Goals
             .Where(g => Has(g.Name))
             .Take(MaxResultsPerKind)
             .Select(g => new SearchResult(Loc.T("Savings goal"), g.Name, Format.Money(g.Target),
                 () =>
                 {
                     CurrentPage = AppPage.Planning;
-                    PlanningTab = 0;
-                    EditGoalCommand.Execute(g);
+                    Planning.PlanningTab = 0;
+                    Planning.EditGoalCommand.Execute(g);
                 })));
 
         results.AddRange(BankAccounts

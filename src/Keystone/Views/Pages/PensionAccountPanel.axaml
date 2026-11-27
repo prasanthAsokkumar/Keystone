@@ -1,0 +1,96 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.PensionAccountPanel"
+             x:DataType="vm:MainViewModel">
+    <!-- The form for a retirement account. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <TextBlock Text="{l:T 'Edit account'}" FontSize="20" FontWeight="Bold" />
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}"
+                    VerticalAlignment="Top">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
+                Padding="28,16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Button Classes="primary" Content="{l:T 'Save changes'}" HorizontalAlignment="Stretch"
+                        Command="{Binding Retirement.SavePensionAccountCommand}" />
+                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}"
+                        Command="{Binding ClosePanelCommand}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Spacing="18" Margin="28,12,28,20">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Pension fund, bank or insurer'}" />
+                    <TextBox Text="{Binding Retirement.PensionAccountName}" />
+                </StackPanel>
+                <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
+                        <ComboBox ItemsSource="{Binding Retirement.PillarNames}" SelectedIndex="{Binding Retirement.PensionPillarIndex}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
+                        <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding Retirement.PensionAccountPerson}" />
+                    </StackPanel>
+                </Grid>
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
+                    <TextBox Text="{Binding Retirement.PensionAccountNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"
+                             PlaceholderText="{l:T 'e.g. insurance number, contact person'}" />
+                </StackPanel>
+
+                <StackPanel Spacing="6">
+                    <Grid ColumnDefinitions="*,Auto">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Statements'}" VerticalAlignment="Center" />
+                        <Button Grid.Column="1" Classes="link" FontSize="12" Padding="0" Content="{l:T 'Add statement'}"
+                                Command="{Binding Retirement.AddStatementToCommand}" CommandParameter="{Binding Retirement.EditingPensionAccount}" />
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding Retirement.StatementHistory}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:PensionStatementRow">
+                                <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,0,0,1" Padding="0,8">
+                                    <Grid ColumnDefinitions="104,*,Auto,34,34,34" ColumnSpacing="8">
+                                        <TextBlock Text="{Binding DateText}" VerticalAlignment="Center" FontSize="13" />
+                                        <TextBlock Grid.Column="1" Text="{Binding ValueText}" FontWeight="SemiBold"
+                                                   VerticalAlignment="Center" />
+                                        <TextBlock Grid.Column="2" Text="{Binding ChangeText}" FontSize="12"
+                                                   VerticalAlignment="Center" Classes="positive"
+                                                   Classes.negative="{Binding IsChangeNegative}" MinWidth="70"
+                                                   TextAlignment="Right" />
+                                        <Button Grid.Column="3" Classes="icon" ToolTip.Tip="{l:T 'Open letter'}"
+                                                IsVisible="{Binding HasLetter}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).Retirement.OpenStatementLetterCommand}"
+                                                CommandParameter="{Binding Statement}">
+                                            <PathIcon Data="{StaticResource IconOpen}" />
+                                        </Button>
+                                        <Button Grid.Column="4" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).Retirement.EditStatementCommand}"
+                                                CommandParameter="{Binding Statement}">
+                                            <PathIcon Data="{StaticResource IconEdit}" />
+                                        </Button>
+                                        <Button Grid.Column="5" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).Retirement.DeleteStatementCommand}"
+                                                CommandParameter="{Binding Statement}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+
+                <TextBlock Classes="error" Text="{Binding Retirement.PensionAccountError}" IsVisible="{Binding Retirement.HasPensionAccountError}" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

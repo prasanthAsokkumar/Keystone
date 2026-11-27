@@ -7,17 +7,17 @@
     <!-- The side forms for a contract, an important date and a warranty. -->
     <Panel>
         <!-- Contract -->
-        <Border Classes="panel" Width="460" HorizontalAlignment="Right" IsVisible="{Binding IsContractPanelOpen}">
+        <Border Classes="panel" Width="460" HorizontalAlignment="Right" IsVisible="{Binding Deadlines.IsContractPanelOpen}">
             <DockPanel>
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
-                    <TextBlock Text="{Binding ContractFormTitle}" FontSize="20" FontWeight="Bold" />
+                    <TextBlock Text="{Binding Deadlines.ContractFormTitle}" FontSize="20" FontWeight="Bold" />
                     <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}">
                         <PathIcon Data="{StaticResource IconClose}" />
                     </Button>
                 </Grid>
                 <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="28,16">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                        <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding SaveContractCommand}" />
+                        <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding Deadlines.SaveContractCommand}" />
                         <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}" Command="{Binding ClosePanelCommand}" />
                     </Grid>
                 </Border>
@@ -29,27 +29,27 @@
                         <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Provider'}" />
-                                <TextBox Text="{Binding ContractProvider}" PlaceholderText="{l:T 'e.g. Swisscom, Fitnesspark'}" />
+                                <TextBox Text="{Binding Deadlines.ContractProvider}" PlaceholderText="{l:T 'e.g. Swisscom, Fitnesspark'}" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
-                                <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding ContractPerson}" />
+                                <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding Deadlines.ContractPerson}" />
                             </StackPanel>
                         </Grid>
                         <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
-                                <ComboBox ItemsSource="{Binding ContractKindNames}" SelectedIndex="{Binding ContractKindIndex}" />
+                                <ComboBox ItemsSource="{Binding Deadlines.ContractKindNames}" SelectedIndex="{Binding Deadlines.ContractKindIndex}" />
                             </StackPanel>
                         </Grid>
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Cost'}" />
-                                <NumericUpDown Value="{Binding ContractCost}" Minimum="0" FormatString="N2" PlaceholderText="0.00" ShowButtonSpinner="False" />
+                                <NumericUpDown Value="{Binding Deadlines.ContractCost}" Minimum="0" FormatString="N2" PlaceholderText="0.00" ShowButtonSpinner="False" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Paid'}" />
-                                <ComboBox ItemsSource="{Binding PremiumRecurrenceNames}" SelectedIndex="{Binding ContractRecurrenceIndex}" />
+                                <ComboBox ItemsSource="{Binding PremiumRecurrenceNames}" SelectedIndex="{Binding Deadlines.ContractRecurrenceIndex}" />
                             </StackPanel>
                         </Grid>
                         <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14">
@@ -57,26 +57,26 @@
                                 <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                                     <StackPanel Spacing="4">
                                         <TextBlock Classes="fieldLabel" Text="{l:T 'Minimum term ends on'}" />
-                                        <CalendarDatePicker SelectedDate="{Binding ContractEnd}" />
+                                        <CalendarDatePicker SelectedDate="{Binding Deadlines.ContractEnd}" />
                                     </StackPanel>
                                     <StackPanel Grid.Column="1" Spacing="4">
                                         <TextBlock Classes="fieldLabel" Text="{l:T 'Notice period (months)'}" />
-                                        <NumericUpDown Value="{Binding ContractNoticeMonths}" Minimum="0" Maximum="24" Increment="1" FormatString="0" />
+                                        <NumericUpDown Value="{Binding Deadlines.ContractNoticeMonths}" Minimum="0" Maximum="24" Increment="1" FormatString="0" />
                                     </StackPanel>
                                 </Grid>
-                                <CheckBox IsChecked="{Binding ContractRenews}" Content="{l:T 'Renews every year unless cancelled'}" />
-                                <TextBlock Classes="secondary" FontSize="13" Text="{Binding ContractCancelByText}" TextWrapping="Wrap" />
+                                <CheckBox IsChecked="{Binding Deadlines.ContractRenews}" Content="{l:T 'Renews every year unless cancelled'}" />
+                                <TextBlock Classes="secondary" FontSize="13" Text="{Binding Deadlines.ContractCancelByText}" TextWrapping="Wrap" />
                             </StackPanel>
                         </Border>
-                        <Expander Header="{l:T 'More details'}" IsExpanded="{Binding ContractMoreOpen}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
+                        <Expander Header="{l:T 'More details'}" IsExpanded="{Binding Deadlines.ContractMoreOpen}" HorizontalAlignment="Stretch" HorizontalContentAlignment="Stretch">
                             <StackPanel Spacing="18">
                                 <StackPanel Spacing="4">
                                     <TextBlock Classes="fieldLabel" Text="{l:T 'Customer number (optional)'}" />
-                                    <TextBox Text="{Binding ContractCustomerNumber}" />
+                                    <TextBox Text="{Binding Deadlines.ContractCustomerNumber}" />
                                 </StackPanel>
                                 <StackPanel Spacing="4">
                                     <TextBlock Classes="fieldLabel" Text="{l:T 'Contract document'}" />
-                                    <ComboBox ItemsSource="{Binding ContractDocumentOptions}" SelectedItem="{Binding ContractDocument}" HorizontalAlignment="Stretch">
+                                    <ComboBox ItemsSource="{Binding Deadlines.ContractDocumentOptions}" SelectedItem="{Binding Deadlines.ContractDocument}" HorizontalAlignment="Stretch">
                                 <ComboBox.ItemTemplate>
                                     <DataTemplate x:DataType="vm:DocumentOption">
                                         <StackPanel Spacing="1">
@@ -89,30 +89,30 @@
                                 </StackPanel>
                                 <StackPanel Spacing="4">
                                     <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
-                                    <TextBox Text="{Binding ContractNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" />
+                                    <TextBox Text="{Binding Deadlines.ContractNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" />
                                 </StackPanel>
                             </StackPanel>
                         </Expander>
-                        <CheckBox IsChecked="{Binding ContractAddToExpenses}" IsVisible="{Binding EditingContract, Converter={x:Static ObjectConverters.IsNull}}"
+                        <CheckBox IsChecked="{Binding Deadlines.ContractAddToExpenses}" IsVisible="{Binding Deadlines.EditingContract, Converter={x:Static ObjectConverters.IsNull}}"
                                   Content="{l:T 'Add the cost to expenses from next month, so your runway includes it'}" />
-                        <TextBlock Classes="error" Text="{Binding ContractError}" IsVisible="{Binding HasContractError}" />
+                        <TextBlock Classes="error" Text="{Binding Deadlines.ContractError}" IsVisible="{Binding Deadlines.HasContractError}" />
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>
         </Border>
 
         <!-- Important date -->
-        <Border Classes="panel" Width="440" HorizontalAlignment="Right" IsVisible="{Binding IsImportantDatePanelOpen}">
+        <Border Classes="panel" Width="440" HorizontalAlignment="Right" IsVisible="{Binding Deadlines.IsImportantDatePanelOpen}">
             <DockPanel>
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
-                    <TextBlock Text="{Binding ImportantDateFormTitle}" FontSize="20" FontWeight="Bold" />
+                    <TextBlock Text="{Binding Deadlines.ImportantDateFormTitle}" FontSize="20" FontWeight="Bold" />
                     <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}">
                         <PathIcon Data="{StaticResource IconClose}" />
                     </Button>
                 </Grid>
                 <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="28,16">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                        <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding SaveImportantDateCommand}" />
+                        <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding Deadlines.SaveImportantDateCommand}" />
                         <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}" Command="{Binding ClosePanelCommand}" />
                     </Grid>
                 </Border>
@@ -124,53 +124,53 @@
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
-                                <ComboBox ItemsSource="{Binding ImportantDateKindNames}" SelectedIndex="{Binding ImportantDateKindIndex}" />
+                                <ComboBox ItemsSource="{Binding Deadlines.ImportantDateKindNames}" SelectedIndex="{Binding Deadlines.ImportantDateKindIndex}" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
-                                <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding ImportantDatePerson}" />
+                                <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding Deadlines.ImportantDatePerson}" />
                             </StackPanel>
                         </Grid>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'What'}" />
-                            <TextBox Text="{Binding ImportantDateTitle}" PlaceholderText="{l:T 'e.g. Passport Anna'}" />
+                            <TextBox Text="{Binding Deadlines.ImportantDateTitle}" PlaceholderText="{l:T 'e.g. Passport Anna'}" />
                         </StackPanel>
                         <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Date (expires or due)'}" />
-                                <CalendarDatePicker SelectedDate="{Binding ImportantDateDate}" />
+                                <CalendarDatePicker SelectedDate="{Binding Deadlines.ImportantDateDate}" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Repeats'}" />
-                                <ComboBox ItemsSource="{Binding RepeatMonthNames}" SelectedIndex="{Binding ImportantDateRepeatIndex}" />
+                                <ComboBox ItemsSource="{Binding Deadlines.RepeatMonthNames}" SelectedIndex="{Binding Deadlines.ImportantDateRepeatIndex}" />
                             </StackPanel>
                         </Grid>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'Remind me this many days before'}" />
-                            <NumericUpDown Value="{Binding ImportantDateRemindDays}" Minimum="0" Maximum="365" Increment="7" FormatString="0" />
+                            <NumericUpDown Value="{Binding Deadlines.ImportantDateRemindDays}" Minimum="0" Maximum="365" Increment="7" FormatString="0" />
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
-                            <TextBox Text="{Binding ImportantDateNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" />
+                            <TextBox Text="{Binding Deadlines.ImportantDateNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64" />
                         </StackPanel>
-                        <TextBlock Classes="error" Text="{Binding ImportantDateError}" IsVisible="{Binding HasImportantDateError}" />
+                        <TextBlock Classes="error" Text="{Binding Deadlines.ImportantDateError}" IsVisible="{Binding Deadlines.HasImportantDateError}" />
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>
         </Border>
 
         <!-- Warranty -->
-        <Border Classes="panel" Width="440" HorizontalAlignment="Right" IsVisible="{Binding IsWarrantyPanelOpen}">
+        <Border Classes="panel" Width="440" HorizontalAlignment="Right" IsVisible="{Binding Deadlines.IsWarrantyPanelOpen}">
             <DockPanel>
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
-                    <TextBlock Text="{Binding WarrantyFormTitle}" FontSize="20" FontWeight="Bold" />
+                    <TextBlock Text="{Binding Deadlines.WarrantyFormTitle}" FontSize="20" FontWeight="Bold" />
                     <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}">
                         <PathIcon Data="{StaticResource IconClose}" />
                     </Button>
                 </Grid>
                 <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="28,16">
                     <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
-                        <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding SaveWarrantyCommand}" />
+                        <Button Classes="primary" Content="{l:T 'Save'}" HorizontalAlignment="Stretch" Command="{Binding Deadlines.SaveWarrantyCommand}" />
                         <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}" Command="{Binding ClosePanelCommand}" />
                     </Grid>
                 </Border>
@@ -181,36 +181,36 @@
                         </Border>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'What you bought'}" />
-                            <TextBox Text="{Binding WarrantyItem}" PlaceholderText="{l:T 'e.g. Washing machine V-ZUG'}" />
+                            <TextBox Text="{Binding Deadlines.WarrantyItem}" PlaceholderText="{l:T 'e.g. Washing machine V-ZUG'}" />
                         </StackPanel>
                         <Grid ColumnDefinitions="3*,2*" ColumnSpacing="12">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Shop'}" />
-                                <TextBox Text="{Binding WarrantyStore}" PlaceholderText="{l:T 'e.g. Fust, Digitec'}" />
+                                <TextBox Text="{Binding Deadlines.WarrantyStore}" PlaceholderText="{l:T 'e.g. Fust, Digitec'}" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
-                                <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding WarrantyPerson}" />
+                                <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding Deadlines.WarrantyPerson}" />
                             </StackPanel>
                         </Grid>
                         <Grid ColumnDefinitions="*,*,*" ColumnSpacing="12">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Bought on'}" />
-                                <CalendarDatePicker SelectedDate="{Binding WarrantyPurchaseDate}" />
+                                <CalendarDatePicker SelectedDate="{Binding Deadlines.WarrantyPurchaseDate}" />
                             </StackPanel>
                             <StackPanel Grid.Column="1" Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Price'}" />
-                                <NumericUpDown Value="{Binding WarrantyPrice}" Minimum="0" FormatString="N2" PlaceholderText="0.00" ShowButtonSpinner="False" />
+                                <NumericUpDown Value="{Binding Deadlines.WarrantyPrice}" Minimum="0" FormatString="N2" PlaceholderText="0.00" ShowButtonSpinner="False" />
                             </StackPanel>
                             <StackPanel Grid.Column="2" Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Months'}" />
-                                <NumericUpDown Value="{Binding WarrantyMonths}" Minimum="1" Maximum="240" Increment="12" FormatString="0" />
+                                <NumericUpDown Value="{Binding Deadlines.WarrantyMonths}" Minimum="1" Maximum="240" Increment="12" FormatString="0" />
                             </StackPanel>
                         </Grid>
-                        <TextBlock Classes="secondary" FontSize="13" Text="{Binding WarrantyEndText}" />
+                        <TextBlock Classes="secondary" FontSize="13" Text="{Binding Deadlines.WarrantyEndText}" />
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'Receipt'}" />
-                            <ComboBox ItemsSource="{Binding WarrantyDocumentOptions}" SelectedItem="{Binding WarrantyDocument}" HorizontalAlignment="Stretch">
+                            <ComboBox ItemsSource="{Binding Deadlines.WarrantyDocumentOptions}" SelectedItem="{Binding Deadlines.WarrantyDocument}" HorizontalAlignment="Stretch">
                         <ComboBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:DocumentOption">
                                 <StackPanel Spacing="1">
@@ -223,10 +223,10 @@
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
-                            <TextBox Text="{Binding WarrantyNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"
+                            <TextBox Text="{Binding Deadlines.WarrantyNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="64"
                                      PlaceholderText="{l:T 'e.g. serial number, extended warranty'}" />
                         </StackPanel>
-                        <TextBlock Classes="error" Text="{Binding WarrantyError}" IsVisible="{Binding HasWarrantyError}" />
+                        <TextBlock Classes="error" Text="{Binding Deadlines.WarrantyError}" IsVisible="{Binding Deadlines.HasWarrantyError}" />
                     </StackPanel>
                 </ScrollViewer>
             </DockPanel>

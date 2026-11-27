@@ -22,9 +22,11 @@ public sealed record PensionAccountOption(PensionAccount? Account, string Name)
 /// The Retirement page: Swiss retirement provision per household member, kept up to date from
 /// the yearly letters of the pension fund, 3a providers and AHV.
 /// </summary>
-public partial class MainViewModel
+/// <remarks>Its own view model; shared things (people, entries, the local AI) come from the main one.</remarks>
+public sealed partial class RetirementViewModel(MainViewModel main) : ViewModelBase
 {
-    private readonly List<PensionAccount> _pensionAccounts = [];
+    /// <summary>Every retirement account.</summary>
+    internal List<PensionAccount> All { get; } = [];
     private CancellationTokenSource? _statementCancellation;
 
     public IReadOnlyList<string> PillarNames => Enum.GetValues<PensionPillar>().Select(PensionAccount.PillarName).ToList();
@@ -40,7 +42,7 @@ public partial class MainViewModel
 
     public bool HasPensionAccounts => PensionAccountRows.Count > 0;
 
-    public string RetirementEmptyText => _pensionAccounts.Count == 0
+    public string RetirementEmptyText => All.Count == 0
         ? Loc.T("No retirement accounts yet. Drop your pension fund certificate or 3a statement here, or click Add statement.")
         : Loc.T("No accounts for this person.");
 
@@ -68,7 +70,7 @@ public partial class MainViewModel
 
     public bool HasPillar3aRows => Pillar3aRows.Count > 0;
 
-    public string Pillar3aTitle => Loc.F("Pillar 3a in {0}", Today.Year);
+    public string Pillar3aTitle => Loc.F("Pillar 3a in {0}", MainViewModel.Today.Year);
 
     public string Pillar3aHint => Loc.F(
         "Payments up to the limit are deducted from your taxable income, if paid by 31 December. Add them as expenses in the category “{0}”.",
@@ -80,35 +82,32 @@ public partial class MainViewModel
         Loc.T("1st pillar, AHV: the state pension. Your AHV office can project your pension (“Rentenvorausberechnung”)."),
         Loc.T("2nd pillar, pension fund: you and your employer save for you. Your pension certificate (“Vorsorgeausweis”) comes every year."),
         Loc.F("Pillar 3a: up to {0} a year with a pension fund, or 20% of net earned income up to {1} without one ({2}). Payments are deducted from taxable income.",
-            Format.Money(SwissPension.Pillar3aLimit(Today.Year, true)), Format.Money(SwissPension.Pillar3aLimit(Today.Year, false)),
-            Math.Min(Today.Year, SwissPension.LatestKnownLimitYear)),
+            Format.Money(SwissPension.Pillar3aLimit(MainViewModel.Today.Year, true)), Format.Money(SwissPension.Pillar3aLimit(MainViewModel.Today.Year, false)),
+            Math.Min(MainViewModel.Today.Year, SwissPension.LatestKnownLimitYear)),
         Loc.T("Missed 3a years from 2025 on can be paid in later, up to 10 years back."),
         Loc.F("Retirement age is {0}. 3a money can be drawn from {1}; pension funds pay a pension or, often, part of it as capital.",
             SwissPension.RetirementAge, SwissPension.Pillar3aEarliestWithdrawalAge),
         Loc.T("Capital withdrawals are taxed separately at a lower rate. Spreading them over several years usually saves tax."),
     ];
 
-    private async Task LoadRetirementAsync()
+    internal async Task LoadRetirementAsync()
     {
-        _pensionAccounts.Clear();
-        _pensionAccounts.AddRange(await repository.GetPensionAccountsAsync());
+        All.Clear();
+        All.AddRange(await main.repository.GetPensionAccountsAsync());
         RefreshRetirement();
     }
 
-    private string PersonName(int? personId) =>
-        personId is { } id && People.FirstOrDefault(p => p.Id == id) is { } person ? person.Name : PersonOption.Shared.ToString();
-
     /// <summary>Rebuilds the account list, totals and 3a progress.</summary>
-    private void RefreshRetirement()
+    internal void RefreshRetirement()
     {
         var filter = RetirementPersonFilter ?? PersonOption.Everyone;
-        var accounts = _pensionAccounts
+        var accounts = All
             .Where(a => filter.IsEveryone || a.PersonId == filter.Id)
             .OrderBy(a => a.Pillar)
-            .ThenBy(a => PersonName(a.PersonId), StringComparer.CurrentCultureIgnoreCase)
+            .ThenBy(a => main.PersonName(a.PersonId), StringComparer.CurrentCultureIgnoreCase)
             .ThenBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
-        PensionAccountRows = Sorted("pensionAccounts", accounts.Select(a => new PensionAccountRow(a, PersonName(a.PersonId))), null,
+        PensionAccountRows = main.Sorted("pensionAccounts", accounts.Select(a => new PensionAccountRow(a, main.PersonName(a.PersonId))), null,
             new SortKey<PensionAccountRow>("name", r => r.Name),
             new SortKey<PensionAccountRow>("person", r => r.PersonName),
             new SortKey<PensionAccountRow>("pillar", r => (int)r.Account.Pillar),
@@ -149,33 +148,33 @@ public partial class MainViewModel
     /// <summary>For each person with a 3a account or 3a payments, what is paid in this year against the limit.</summary>
     private void RefreshPillar3a(PersonOption filter)
     {
-        Pillar3aRows = Pillar3aRowsFor(filter, Today.Year);
+        Pillar3aRows = Pillar3aRowsFor(filter, MainViewModel.Today.Year);
         OnPropertyChanged(nameof(Pillar3aTitle));
-        ScheduleReminders();
+        main.ScheduleReminders();
     }
 
-    private IReadOnlyList<Pillar3aRow> Pillar3aRowsForReminders() => Pillar3aRowsFor(PersonOption.Everyone, Today.Year);
+    internal IReadOnlyList<Pillar3aRow> Pillar3aRowsForReminders() => Pillar3aRowsFor(PersonOption.Everyone, MainViewModel.Today.Year);
 
     /// <summary>Pillar 3a payments in <paramref name="year"/> per person, against that year's limit.</summary>
     internal IReadOnlyList<Pillar3aRow> Pillar3aRowsFor(PersonOption filter, int year)
     {
         var payments = Schedule.Expand(
-                Transactions.Where(t => t.Type == TransactionType.Expense && t.Category == Categories.Pillar3a),
+                main.Transactions.Where(t => t.Type == TransactionType.Expense && t.Category == Categories.Pillar3a),
                 new DateOnly(year, 1, 1), new DateOnly(year, 12, 31))
             .ToList();
 
-        var personIds = _pensionAccounts.Where(a => a.Pillar == PensionPillar.Pillar3a).Select(a => a.PersonId)
+        var personIds = All.Where(a => a.Pillar == PensionPillar.Pillar3a).Select(a => a.PersonId)
             .Concat(payments.Select(p => p.Source.PersonId))
             .Distinct()
             .Where(id => filter.IsEveryone || id == filter.Id)
-            .OrderBy(id => PersonName(id), StringComparer.CurrentCultureIgnoreCase);
+            .OrderBy(id => main.PersonName(id), StringComparer.CurrentCultureIgnoreCase);
 
         return personIds.Select(id =>
         {
-            var hasPensionFund = _pensionAccounts.Any(a => a.PersonId == id && a.Pillar == PensionPillar.PensionFund);
+            var hasPensionFund = All.Any(a => a.PersonId == id && a.Pillar == PensionPillar.PensionFund);
             var paid = payments.Where(p => p.Source.PersonId == id).Sum(p => p.Amount);
-            var paidByToday = payments.Where(p => p.Source.PersonId == id && p.Date <= Today).Sum(p => p.Amount);
-            return new Pillar3aRow(id, PersonName(id), paid, paidByToday, SwissPension.Pillar3aLimit(year, hasPensionFund), hasPensionFund);
+            var paidByToday = payments.Where(p => p.Source.PersonId == id && p.Date <= MainViewModel.Today).Sum(p => p.Amount);
+            return new Pillar3aRow(id, main.PersonName(id), paid, paidByToday, SwissPension.Pillar3aLimit(year, hasPensionFund), hasPensionFund);
         }).ToList();
     }
 
@@ -183,18 +182,17 @@ public partial class MainViewModel
     [RelayCommand]
     private void AddPillar3aPayment(Pillar3aRow row)
     {
-        NewEntry();
-        NewIsIncome = false;
-        NewDescription = Loc.T("Pillar 3a");
-        NewCategory = Categories.Display(Categories.Pillar3a);
-        NewAmount = row.Left > 0 ? row.Left : null;
-        NewPerson = PersonOptions.FirstOrDefault(o => o.Id == row.PersonId) ?? PersonOption.Shared;
+        main.NewEntry();
+        main.NewIsIncome = false;
+        main.NewDescription = Loc.T("Pillar 3a");
+        main.NewCategory = Categories.Display(Categories.Pillar3a);
+        main.NewAmount = row.Left > 0 ? row.Left : null;
+        main.NewPerson = main.PersonOptions.FirstOrDefault(o => o.Id == row.PersonId) ?? PersonOption.Shared;
     }
 
     // ── Statement panel ─────────────────────────────────────────────────────
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsStatementPanelOpen { get; set; }
 
     [ObservableProperty]
@@ -285,9 +283,9 @@ public partial class MainViewModel
     {
         StatementAccountOptions =
         [
-            .. _pensionAccounts
+            .. All
                 .OrderBy(a => a.Pillar).ThenBy(a => a.Name, StringComparer.CurrentCultureIgnoreCase)
-                .Select(a => new PensionAccountOption(a, $"{a.Name} · {PersonName(a.PersonId)}")),
+                .Select(a => new PensionAccountOption(a, $"{a.Name} · {main.PersonName(a.PersonId)}")),
             new PensionAccountOption(null, ""),
         ];
         StatementAccount = StatementAccountOptions.FirstOrDefault(o => o.Account == select && select is not null)
@@ -296,7 +294,7 @@ public partial class MainViewModel
 
     /// <summary>The person new accounts are for: the one being looked at, else the first household member.</summary>
     private PersonOption DefaultPensionPerson =>
-        RetirementPersonFilter is { IsEveryone: false } person ? person : PersonOptions.FirstOrDefault(o => o.Id is not null) ?? PersonOption.Shared;
+        RetirementPersonFilter is { IsEveryone: false } person ? person : main.PersonOptions.FirstOrDefault(o => o.Id is not null) ?? PersonOption.Shared;
 
     [RelayCommand]
     private void NewStatement() => OpenStatementPanel(PensionAccountRows.FirstOrDefault()?.Account);
@@ -306,12 +304,12 @@ public partial class MainViewModel
 
     private void OpenStatementPanel(PensionAccount? account)
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         ResetStatementForm();
         RefreshStatementAccountOptions(account);
         NewPensionPerson = DefaultPensionPerson;
         // Most letters show the figures at the end of last year.
-        StatementDate = new DateTime(Today.Year - 1, 12, 31);
+        StatementDate = new DateTime(MainViewModel.Today.Year - 1, 12, 31);
         IsStatementPanelOpen = true;
     }
 
@@ -321,7 +319,7 @@ public partial class MainViewModel
         OpenStatementPanel(PensionAccountRows.FirstOrDefault()?.Account);
         _statementLetterPath = path;
         StatementLetterName = Path.GetFileName(path);
-        if (IsImportEnabled && DocumentReader.IsSupported(path))
+        if (main.IsImportEnabled && DocumentReader.IsSupported(path))
             await FillStatementAsync(path);
     }
 
@@ -330,7 +328,7 @@ public partial class MainViewModel
     {
         _statementLetterPath = path;
         StatementLetterName = Path.GetFileName(path);
-        if (IsImportEnabled && DocumentReader.IsSupported(path))
+        if (main.IsImportEnabled && DocumentReader.IsSupported(path))
             await FillStatementAsync(path);
     }
 
@@ -339,11 +337,11 @@ public partial class MainViewModel
         _statementCancellation?.Cancel();
         var cancellation = _statementCancellation = new CancellationTokenSource();
         IsStatementAiBusy = true;
-        StatementAiStatus = Loc.F("Reading the letter with {0}. You can type while it works…", AiModel);
+        StatementAiStatus = Loc.F("Reading the letter with {0}. You can type while it works…", main.AiModel);
         try
         {
             var content = await DocumentReader.ReadAsync(path);
-            var details = await _ai.ExtractPensionStatementAsync(content, AiEndpoint, AiModel, HouseholdNames, cancellation.Token);
+            var details = await main._ai.ExtractPensionStatementAsync(content, main.AiEndpoint, main.AiModel, main.HouseholdNames, cancellation.Token);
             if (cancellation.IsCancellationRequested)
                 return;
             ApplyStatementDetails(details);
@@ -366,13 +364,13 @@ public partial class MainViewModel
     /// <summary>Fills what the model found, picking the matching account or preparing a new one.</summary>
     public void ApplyStatementDetails(PensionStatementDetails details)
     {
-        var person = MatchPersonOption(details.Person);
+        var person = main.MatchPersonOption(details.Person);
         if (person is not null)
             NewPensionPerson = person;
 
         if (CanChooseStatementAccount && (details.Pillar is not null || details.Provider != ""))
         {
-            var match = _pensionAccounts
+            var match = All
                 .Where(a => details.Pillar is null || a.Pillar == details.Pillar ||
                             (a.Pillar is PensionPillar.PensionFund or PensionPillar.VestedBenefits &&
                              details.Pillar is PensionPillar.PensionFund or PensionPillar.VestedBenefits))
@@ -382,7 +380,7 @@ public partial class MainViewModel
                 .Where(a => person is null || a.PersonId == person.Id)
                 .OrderBy(a => a.PersonId == DefaultPensionPerson.Id ? 0 : 1)
                 .FirstOrDefault();
-            if (match is not null && (details.Provider != "" || _pensionAccounts.Count(a => a.Pillar == match.Pillar) == 1))
+            if (match is not null && (details.Provider != "" || All.Count(a => a.Pillar == match.Pillar) == 1))
             {
                 StatementAccount = StatementAccountOptions.First(o => o.Account == match);
             }
@@ -408,8 +406,8 @@ public partial class MainViewModel
     [RelayCommand]
     private void EditStatement(PensionStatement statement)
     {
-        var account = _pensionAccounts.First(a => a.Id == statement.AccountId);
-        CloseOtherPanels();
+        var account = All.First(a => a.Id == statement.AccountId);
+        main.CloseOtherPanels();
         ResetStatementForm();
         EditingStatement = statement;
         RefreshStatementAccountOptions(account);
@@ -470,15 +468,15 @@ public partial class MainViewModel
         {
             if (account.Id == 0)
             {
-                await repository.SavePensionAccountAsync(account);
-                _pensionAccounts.Add(account);
+                await main.repository.SavePensionAccountAsync(account);
+                All.Add(account);
             }
             values.AccountId = account.Id;
 
             if (_statementLetterPath is { } letter)
                 values.DocumentId = await FileStatementLetterAsync(letter, account, date);
 
-            await repository.SavePensionStatementAsync(values);
+            await main.repository.SavePensionStatementAsync(values);
         }
         catch (Exception ex)
         {
@@ -493,7 +491,7 @@ public partial class MainViewModel
         RefreshRetirement();
         if (EditingPensionAccount == account)
             RefreshStatementHistory();
-        CurrentPage = AppPage.Retirement;
+        main.CurrentPage = AppPage.Retirement;
     }
 
     /// <summary>Files the letter in Documents as a statement for the account's person.</summary>
@@ -508,11 +506,11 @@ public partial class MainViewModel
             Date = date,
             AddedAt = DateTime.Now,
         };
-        var personName = account.PersonId is null ? null : PersonName(account.PersonId);
-        document.RelativePath = await Task.Run(() => _documentStore.Add(path, document, personName));
-        await repository.AddDocumentAsync(document);
-        Documents.Add(document);
-        RefreshDocumentRows();
+        var personName = account.PersonId is null ? null : main.PersonName(account.PersonId);
+        document.RelativePath = await Task.Run(() => main._documentStore.Add(path, document, personName));
+        await main.repository.AddDocumentAsync(document);
+        main.Documents.Add(document);
+        main.RefreshDocumentRows();
         return document.Id;
     }
 
@@ -520,8 +518,8 @@ public partial class MainViewModel
     [RelayCommand]
     private void OpenStatementLetter(PensionStatement statement)
     {
-        if (Documents.FirstOrDefault(d => d.Id == statement.DocumentId) is { } document)
-            OpenDocument(document);
+        if (main.Documents.FirstOrDefault(d => d.Id == statement.DocumentId) is { } document)
+            main.OpenDocument(document);
     }
 
     private void CloseStatementPanel()
@@ -552,7 +550,6 @@ public partial class MainViewModel
     // ── Account panel ───────────────────────────────────────────────────────
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsPensionAccountPanelOpen { get; set; }
 
     [ObservableProperty]
@@ -582,11 +579,11 @@ public partial class MainViewModel
     [RelayCommand]
     private void EditPensionAccount(PensionAccount account)
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingPensionAccount = account;
         PensionAccountName = account.Name;
         PensionPillarIndex = (int)account.Pillar;
-        PensionAccountPerson = PersonOptions.FirstOrDefault(o => o.Id == account.PersonId) ?? PersonOption.Shared;
+        PensionAccountPerson = main.PersonOptions.FirstOrDefault(o => o.Id == account.PersonId) ?? PersonOption.Shared;
         PensionAccountNotes = account.Notes;
         PensionAccountError = null;
         RefreshStatementHistory();
@@ -622,7 +619,7 @@ public partial class MainViewModel
         account.Notes = PensionAccountNotes.Trim();
         try
         {
-            await repository.SavePensionAccountAsync(account);
+            await main.repository.SavePensionAccountAsync(account);
         }
         catch (Exception ex)
         {
@@ -641,15 +638,15 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.DeletePensionAccountAsync(account.Id);
+            await main.repository.DeletePensionAccountAsync(account.Id);
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
             return;
         }
 
-        _pensionAccounts.Remove(account);
+        All.Remove(account);
         if (EditingPensionAccount == account)
             ClosePensionAccountPanel();
         RefreshRetirement();
@@ -660,7 +657,7 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.DeletePensionStatementAsync(statement.Id);
+            await main.repository.DeletePensionStatementAsync(statement.Id);
         }
         catch (Exception ex)
         {
@@ -668,7 +665,7 @@ public partial class MainViewModel
             return;
         }
 
-        _pensionAccounts.FirstOrDefault(a => a.Id == statement.AccountId)?.Statements.Remove(statement);
+        All.FirstOrDefault(a => a.Id == statement.AccountId)?.Statements.Remove(statement);
         RefreshStatementHistory();
         RefreshRetirement();
     }
@@ -681,7 +678,7 @@ public partial class MainViewModel
         PensionAccountError = null;
     }
 
-    private void CloseRetirementPanels()
+    internal void CloseRetirementPanels()
     {
         if (IsStatementPanelOpen)
             CloseStatementPanel();

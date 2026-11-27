@@ -87,33 +87,33 @@ public partial class MainViewModel
             .Select(d => new BillReminder(d.Id,
                 d.HasInstalments ? Loc.F("{0} (instalment {1} of {2})", d.Title, d.NextInstalmentNumber, d.Instalments.Count) : d.Title,
                 d.Sender, d.NextAmount, d.NextDueDate!.Value)),
-        _tasks.Where(t => !t.IsDone && t.DueDate is not null).Select(t => new TaskReminder(t.Id, t.Title, t.DueDate!.Value)),
+        Tasks.All.Where(t => !t.IsDone && t.DueDate is not null).Select(t => new TaskReminder(t.Id, t.Title, t.DueDate!.Value)),
         _policies.Where(p => !p.HasEnded(Today))
             .Select(p => (Policy: p, Deadline: p.NextDeadline(Today)))
             .Where(x => x.Deadline is not null)
             .Select(x => new DeadlineReminder(x.Policy.Id, x.Policy.Insurer, InsurancePolicy.KindName(x.Policy.Kind), x.Deadline!.Value.CancelBy,
                 x.Policy.PersonId is null ? "" : PersonName(x.Policy.PersonId))),
-        Pillar3aRowsForReminders().Select(r => new Pillar3aReminder(r.PersonName, r.Left, Today.Year)),
+        Retirement.Pillar3aRowsForReminders().Select(r => new Pillar3aReminder(r.PersonName, r.Left, Today.Year)),
         now, ReminderHour,
-        _contracts.Where(c => !c.HasEnded(Today))
+        Deadlines.Contracts.Where(c => !c.HasEnded(Today))
             .Select(c => (Contract: c, Deadline: c.NextDeadline(Today)))
             .Where(x => x.Deadline is not null)
             .Select(x => new DeadlineReminder(x.Contract.Id, x.Contract.Provider, Contract.KindName(x.Contract.Kind), x.Deadline!.Value.CancelBy,
                 x.Contract.PersonId is null ? "" : PersonName(x.Contract.PersonId))),
-        _dates.Where(d => !d.HasPassed(Today))
+        Deadlines.Dates.Where(d => !d.HasPassed(Today))
             .Select(d => new DateReminder(d.Id, d.Title, d.NextDate(Today), d.RemindDaysBefore, d.PersonId is null ? "" : PersonName(d.PersonId))),
-        _warranties.Where(w => !w.HasExpired(Today)).Select(w => new WarrantyReminder(w.Id, w.Item, w.ExpiresOn)),
-        AppointmentReminders(ReminderHour),
-        _medicines.Where(m => m.IsTaken(Today) || m.StartedOn > Today)
+        Deadlines.Warranties.Where(w => !w.HasExpired(Today)).Select(w => new WarrantyReminder(w.Id, w.Item, w.ExpiresOn)),
+        Appointments.AppointmentReminders(ReminderHour),
+        Medicines.All.Where(m => m.IsTaken(Today) || m.StartedOn > Today)
             .Select(m => new MedicineReminder(m.Id, $"{m.Name} {m.Strength}".Trim(), m.PersonId is null ? "" : PersonName(m.PersonId),
                 m.EndsOn is { } end && m.RunsOutOn > end ? null : m.RunsOutOn, m.PrescriptionUntil, m.PrescribedBy)),
-        _sickLeaves.Where(l => l.IsOngoing(Today) && !l.CertificateSent)
-            .Select(l => (Leave: l, Day: CertificateDayOf(l)))
-            .Select(x => new CertificateReminder(x.Leave.Id, PersonName(x.Leave.PersonId), JobOf(x.Leave)?.Employer ?? "",
+        Work.SickLeaves.Where(l => l.IsOngoing(Today) && !l.CertificateSent)
+            .Select(l => (Leave: l, Day: Work.CertificateDayOf(l)))
+            .Select(x => new CertificateReminder(x.Leave.Id, PersonName(x.Leave.PersonId), Work.JobOf(x.Leave)?.Employer ?? "",
                 x.Leave.CertificateDueOn(x.Day), x.Day)));
 
     /// <summary>Re-plans reminders shortly after a change; many changes in a row plan only once.</summary>
-    private void ScheduleReminders()
+    internal void ScheduleReminders()
     {
         if (_isLoading)
             return;

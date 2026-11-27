@@ -1,0 +1,198 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.DocumentPanel"
+             x:DataType="vm:MainViewModel">
+    <!-- The form for a filed document. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <StackPanel Spacing="2">
+                <TextBlock Text="{Binding DocumentFormTitle}" FontSize="20" FontWeight="Bold" />
+                <TextBlock Classes="muted" FontSize="13" Text="{Binding DocumentFileName}"
+                           TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}"
+                    VerticalAlignment="Top">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
+                Padding="28,16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Button Classes="primary" Content="{Binding DocumentSubmitText}" HorizontalAlignment="Stretch"
+                        Command="{Binding SaveDocumentCommand}" />
+                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}"
+                        Command="{Binding ClosePanelCommand}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Spacing="18" Margin="28,12,28,20">
+                <Border Background="{DynamicResource WarningSoft}" CornerRadius="10" Padding="14,12"
+                        IsVisible="{Binding HasDocumentDuplicate}">
+                    <StackPanel Spacing="10">
+                        <TextBlock Text="{Binding DocumentDuplicateText}" TextWrapping="Wrap" FontWeight="Medium" />
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <Button Classes="secondary" Content="{l:T 'Show it'}" Command="{Binding ShowDuplicateDocumentCommand}" />
+                            <Button Classes="secondary" Content="{l:T 'Skip this file'}" Command="{Binding SkipDuplicateDocumentCommand}" />
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Spacing="8" IsVisible="{Binding HasDocumentAiStatus}">
+                    <ProgressBar Classes="thin" IsIndeterminate="True" IsVisible="{Binding IsDocumentAiBusy}" />
+                    <TextBlock Classes="muted" Text="{Binding DocumentAiStatus}" TextWrapping="Wrap" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
+                        <ComboBox ItemsSource="{Binding DocumentKindNames}" SelectedIndex="{Binding DocumentKindIndex}"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
+                        <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding DocumentPerson}"
+                                  HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Title'}" />
+                    <TextBox Text="{Binding DocumentTitle}" PlaceholderText="{l:T 'e.g. Health insurance premium 2027'}" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'From'}" />
+                        <TextBox Text="{Binding DocumentSender}" PlaceholderText="{l:T 'e.g. Helsana'}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Document date'}" />
+                        <CalendarDatePicker SelectedDate="{Binding DocumentDate}" HorizontalAlignment="Stretch" />
+                    </StackPanel>
+                </Grid>
+
+                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14"
+                        IsVisible="{Binding DocumentIsPayable}">
+                    <StackPanel Spacing="12">
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Amount to pay'}" />
+                                <NumericUpDown Value="{Binding DocumentAmount}" Minimum="0" FormatString="N2"
+                                               PlaceholderText="0.00" ShowButtonSpinner="False" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Due on'}" />
+                                <CalendarDatePicker SelectedDate="{Binding DocumentDueDate}"
+                                                    HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                        </Grid>
+                        <Border Background="{DynamicResource Surface}" CornerRadius="8" Padding="12,10"
+                                IsVisible="{Binding HasPaymentDetails}">
+                            <StackPanel Spacing="8">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <PathIcon Data="{StaticResource IconQr}" Width="16" Height="16" Foreground="{DynamicResource Brand}" />
+                                    <TextBlock Grid.Column="1" Classes="fieldLabel" Text="{l:T 'Payment details'}" VerticalAlignment="Center" />
+                                    <Button Grid.Column="2" Classes="link" FontSize="12" Padding="0" Content="{l:T 'Copy all'}"
+                                            Command="{Binding CopyAllPaymentDetailsCommand}" />
+                                </Grid>
+                                <Grid ColumnDefinitions="70,*,Auto" RowDefinitions="Auto,Auto" ColumnSpacing="8" RowSpacing="6">
+                                    <TextBlock Classes="muted" FontSize="12" Text="{l:T 'Account'}" VerticalAlignment="Center" />
+                                    <TextBox Grid.Column="1" Text="{Binding DocumentPaymentIban}" FontFamily="Menlo, monospace" FontSize="12" />
+                                    <Button Grid.Column="2" Classes="icon" ToolTip.Tip="{l:T 'Copy'}"
+                                            Command="{Binding CopyPaymentTextCommand}" CommandParameter="{Binding DocumentPaymentIban}">
+                                        <PathIcon Data="{StaticResource IconCopy}" />
+                                    </Button>
+                                    <TextBlock Grid.Row="1" Classes="muted" FontSize="12" Text="{l:T 'Reference'}" VerticalAlignment="Center" />
+                                    <TextBox Grid.Row="1" Grid.Column="1" Text="{Binding DocumentPaymentReference}" FontFamily="Menlo, monospace" FontSize="12" />
+                                    <Button Grid.Row="1" Grid.Column="2" Classes="icon" ToolTip.Tip="{l:T 'Copy'}"
+                                            Command="{Binding CopyPaymentTextCommand}" CommandParameter="{Binding DocumentPaymentReference}">
+                                        <PathIcon Data="{StaticResource IconCopy}" />
+                                    </Button>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                        <CheckBox IsChecked="{Binding DocumentIsPaid}" Content="{l:T 'Already paid'}"
+                                  IsVisible="{Binding CanTickDocumentPaid}" />
+                        <CheckBox IsChecked="{Binding DocumentPaysInInstalments}" IsVisible="{Binding CanPayDocumentInInstalments}"
+                                  Content="{l:T 'Pay in instalments'}"
+                                  ToolTip.Tip="{l:T 'For a bill too big to pay at once, e.g. taxes you agreed to pay in parts'}" />
+                        <StackPanel Spacing="10" IsVisible="{Binding DocumentPaysInInstalments}">
+                            <Grid ColumnDefinitions="*,*,1.4*" ColumnSpacing="10">
+                                <StackPanel Spacing="4">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Instalments'}" />
+                                    <NumericUpDown Value="{Binding InstalmentCount}" Minimum="2" Maximum="36" Increment="1"
+                                                   FormatString="0" MinWidth="0" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="1" Spacing="4">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'Every … months'}" />
+                                    <NumericUpDown Value="{Binding InstalmentEveryMonths}" Minimum="1" Maximum="12" Increment="1"
+                                                   FormatString="0" MinWidth="0" />
+                                </StackPanel>
+                                <StackPanel Grid.Column="2" Spacing="4">
+                                    <TextBlock Classes="fieldLabel" Text="{l:T 'First one on'}" />
+                                    <CalendarDatePicker SelectedDate="{Binding InstalmentFirstDate}" HorizontalAlignment="Stretch" />
+                                </StackPanel>
+                            </Grid>
+                            <ItemsControl ItemsSource="{Binding InstalmentRows}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="6" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:InstalmentRow">
+                                        <Grid ColumnDefinitions="26,*,110,Auto" ColumnSpacing="8">
+                                            <TextBlock Classes="muted" Text="{Binding NumberText}" VerticalAlignment="Center" />
+                                            <CalendarDatePicker Grid.Column="1" SelectedDate="{Binding DueDate}"
+                                                                HorizontalAlignment="Stretch" IsEnabled="{Binding !IsPaid}" />
+                                            <NumericUpDown Grid.Column="2" Value="{Binding Amount}" Minimum="0" FormatString="N2"
+                                                           ShowButtonSpinner="False" MinWidth="0" IsEnabled="{Binding !IsPaid}" />
+                                            <CheckBox Grid.Column="3" IsChecked="{Binding IsPaid}" Content="{l:T 'Paid'}" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Classes="secondary" FontSize="12" Text="{Binding InstalmentSummaryText}" />
+                            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding InstalmentDifferenceText}"
+                                       IsVisible="{Binding HasInstalmentDifference}" />
+                            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                       Text="{l:T 'Each instalment is reminded on its own date. Changing the number, the months between or the first date shares out again what isn’t paid yet.'}" />
+                        </StackPanel>
+                        <CheckBox IsChecked="{Binding DocumentCreateEntry}" IsVisible="{Binding CanCreateDocumentEntry}">
+                            <TextBlock Text="{Binding DocumentCreateEntryText}" TextWrapping="Wrap" />
+                        </CheckBox>
+                    </StackPanel>
+                </Border>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Notes'}" />
+                    <TextBox Text="{Binding DocumentNotes}" AcceptsReturn="True" TextWrapping="Wrap" MinHeight="72"
+                             PlaceholderText="{l:T 'Anything to remember, e.g. reference number'}" />
+                </StackPanel>
+
+                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Text="{Binding DocumentRetentionText}"
+                           IsVisible="{Binding IsEditingDocument}" />
+
+                <Border Background="{DynamicResource BrandSoft}" CornerRadius="10" Padding="14,12"
+                        IsVisible="{Binding HasDocumentFollowUp}">
+                    <StackPanel Spacing="4">
+                        <CheckBox IsChecked="{Binding DocumentAddFollowUp}">
+                            <TextBlock Text="{Binding DocumentFollowUpText}" TextWrapping="Wrap" FontWeight="Medium" />
+                        </CheckBox>
+                        <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" Margin="28,0,0,0"
+                                   Text="{Binding DocumentFollowUpNote}" />
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Classes="error" Text="{Binding DocumentError}" IsVisible="{Binding HasDocumentError}"
+                           TextWrapping="Wrap" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

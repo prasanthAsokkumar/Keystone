@@ -74,12 +74,12 @@ public sealed class RedesignTests : IDisposable
         vm.CurrentPage = AppPage.Overview;
         vm.CreateNewCommand.Execute(vm.NewMenuItems.Single(i => i.Key == "medicine"));
         Assert.Equal(AppPage.Household, vm.CurrentPage);
-        Assert.True(vm.IsMedicinePanelOpen);
+        Assert.True(vm.Medicines.IsMedicinePanelOpen);
 
         vm.CreateNewCommand.Execute(vm.NewMenuItems.Single(i => i.Key == "date"));
         Assert.Equal(AppPage.Contracts, vm.CurrentPage);
-        Assert.True(vm.IsImportantDatePanelOpen);
-        Assert.False(vm.IsMedicinePanelOpen);
+        Assert.True(vm.Deadlines.IsImportantDatePanelOpen);
+        Assert.False(vm.Medicines.IsMedicinePanelOpen);
 
         var asked = false;
         vm.PickDocumentsRequested += () => asked = true;
@@ -156,12 +156,12 @@ public sealed class RedesignTests : IDisposable
         }, isNew: true);
         var vm = await LoadAsync();
 
-        Assert.Equal(["Helsana", "Swisscom"], vm.AllDeadlineRows.Select(r => r.Name));
-        Assert.True(vm.AllDeadlineRows[0].IsInsurance);
-        Assert.Equal("Insurance", vm.AllDeadlineRows[0].SourceText);
-        Assert.Equal(Format.Date(vm.AllDeadlineRows[0].CancelBy), vm.ContractDeadlineText);
+        Assert.Equal(["Helsana", "Swisscom"], vm.Deadlines.AllDeadlineRows.Select(r => r.Name));
+        Assert.True(vm.Deadlines.AllDeadlineRows[0].IsInsurance);
+        Assert.Equal("Insurance", vm.Deadlines.AllDeadlineRows[0].SourceText);
+        Assert.Equal(Format.Date(vm.Deadlines.AllDeadlineRows[0].CancelBy), vm.Deadlines.ContractDeadlineText);
 
-        vm.OpenNoticeDeadlineCommand.Execute(vm.AllDeadlineRows[0]);
+        vm.Deadlines.OpenNoticeDeadlineCommand.Execute(vm.Deadlines.AllDeadlineRows[0]);
         Assert.Equal(AppPage.Insurance, vm.CurrentPage);
         Assert.True(vm.IsInsurancePanelOpen);
     }
@@ -182,16 +182,16 @@ public sealed class RedesignTests : IDisposable
         Assert.True(vm.IsPersonView);
         Assert.Equal(anna.Id, vm.PersonFilter.Id);
         Assert.Equal(anna.Id, vm.DocumentPersonFilter.Id);
-        Assert.Equal(anna.Id, vm.TaskPersonFilter.Id);
+        Assert.Equal(anna.Id, vm.Tasks.TaskPersonFilter.Id);
         Assert.Equal(anna.Id, vm.SelectedMemberId);
-        Assert.Equal(["Swisscom"], vm.ContractRows.Select(r => r.Contract.Provider));
+        Assert.Equal(["Swisscom"], vm.Deadlines.ContractRows.Select(r => r.Contract.Provider));
         vm.CurrentPage = AppPage.Contracts;
         Assert.True(vm.ShowsPersonViewBar);
         Assert.Equal("Showing Anna’s things only", vm.PersonViewText);
 
         vm.ShowEveryoneCommand.Execute(null);
         Assert.True(vm.PersonFilter.IsEveryone);
-        Assert.Equal(2, vm.ContractRows.Count);
+        Assert.Equal(2, vm.Deadlines.ContractRows.Count);
         Assert.False(vm.ShowsPersonViewBar);
     }
 
@@ -242,7 +242,7 @@ public sealed class RedesignTests : IDisposable
     public async Task CalendarSettingsOpenOnTheirTab()
     {
         var vm = await LoadAsync();
-        vm.ShowCalendarSettingsCommand.Execute(null);
+        vm.Appointments.ShowCalendarSettingsCommand.Execute(null);
         Assert.Equal(AppPage.Settings, vm.CurrentPage);
         Assert.True(vm.IsSettingsRemindersTab);
         Assert.False(vm.IsSettingsGeneralTab);

@@ -6,15 +6,20 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Keystone.Data;
 using Keystone.Localization;
 using Keystone.Models;
 
 namespace Keystone.ViewModels;
 
-/// <summary>The Notes page: a list of notes and an editor that saves as you type.</summary>
-public partial class MainViewModel
+/// <summary>
+/// The Notes page: a list of notes and an editor that saves as you type. Notes share nothing with the money side,
+/// so they live in their own view model; the main one only opens the page and reports errors.
+/// </summary>
+public sealed partial class NotesViewModel(KeystoneRepository repository, Action showPage, Action<string> reportError)
+    : ViewModelBase
 {
-    private const int NoteSaveDelayMs = 600;
+    internal const int NoteSaveDelayMs = 600;
 
     private readonly List<Note> _notes = [];
     private CancellationTokenSource? _noteSaveDelay;
@@ -208,7 +213,7 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task NewNoteAsync()
     {
-        CurrentPage = AppPage.Notes;
+        showPage();
         if (SelectedNoteItem is { } current && current.Note.Title.Trim() == "" && current.Note.Body.Trim() == "")
             return; // already on an empty note
 
@@ -226,7 +231,7 @@ public partial class MainViewModel
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            reportError(Loc.F("Could not save: {0}", ex.Message));
             return;
         }
 
@@ -273,7 +278,10 @@ public partial class MainViewModel
             SelectedNoteItem = NoteItems[Math.Clamp(index, 0, NoteItems.Count - 1)];
     }
 
-    private async Task LoadNotesAsync()
+    /// <summary>All notes, for searching everything.</summary>
+    internal IReadOnlyList<Note> All => _notes;
+
+    internal async Task LoadAsync()
     {
         _notes.Clear();
         _notes.AddRange(await repository.GetNotesAsync());
@@ -336,6 +344,22 @@ public partial class MainViewModel
             item.Refresh();
         OnPropertyChanged(nameof(HasNoteItems));
         OnPropertyChanged(nameof(NotesEmptyText));
+    }
+
+    /// <summary>After the language changed: the translated texts and the "All projects" filter.</summary>
+    internal override void RefreshTexts()
+    {
+        OnPropertyChanged(string.Empty);
+        RefreshNoteProjects();
+        RefreshNoteItems();
+    }
+
+    /// <summary>Shows one note, whatever the filters were (from search).</summary>
+    internal void Show(Note note)
+    {
+        NoteSearch = "";
+        NoteProjectFilter = AllProjects;
+        SelectedNoteItem = NoteItems.FirstOrDefault(i => i.Note == note);
     }
 }
 

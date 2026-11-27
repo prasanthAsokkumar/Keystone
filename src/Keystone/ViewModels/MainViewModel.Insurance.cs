@@ -29,7 +29,7 @@ public partial class MainViewModel
     /// <summary>Deadlines this close are highlighted and reminded of.</summary>
     public const int InsuranceDeadlineWarningDays = 60;
 
-    private readonly List<InsurancePolicy> _policies = [];
+    internal readonly List<InsurancePolicy> _policies = [];
 
     public IReadOnlyList<string> InsuranceKindNames => Enum.GetValues<InsuranceKind>().Select(InsurancePolicy.KindName).ToList();
 
@@ -96,7 +96,7 @@ public partial class MainViewModel
         RefreshOwnPageLists();
         // Policies' notice deadlines are also listed with the contracts'.
         if (!_isLoading)
-            RefreshContracts();
+            Deadlines.RefreshContracts();
         var filter = InsurancePersonFilter ?? PersonOption.Everyone;
         var policies = _policies.Where(p => filter.IsEveryone || p.PersonId == filter.Id).ToList();
         var documents = Documents.ToDictionary(d => d.Id);

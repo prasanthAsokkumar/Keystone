@@ -12,6 +12,6 @@ public partial class AppointmentsPage : UserControl
     private void AppointmentRow_DoubleTapped(object? sender, TappedEventArgs e)
     {
         if (sender is Control { DataContext: AppointmentRow row } && DataContext is MainViewModel vm)
-            vm.EditAppointmentCommand.Execute(row.Appointment);
+            vm.Appointments.EditAppointmentCommand.Execute(row.Appointment);
     }
 }

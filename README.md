@@ -232,8 +232,8 @@ Two environment variables override these locations, which is useful for testing:
 src/Keystone/
   Models/         Transactions, debts, people, documents, tasks, notes, retirement accounts
   Services/       Runway calculation, schedules, document filing, local AI, Swiss pension rules
-  ViewModels/     MainViewModel, split by page (Documents, Tasks, Notes, Retirement, BulkImport)
-  Views/          Avalonia XAML views and styles
+  ViewModels/     MainViewModel for money and paperwork, plus one view model per area (Tasks, Notes, Retirement…)
+  Views/          The window, one file per page and form (Views/Pages), styles
   Localization/   English keys with German translations
   Data/           EF Core context, repository and migrations
 tests/Keystone.Tests/  xUnit tests

@@ -53,7 +53,7 @@ public partial class MainViewModel
     private Contract? MatchingContract(HouseholdDocument document, FollowUp followUp)
     {
         var kind = ParseKind(followUp.Subkind, ContractKind.Other);
-        return _contracts.FirstOrDefault(c => DuplicateFinder.SameSender(c.Provider, NameOf(document)) &&
+        return Deadlines.Contracts.FirstOrDefault(c => DuplicateFinder.SameSender(c.Provider, NameOf(document)) &&
             (followUp.Reference != "" && c.CustomerNumber != ""
                 ? CleanNumber(c.CustomerNumber) == CleanNumber(followUp.Reference)
                 : (followUp.Subkind == "" || c.Kind == kind) && c.PersonId == document.PersonId));
@@ -63,7 +63,7 @@ public partial class MainViewModel
     private ImportantDate? MatchingDate(HouseholdDocument document, FollowUp followUp)
     {
         var kind = ParseKind(followUp.Subkind, ImportantDateKind.Other);
-        return kind == ImportantDateKind.Other ? null : _dates.FirstOrDefault(d => d.Kind == kind && d.PersonId == document.PersonId);
+        return kind == ImportantDateKind.Other ? null : Deadlines.Dates.FirstOrDefault(d => d.Kind == kind && d.PersonId == document.PersonId);
     }
 
     // ── The record's values ─────────────────────────────────────────────────
@@ -233,8 +233,8 @@ public partial class MainViewModel
                 var existing = MatchingContract(document, followUp);
                 var contract = ContractFrom(document, followUp, existing);
                 await repository.SaveAsync(contract, existing is null);
-                Replace(_contracts, existing, contract);
-                RefreshDeadlines();
+                Replace(Deadlines.Contracts, existing, contract);
+                Deadlines.RefreshDeadlines();
                 return contract.Provider;
             }
             case FollowUpKind.Date:
@@ -243,16 +243,16 @@ public partial class MainViewModel
                 if (DateFrom(document, followUp, existing) is not { } date)
                     return null;
                 await repository.SaveAsync(date, existing is null);
-                Replace(_dates, existing, date);
-                RefreshDeadlines();
+                Replace(Deadlines.Dates, existing, date);
+                Deadlines.RefreshDeadlines();
                 return date.Title;
             }
             default:
             {
                 var warranty = WarrantyFrom(document, followUp);
                 await repository.SaveAsync(warranty, isNew: true);
-                _warranties.Add(warranty);
-                RefreshDeadlines();
+                Deadlines.Warranties.Add(warranty);
+                Deadlines.RefreshDeadlines();
                 return warranty.Item;
             }
         }
@@ -303,21 +303,21 @@ public partial class MainViewModel
                 var existing = MatchingContract(document, followUp);
                 var contract = ContractFrom(document, followUp, existing);
                 if (existing is null)
-                    NewContract();
+                    Deadlines.NewContract();
                 else
-                    EditContract(existing);
-                ContractProvider = contract.Provider;
-                ContractKindIndex = (int)contract.Kind;
-                ContractPerson = PersonOptions.FirstOrDefault(o => o.Id == contract.PersonId) ?? PersonOption.Shared;
-                ContractCustomerNumber = contract.CustomerNumber;
-                ContractCost = contract.Cost > 0 ? contract.Cost : null;
-                ContractRecurrenceIndex = contract.CostRecurrence switch { Recurrence.Quarterly => 1, Recurrence.Yearly => 2, _ => 0 };
-                ContractEnd = contract.ContractEnd?.ToDateTime(TimeOnly.MinValue);
-                ContractNoticeMonths = contract.NoticeMonths;
-                ContractDocumentOptions = DocumentOptionsFor(document.Id, DocumentKind.Contract);
-                ContractDocument = ContractDocumentOptions.FirstOrDefault(o => o.Document?.Id == document.Id) ?? ContractDocumentOptions[0];
+                    Deadlines.EditContract(existing);
+                Deadlines.ContractProvider = contract.Provider;
+                Deadlines.ContractKindIndex = (int)contract.Kind;
+                Deadlines.ContractPerson = PersonOptions.FirstOrDefault(o => o.Id == contract.PersonId) ?? PersonOption.Shared;
+                Deadlines.ContractCustomerNumber = contract.CustomerNumber;
+                Deadlines.ContractCost = contract.Cost > 0 ? contract.Cost : null;
+                Deadlines.ContractRecurrenceIndex = contract.CostRecurrence switch { Recurrence.Quarterly => 1, Recurrence.Yearly => 2, _ => 0 };
+                Deadlines.ContractEnd = contract.ContractEnd?.ToDateTime(TimeOnly.MinValue);
+                Deadlines.ContractNoticeMonths = contract.NoticeMonths;
+                Deadlines.ContractDocumentOptions = DocumentOptionsFor(document.Id, DocumentKind.Contract);
+                Deadlines.ContractDocument = Deadlines.ContractDocumentOptions.FirstOrDefault(o => o.Document?.Id == document.Id) ?? Deadlines.ContractDocumentOptions[0];
                 CurrentPage = AppPage.Contracts;
-                DeadlinesTab = 0;
+                Deadlines.DeadlinesTab = 0;
                 updates = existing is not null;
                 break;
             }
@@ -325,33 +325,33 @@ public partial class MainViewModel
             {
                 var existing = MatchingDate(document, followUp);
                 if (existing is null)
-                    NewImportantDate();
+                    Deadlines.NewImportantDate();
                 else
-                    EditImportantDate(existing);
-                ImportantDateKindIndex = (int)ParseKind(followUp.Subkind, ImportantDateKind.Other);
-                ImportantDatePerson = person;
+                    Deadlines.EditImportantDate(existing);
+                Deadlines.ImportantDateKindIndex = (int)ParseKind(followUp.Subkind, ImportantDateKind.Other);
+                Deadlines.ImportantDatePerson = person;
                 if (followUp.EndDate is { } date)
-                    ImportantDateDate = date.ToDateTime(TimeOnly.MinValue);
-                if (ImportantDateTitle == "")
-                    ImportantDateTitle = document.Title;
+                    Deadlines.ImportantDateDate = date.ToDateTime(TimeOnly.MinValue);
+                if (Deadlines.ImportantDateTitle == "")
+                    Deadlines.ImportantDateTitle = document.Title;
                 CurrentPage = AppPage.Contracts;
-                DeadlinesTab = 1;
+                Deadlines.DeadlinesTab = 1;
                 updates = existing is not null;
                 break;
             }
             default:
             {
                 var warranty = WarrantyFrom(document, followUp);
-                NewWarranty();
-                WarrantyItem = warranty.Item;
-                WarrantyStore = warranty.Store;
-                WarrantyPerson = person;
-                WarrantyPurchaseDate = warranty.PurchaseDate.ToDateTime(TimeOnly.MinValue);
-                WarrantyPrice = warranty.Price;
-                WarrantyDocumentOptions = DocumentOptionsFor(document.Id, DocumentKind.Invoice, DocumentKind.Bill);
-                WarrantyDocument = WarrantyDocumentOptions.FirstOrDefault(o => o.Document?.Id == document.Id) ?? WarrantyDocumentOptions[0];
+                Deadlines.NewWarranty();
+                Deadlines.WarrantyItem = warranty.Item;
+                Deadlines.WarrantyStore = warranty.Store;
+                Deadlines.WarrantyPerson = person;
+                Deadlines.WarrantyPurchaseDate = warranty.PurchaseDate.ToDateTime(TimeOnly.MinValue);
+                Deadlines.WarrantyPrice = warranty.Price;
+                Deadlines.WarrantyDocumentOptions = DocumentOptionsFor(document.Id, DocumentKind.Invoice, DocumentKind.Bill);
+                Deadlines.WarrantyDocument = Deadlines.WarrantyDocumentOptions.FirstOrDefault(o => o.Document?.Id == document.Id) ?? Deadlines.WarrantyDocumentOptions[0];
                 CurrentPage = AppPage.Contracts;
-                DeadlinesTab = 2;
+                Deadlines.DeadlinesTab = 2;
                 updates = false;
                 break;
             }

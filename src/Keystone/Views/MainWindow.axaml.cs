@@ -49,20 +49,21 @@ public partial class MainWindow : Window
             if (DataContext is not MainViewModel vm)
                 return;
             vm.PropertyChanged += ViewModel_PropertyChanged;
+            vm.Notes.PropertyChanged += Notes_PropertyChanged;
             vm.CopyToClipboard = text => Clipboard?.SetTextAsync(text) ?? System.Threading.Tasks.Task.CompletedTask;
             vm.NewMenuRequested += () => NewButton.Flyout?.ShowAt(NewButton);
             vm.PickDocumentsRequested += () => AddDocument_Click(null, new RoutedEventArgs());
             // The task box is on a page that may only just have become visible: focus it once laid out.
-            vm.FocusNewTaskRequested += () => Avalonia.Threading.Dispatcher.UIThread.Post(() => NewTaskBox.Focus(),
+            vm.FocusNewTaskRequested += () => Avalonia.Threading.Dispatcher.UIThread.Post(() => TasksView.NewTaskBox.Focus(),
                 Avalonia.Threading.DispatcherPriority.Loaded);
         };
 
         // The app lock counts time away from the window.
-        Deactivated += (_, _) => (DataContext as MainViewModel)?.OnLeftApp(System.DateTime.Now);
-        Activated += (_, _) => (DataContext as MainViewModel)?.OnReturnedToApp(System.DateTime.Now);
+        Deactivated += (_, _) => (DataContext as MainViewModel)?.Lock.OnLeftApp(System.DateTime.Now);
+        Activated += (_, _) => (DataContext as MainViewModel)?.Lock.OnReturnedToApp(System.DateTime.Now);
         // The app lock follows the Mac's own lock: locked with the screen, Touch ID asked when back in front.
-        Keystone.Services.Mac.ScreenLock.Locked += () => (DataContext as MainViewModel)?.OnMacLocked();
-        Keystone.Services.Mac.ScreenLock.Unlocked += () => (DataContext as MainViewModel)?.OnMacUnlocked(IsActive);
+        Keystone.Services.Mac.ScreenLock.Locked += () => (DataContext as MainViewModel)?.Lock.OnMacLocked();
+        Keystone.Services.Mac.ScreenLock.Unlocked += () => (DataContext as MainViewModel)?.Lock.OnMacUnlocked(IsActive);
         Keystone.Services.Mac.ScreenLock.Start();
 
         // ⌘F searches everything.
@@ -77,18 +78,21 @@ public partial class MainWindow : Window
         });
     }
 
+    /// <summary>The window a page or form sits in, for file pickers and other window-wide actions.</summary>
+    internal static MainWindow? Of(Control control) => TopLevel.GetTopLevel(control) as MainWindow;
+
     private bool _closingAfterSave;
 
     /// <summary>File pickers take focus; that isn't leaving Keystone, so the app lock ignores it.</summary>
     private async Task<IReadOnlyList<IStorageFile>> PickFilesAsync(FilePickerOpenOptions options)
     {
-        using ((DataContext as MainViewModel)?.OwnWindow())
+        using ((DataContext as MainViewModel)?.Lock.OwnWindow())
             return await StorageProvider.OpenFilePickerAsync(options);
     }
 
     private async Task<IReadOnlyList<IStorageFolder>> PickFolderAsync(FolderPickerOpenOptions options)
     {
-        using ((DataContext as MainViewModel)?.OwnWindow())
+        using ((DataContext as MainViewModel)?.Lock.OwnWindow())
             return await StorageProvider.OpenFolderPickerAsync(options);
     }
 
@@ -96,24 +100,29 @@ public partial class MainWindow : Window
     protected override async void OnClosing(WindowClosingEventArgs e)
     {
         base.OnClosing(e);
-        if (_closingAfterSave || e.Cancel || DataContext is not MainViewModel { HasUnsavedNote: true } vm)
+        if (_closingAfterSave || e.Cancel || DataContext is not MainViewModel { Notes.HasUnsavedNote: true } vm)
             return;
 
         e.Cancel = true;
-        await vm.SaveNoteNowAsync();
+        await vm.Notes.SaveNoteNowAsync();
         _closingAfterSave = true;
         Close();
     }
 
-    /// <summary>A new, empty note gets the cursor in its title; search results open below the search box.</summary>
+    /// <summary>Search results open below the search box.</summary>
     private void ViewModel_PropertyChanged(object? sender, PropertyChangedEventArgs e)
     {
         if (e.PropertyName is nameof(MainViewModel.SearchResults) && sender is MainViewModel search)
             SearchPopup.IsOpen = search.HasSearchResults || search.ShowsNoSearchResults;
 
-        if (e.PropertyName == nameof(MainViewModel.SelectedNoteItem) &&
-            sender is MainViewModel { SelectedNoteItem: { IsUntitled: true, HasPreview: false } })
-            Dispatcher.UIThread.Post(() => NoteTitleBox.Focus(), DispatcherPriority.Background);
+    }
+
+    /// <summary>A new, empty note gets the cursor in its title.</summary>
+    private void Notes_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName == nameof(NotesViewModel.SelectedNoteItem) &&
+            sender is NotesViewModel { SelectedNoteItem: { IsUntitled: true, HasPreview: false } })
+            Dispatcher.UIThread.Post(() => NotesView.NoteTitleBox.Focus(), DispatcherPriority.Background);
     }
 
     /// <summary>Any file can be filed as a document; reading entries needs a type the AI can read.</summary>
@@ -136,7 +145,7 @@ public partial class MainWindow : Window
 
     private void Window_DragOver(object? sender, DragEventArgs e)
     {
-        var canDrop = DataContext is MainViewModel { CanAcceptDrop: true } && DroppedPath(e) is not null;
+        var canDrop = DataContext is MainViewModel { Lock.CanAcceptDrop: true } && DroppedPath(e) is not null;
         e.DragEffects = canDrop ? DragDropEffects.Copy : DragDropEffects.None;
         DropOverlay.IsVisible = canDrop;
     }
@@ -144,7 +153,7 @@ public partial class MainWindow : Window
     private async void Window_Drop(object? sender, DragEventArgs e)
     {
         DropOverlay.IsVisible = false;
-        if (DroppedPath(e) is not { } path || DataContext is not MainViewModel { CanAcceptDrop: true } vm)
+        if (DroppedPath(e) is not { } path || DataContext is not MainViewModel { Lock.CanAcceptDrop: true } vm)
             return;
 
         // Bank statements are read without the AI, except where files are filed as documents.
@@ -163,7 +172,7 @@ public partial class MainWindow : Window
         }
 
         if (vm.IsRetirementPage)
-            await vm.StartNewStatementAsync(path);
+            await vm.Retirement.StartNewStatementAsync(path);
         else if (vm.DropFilesAsDocument)
             await vm.StartNewDocumentAsync(path);
         else
@@ -179,7 +188,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>One file opens the document form; several go to the import list.</summary>
-    private async void AddDocument_Click(object? sender, RoutedEventArgs e)
+    internal async void AddDocument_Click(object? sender, RoutedEventArgs e)
     {
         var files = await PickFilesAsync(new FilePickerOpenOptions
         {
@@ -196,20 +205,20 @@ public partial class MainWindow : Window
             await vm.StartNewDocumentAsync(paths[0]);
     }
 
-    private async void AttachStatementLetter_Click(object? sender, RoutedEventArgs e)
+    internal async void AttachStatementLetter_Click(object? sender, RoutedEventArgs e)
     {
         var files = await PickFilesAsync(new FilePickerOpenOptions
         {
             Title = "Choose the letter",
         });
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path && DataContext is MainViewModel vm)
-            await vm.AttachStatementLetterAsync(path);
+            await vm.Retirement.AttachStatementLetterAsync(path);
     }
 
     /// <summary>Asks where to save an export; null when cancelled.</summary>
     private async Task<string?> PickSaveFileAsync(string title, string fileName, string typeName, string pattern)
     {
-        using ((DataContext as MainViewModel)?.OwnWindow())
+        using ((DataContext as MainViewModel)?.Lock.OwnWindow())
         {
             var file = await StorageProvider.SaveFilePickerAsync(new FilePickerSaveOptions
             {
@@ -262,7 +271,7 @@ public partial class MainWindow : Window
     }
 
     /// <summary>Matches one account in Settings to the balance typed in its flyout.</summary>
-    private void MatchAccount_Click(object? sender, RoutedEventArgs e)
+    internal void MatchAccount_Click(object? sender, RoutedEventArgs e)
     {
         if (sender is not Button { Tag: Keystone.Models.BankAccount account } button || DataContext is not MainViewModel vm)
             return;
@@ -271,11 +280,11 @@ public partial class MainWindow : Window
         button.FindAncestorOfType<Popup>()?.Close();
     }
 
-    private async void RestoreBackup_Click(object? sender, RoutedEventArgs e)
+    internal async void RestoreBackup_Click(object? sender, RoutedEventArgs e)
     {
         if (DataContext is not MainViewModel vm)
             return;
-        var start = await StorageProvider.TryGetFolderFromPathAsync(vm.BackupFolder);
+        var start = await StorageProvider.TryGetFolderFromPathAsync(vm.Backup.BackupFolder);
         var files = await PickFilesAsync(new FilePickerOpenOptions
         {
             Title = "Choose a backup to restore",
@@ -283,10 +292,10 @@ public partial class MainWindow : Window
             FileTypeFilter = [new FilePickerFileType("Keystone backups") { Patterns = ["*.db"] }],
         });
         if (files.FirstOrDefault()?.TryGetLocalPath() is { } path)
-            vm.ChooseBackupToRestore(path);
+            vm.Backup.ChooseBackupToRestore(path);
     }
 
-    private async void ChangeDocumentsFolder_Click(object? sender, RoutedEventArgs e)
+    internal async void ChangeDocumentsFolder_Click(object? sender, RoutedEventArgs e)
     {
         var folders = await PickFolderAsync(new FolderPickerOpenOptions
         {
@@ -320,31 +329,7 @@ public partial class MainWindow : Window
             vm.ClosePanelCommand.Execute(null);
     }
 
-    /// <summary>Double-clicking a document opens the file.</summary>
-    private void DocumentRow_DoubleTapped(object? sender, TappedEventArgs e)
-    {
-        if (sender is Control { DataContext: DocumentRow row } && DataContext is MainViewModel vm)
-            vm.OpenDocumentCommand.Execute(row.Document);
-    }
 
-    /// <summary>Double-clicking a retirement account shows its details and history.</summary>
-    private void PensionAccountRow_DoubleTapped(object? sender, TappedEventArgs e)
-    {
-        if (sender is Control { DataContext: PensionAccountRow row } && DataContext is MainViewModel vm)
-            vm.EditPensionAccountCommand.Execute(row.Account);
-    }
 
-    /// <summary>Double-clicking a task opens it for editing.</summary>
-    private void TaskRow_DoubleTapped(object? sender, TappedEventArgs e)
-    {
-        if (sender is Control { DataContext: TaskRow row } && DataContext is MainViewModel vm)
-            vm.EditTaskCommand.Execute(row.Task);
-    }
 
-    /// <summary>Double-clicking a row in the Entries table opens it for editing.</summary>
-    private void EntryRow_DoubleTapped(object? sender, TappedEventArgs e)
-    {
-        if (sender is Control { DataContext: EntryRow row } && DataContext is MainViewModel vm)
-            vm.EditTransactionCommand.Execute(row.Transaction);
-    }
 }

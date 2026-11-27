@@ -180,7 +180,7 @@ public sealed class HouseholdFeaturesTests : IDisposable
 
         vm.OpenSearchResultCommand.Execute(vm.SearchResults.Single(r => r.Kind == "Note"));
         Assert.Equal(AppPage.Notes, vm.CurrentPage);
-        Assert.Equal("Helsana or CSS?", vm.SelectedNoteItem?.Title);
+        Assert.Equal("Helsana or CSS?", vm.Notes.SelectedNoteItem?.Title);
         Assert.Equal("", vm.GlobalSearch);
     }
 
@@ -191,34 +191,34 @@ public sealed class HouseholdFeaturesTests : IDisposable
     {
         var vm = await LoadAsync();
         var answer = false;
-        vm.Authenticate = _ => Task.FromResult(answer);
-        if (!vm.CanLock)
+        vm.Lock.Authenticate = _ => Task.FromResult(answer);
+        if (!vm.Lock.CanLock)
             return; // no Touch ID or password check on this machine
 
-        vm.IsLockEnabled = true; // the check fails, so it stays off
+        vm.Lock.IsLockEnabled = true; // the check fails, so it stays off
         await Task.Delay(50);
-        Assert.False(vm.IsLockEnabled);
+        Assert.False(vm.Lock.IsLockEnabled);
 
         answer = true;
-        vm.IsLockEnabled = true;
+        vm.Lock.IsLockEnabled = true;
         await Task.Delay(50);
-        Assert.True(vm.IsLockEnabled);
+        Assert.True(vm.Lock.IsLockEnabled);
         Assert.True((await _repository.GetSettingsAsync()).LockEnabled);
 
-        vm.LockDelayIndex = 3; // 5 minutes
+        vm.Lock.LockDelayIndex = 3; // 5 minutes
         var left = DateTime.Now;
-        vm.OnLeftApp(left);
-        vm.OnReturnedToApp(left.AddMinutes(2));
-        Assert.False(vm.IsLocked);
+        vm.Lock.OnLeftApp(left);
+        vm.Lock.OnReturnedToApp(left.AddMinutes(2));
+        Assert.False(vm.Lock.IsLocked);
 
         answer = false;
-        vm.OnLeftApp(left);
-        vm.OnReturnedToApp(left.AddMinutes(6));
-        Assert.True(vm.IsLocked);
+        vm.Lock.OnLeftApp(left);
+        vm.Lock.OnReturnedToApp(left.AddMinutes(6));
+        Assert.True(vm.Lock.IsLocked);
 
         answer = true;
-        await vm.UnlockCommand.ExecuteAsync(null);
-        Assert.False(vm.IsLocked);
+        await vm.Lock.UnlockCommand.ExecuteAsync(null);
+        Assert.False(vm.Lock.IsLocked);
     }
 
     [Fact]
@@ -226,42 +226,42 @@ public sealed class HouseholdFeaturesTests : IDisposable
     {
         var vm = await LoadAsync();
         var asked = 0;
-        vm.Authenticate = _ => { asked++; return Task.FromResult(true); };
-        if (!vm.CanLock)
+        vm.Lock.Authenticate = _ => { asked++; return Task.FromResult(true); };
+        if (!vm.Lock.CanLock)
             return; // no Touch ID or password check on this machine
-        vm.IsLockEnabled = true;
+        vm.Lock.IsLockEnabled = true;
         await Task.Delay(50);
         asked = 0;
-        Assert.Equal(0, vm.LockDelayIndex); // "When my Mac locks or sleeps"
+        Assert.Equal(0, vm.Lock.LockDelayIndex); // "When my Mac locks or sleeps"
         Assert.Equal(-1, (await _repository.GetSettingsAsync()).LockAfterMinutes);
 
         // Switching to other apps, even for hours, doesn't lock.
         var left = DateTime.Now;
-        vm.OnLeftApp(left);
-        vm.OnReturnedToApp(left.AddHours(3));
-        Assert.False(vm.IsLocked);
+        vm.Lock.OnLeftApp(left);
+        vm.Lock.OnReturnedToApp(left.AddHours(3));
+        Assert.False(vm.Lock.IsLocked);
         Assert.Equal(0, asked);
 
         // The Mac locks its screen: Keystone locks too, and asks once the Mac is unlocked with Keystone in front.
-        vm.OnMacLocked();
-        Assert.True(vm.IsLocked);
-        vm.OnMacUnlocked(keystoneInFront: false);
+        vm.Lock.OnMacLocked();
+        Assert.True(vm.Lock.IsLocked);
+        vm.Lock.OnMacUnlocked(keystoneInFront: false);
         Assert.Equal(0, asked);
-        vm.OnMacUnlocked(keystoneInFront: true);
+        vm.Lock.OnMacUnlocked(keystoneInFront: true);
         await Task.Delay(50);
         Assert.Equal(1, asked);
-        Assert.False(vm.IsLocked);
+        Assert.False(vm.Lock.IsLocked);
     }
 
     /// <summary>Turns the lock on with "as soon as I switch away", the setting the Touch ID prompt used to upset.</summary>
     private async Task<MainViewModel> LockedImmediatelyAsync(Func<MainViewModel, Task<bool>> touchId)
     {
         var vm = await LoadAsync();
-        vm.Authenticate = _ => touchId(vm);
-        vm.IsLockEnabled = true;
+        vm.Lock.Authenticate = _ => touchId(vm);
+        vm.Lock.IsLockEnabled = true;
         await Task.Delay(50);
-        vm.LockDelayIndex = 1; // as soon as I switch away
-        vm.LockNowCommand.Execute(null);
+        vm.Lock.LockDelayIndex = 1; // as soon as I switch away
+        vm.Lock.LockNowCommand.Execute(null);
         return vm;
     }
 
@@ -273,17 +273,17 @@ public sealed class HouseholdFeaturesTests : IDisposable
         var vm = await LockedImmediatelyAsync(model =>
         {
             prompts++;
-            model.OnLeftApp(DateTime.Now);
+            model.Lock.OnLeftApp(DateTime.Now);
             return Task.FromResult(true);
         });
-        if (!vm.CanLock)
+        if (!vm.Lock.CanLock)
             return;
         prompts = 0;
 
-        await vm.UnlockCommand.ExecuteAsync(null);
-        vm.OnReturnedToApp(DateTime.Now);
+        await vm.Lock.UnlockCommand.ExecuteAsync(null);
+        vm.Lock.OnReturnedToApp(DateTime.Now);
 
-        Assert.False(vm.IsLocked);
+        Assert.False(vm.Lock.IsLocked);
         Assert.Equal(1, prompts);
     }
 
@@ -294,39 +294,39 @@ public sealed class HouseholdFeaturesTests : IDisposable
         var vm = await LockedImmediatelyAsync(model =>
         {
             prompts++;
-            model.OnLeftApp(DateTime.Now);
+            model.Lock.OnLeftApp(DateTime.Now);
             return Task.FromResult(prompts == 1); // turning the lock on succeeds, unlocking is cancelled
         });
-        if (!vm.CanLock)
+        if (!vm.Lock.CanLock)
             return;
 
-        await vm.UnlockCommand.ExecuteAsync(null);
-        vm.OnReturnedToApp(DateTime.Now); // back from the cancelled prompt
+        await vm.Lock.UnlockCommand.ExecuteAsync(null);
+        vm.Lock.OnReturnedToApp(DateTime.Now); // back from the cancelled prompt
         await Task.Delay(50);
 
-        Assert.True(vm.IsLocked);
+        Assert.True(vm.Lock.IsLocked);
         Assert.Equal(2, prompts); // no new prompt until the user clicks Unlock
-        Assert.Equal("Not unlocked. Try again.", vm.LockMessage);
+        Assert.Equal("Not unlocked. Try again.", vm.Lock.LockMessage);
     }
 
     [Fact]
     public async Task FilePickersDoNotLock()
     {
         var vm = await LockedImmediatelyAsync(_ => Task.FromResult(true));
-        if (!vm.CanLock)
+        if (!vm.Lock.CanLock)
             return;
-        await vm.UnlockCommand.ExecuteAsync(null);
-        Assert.False(vm.IsLocked);
+        await vm.Lock.UnlockCommand.ExecuteAsync(null);
+        Assert.False(vm.Lock.IsLocked);
 
-        using (vm.OwnWindow())
-            vm.OnLeftApp(DateTime.Now); // the picker takes focus
-        vm.OnReturnedToApp(DateTime.Now);
-        Assert.False(vm.IsLocked);
+        using (vm.Lock.OwnWindow())
+            vm.Lock.OnLeftApp(DateTime.Now); // the picker takes focus
+        vm.Lock.OnReturnedToApp(DateTime.Now);
+        Assert.False(vm.Lock.IsLocked);
 
         // Really switching to another app still locks right away.
-        vm.OnLeftApp(DateTime.Now);
-        Assert.True(vm.IsLocked);
-        Assert.False(vm.CanAcceptDrop);
+        vm.Lock.OnLeftApp(DateTime.Now);
+        Assert.True(vm.Lock.IsLocked);
+        Assert.False(vm.Lock.CanAcceptDrop);
     }
 
     // ── Backups ──
@@ -353,18 +353,18 @@ public sealed class HouseholdFeaturesTests : IDisposable
         await _repository.AddPersonAsync(new Person { Name = "Anna" });
         var vm = await LoadAsync();
         await vm.ChangeDocumentsFolderAsync(Path.Combine(_folder, "Documents")); // its own backups folder
-        await vm.BackUpNowCommand.ExecuteAsync(null);
-        var backup = DatabaseBackup.List(vm.BackupFolder).First();
+        await vm.Backup.BackUpNowCommand.ExecuteAsync(null);
+        var backup = DatabaseBackup.List(vm.Backup.BackupFolder).First();
 
         await _repository.AddPersonAsync(new Person { Name = "Lukas" });
-        vm.ChooseBackupToRestore(backup.Path);
-        Assert.True(vm.HasRestoreCandidate);
-        await vm.RestoreBackupCommand.ExecuteAsync(null);
+        vm.Backup.ChooseBackupToRestore(backup.Path);
+        Assert.True(vm.Backup.HasRestoreCandidate);
+        await vm.Backup.RestoreBackupCommand.ExecuteAsync(null);
 
-        Assert.Null(vm.BackupError);
+        Assert.Null(vm.Backup.BackupError);
         Assert.Equal(["Anna"], vm.People.Select(p => p.Name));
         // The state before restoring was backed up too.
-        Assert.True(DatabaseBackup.List(vm.BackupFolder).Count >= 2);
+        Assert.True(DatabaseBackup.List(vm.Backup.BackupFolder).Count >= 2);
     }
 
     [Fact]

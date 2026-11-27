@@ -36,41 +36,41 @@ public sealed class AssetsAndTaxEstimateTests : IDisposable
     public async Task AnAssetKeepsItsValuesAndCountsInNetWorth()
     {
         var vm = await LoadAsync();
-        var before = vm.NetWorthOn(Today);
+        var before = vm.Planning.NetWorthOn(Today);
 
-        vm.NewAssetCommand.Execute(null);
-        vm.AssetName = "ETF depot";
-        vm.AssetKindIndex = (int)AssetKind.Securities;
-        vm.AssetInstitution = "Swissquote";
-        vm.AssetValueAmount = 40000m;
-        vm.AssetValueDate = Today.AddMonths(-3).ToDateTime(TimeOnly.MinValue);
-        await vm.SaveAssetCommand.ExecuteAsync(null);
-        Assert.Null(vm.AssetError);
+        vm.Assets.NewAssetCommand.Execute(null);
+        vm.Assets.AssetName = "ETF depot";
+        vm.Assets.AssetKindIndex = (int)AssetKind.Securities;
+        vm.Assets.AssetInstitution = "Swissquote";
+        vm.Assets.AssetValueAmount = 40000m;
+        vm.Assets.AssetValueDate = Today.AddMonths(-3).ToDateTime(TimeOnly.MinValue);
+        await vm.Assets.SaveAssetCommand.ExecuteAsync(null);
+        Assert.Null(vm.Assets.AssetError);
 
         // A new value from today's statement.
-        var asset = vm.AssetRows.Single().Asset;
-        vm.EditAssetCommand.Execute(asset);
-        vm.AssetValueAmount = 43500m;
-        vm.AssetValueDate = DateTime.Today;
-        await vm.SaveAssetCommand.ExecuteAsync(null);
+        var asset = vm.Assets.AssetRows.Single().Asset;
+        vm.Assets.EditAssetCommand.Execute(asset);
+        vm.Assets.AssetValueAmount = 43500m;
+        vm.Assets.AssetValueDate = DateTime.Today;
+        await vm.Assets.SaveAssetCommand.ExecuteAsync(null);
 
-        var row = vm.AssetRows.Single();
+        var row = vm.Assets.AssetRows.Single();
         Assert.Equal(Format.Money(43500), row.ValueText);
         Assert.Equal($"{Format.SignedMoney(3500)} since {Format.Date(Today.AddMonths(-3))}", row.ChangeText);
         Assert.True(row.IsUp);
-        Assert.Equal(before + 43500m, vm.NetWorthOn(Today));
-        Assert.Equal(Format.Money(43500), vm.AssetsTotalText);
+        Assert.Equal(before + 43500m, vm.Planning.NetWorthOn(Today));
+        Assert.Equal(Format.Money(43500), vm.Assets.AssetsTotalText);
 
         // Read back from the database with both values.
         var again = await LoadAsync();
-        Assert.Equal(2, again.AssetRows.Single().Asset.Values.Count);
+        Assert.Equal(2, again.Assets.AssetRows.Single().Asset.Values.Count);
 
         // Sold: no longer counts.
-        vm.EditAssetCommand.Execute(asset);
-        vm.AssetSoldOn = DateTime.Today;
-        await vm.SaveAssetCommand.ExecuteAsync(null);
-        Assert.Equal(0m, vm.AssetsOn(Today));
-        Assert.Equal(40000m, vm.AssetsOn(Today.AddDays(-1))); // yesterday it still had the older value
+        vm.Assets.EditAssetCommand.Execute(asset);
+        vm.Assets.AssetSoldOn = DateTime.Today;
+        await vm.Assets.SaveAssetCommand.ExecuteAsync(null);
+        Assert.Equal(0m, vm.Assets.AssetsOn(Today));
+        Assert.Equal(40000m, vm.Assets.AssetsOn(Today.AddDays(-1))); // yesterday it still had the older value
     }
 
     [Fact]
@@ -78,12 +78,12 @@ public sealed class AssetsAndTaxEstimateTests : IDisposable
     {
         var vm = await LoadAsync();
         vm.TaxYear = Today.Year - 1;
-        vm.NewAssetCommand.Execute(null);
-        vm.AssetName = "Flat";
-        vm.AssetKindIndex = (int)AssetKind.Property;
-        vm.AssetValueAmount = 650000m;
-        vm.AssetValueDate = new DateTime(Today.Year - 1, 6, 30);
-        await vm.SaveAssetCommand.ExecuteAsync(null);
+        vm.Assets.NewAssetCommand.Execute(null);
+        vm.Assets.AssetName = "Flat";
+        vm.Assets.AssetKindIndex = (int)AssetKind.Property;
+        vm.Assets.AssetValueAmount = 650000m;
+        vm.Assets.AssetValueDate = new DateTime(Today.Year - 1, 6, 30);
+        await vm.Assets.SaveAssetCommand.ExecuteAsync(null);
 
         var line = vm.TaxSections.Single(s => s.Title == "Assets and debts on 31 December").Lines.Single(l => l.Label == "Flat");
         Assert.Equal(Format.Money(650000), line.AmountText);

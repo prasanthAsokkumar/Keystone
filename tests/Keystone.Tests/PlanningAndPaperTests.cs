@@ -66,29 +66,29 @@ public sealed class PlanningAndPaperTests : IDisposable
     public async Task ContractsDatesAndWarrantiesAreReminded()
     {
         var vm = await LoadAsync();
-        vm.NewContractCommand.Execute(null);
-        vm.ContractProvider = "Swisscom";
-        vm.ContractKindIndex = (int)ContractKind.Mobile;
-        vm.ContractCost = 65;
-        vm.ContractEnd = DateTime.Today.AddMonths(6);
-        await vm.SaveContractCommand.ExecuteAsync(null);
-        Assert.Null(vm.ContractError);
+        vm.Deadlines.NewContractCommand.Execute(null);
+        vm.Deadlines.ContractProvider = "Swisscom";
+        vm.Deadlines.ContractKindIndex = (int)ContractKind.Mobile;
+        vm.Deadlines.ContractCost = 65;
+        vm.Deadlines.ContractEnd = DateTime.Today.AddMonths(6);
+        await vm.Deadlines.SaveContractCommand.ExecuteAsync(null);
+        Assert.Null(vm.Deadlines.ContractError);
 
-        vm.NewImportantDateCommand.Execute(null);
-        vm.ImportantDateKindIndex = (int)ImportantDateKind.Passport;
-        Assert.Equal("Passport", vm.ImportantDateTitle);
-        Assert.Equal(180m, vm.ImportantDateRemindDays);
-        vm.ImportantDateDate = DateTime.Today.AddMonths(8);
-        await vm.SaveImportantDateCommand.ExecuteAsync(null);
+        vm.Deadlines.NewImportantDateCommand.Execute(null);
+        vm.Deadlines.ImportantDateKindIndex = (int)ImportantDateKind.Passport;
+        Assert.Equal("Passport", vm.Deadlines.ImportantDateTitle);
+        Assert.Equal(180m, vm.Deadlines.ImportantDateRemindDays);
+        vm.Deadlines.ImportantDateDate = DateTime.Today.AddMonths(8);
+        await vm.Deadlines.SaveImportantDateCommand.ExecuteAsync(null);
 
-        vm.NewWarrantyCommand.Execute(null);
-        vm.WarrantyItem = "Washing machine";
-        vm.WarrantyPurchaseDate = DateTime.Today.AddMonths(-20);
-        await vm.SaveWarrantyCommand.ExecuteAsync(null);
+        vm.Deadlines.NewWarrantyCommand.Execute(null);
+        vm.Deadlines.WarrantyItem = "Washing machine";
+        vm.Deadlines.WarrantyPurchaseDate = DateTime.Today.AddMonths(-20);
+        await vm.Deadlines.SaveWarrantyCommand.ExecuteAsync(null);
 
-        Assert.Single(vm.ContractRows);
-        Assert.Single(vm.ImportantDateRows);
-        Assert.Single(vm.WarrantyRows);
+        Assert.Single(vm.Deadlines.ContractRows);
+        Assert.Single(vm.Deadlines.ImportantDateRows);
+        Assert.Single(vm.Deadlines.WarrantyRows);
         var reminders = vm.PlanReminders(DateTime.Now);
         Assert.Contains(reminders, r => r.Id.StartsWith("contract-"));
         Assert.Contains(reminders, r => r.Id.StartsWith("date-") && r.Title.StartsWith("Coming up: Passport"));
@@ -107,10 +107,10 @@ public sealed class PlanningAndPaperTests : IDisposable
         });
         var vm = await LoadAsync();
 
-        await vm.ToggleTaskCommand.ExecuteAsync(vm.TaskRows[0].Task);
+        await vm.Tasks.ToggleTaskCommand.ExecuteAsync(vm.Tasks.TaskRows[0].Task);
 
         // Done late: the next one is the first monthly date from today on, not one already past.
-        var next = Assert.Single(vm.TaskRows);
+        var next = Assert.Single(vm.Tasks.TaskRows);
         Assert.Equal("Read the meters", next.Title);
         Assert.True(next.Task.DueDate >= Today);
         Assert.Equal(TaskRepeat.Monthly, next.Task.Repeat);
@@ -247,18 +247,18 @@ public sealed class PlanningAndPaperTests : IDisposable
         });
         var vm = await LoadAsync();
 
-        vm.ScenarioKindIndex = 1; // stop an entry
-        vm.ScenarioEntry = vm.ScenarioEntries.First(e => e.Transaction.Description == "Salary");
-        await vm.AddScenarioChangeCommand.ExecuteAsync(null);
+        vm.Planning.ScenarioKindIndex = 1; // stop an entry
+        vm.Planning.ScenarioEntry = vm.Planning.ScenarioEntries.First(e => e.Transaction.Description == "Salary");
+        await vm.Planning.AddScenarioChangeCommand.ExecuteAsync(null);
 
         Assert.Null(vm.Summary.ZeroCashDate);
-        Assert.NotNull(vm.ScenarioSummary.ZeroCashDate); // without the salary, the money runs out
+        Assert.NotNull(vm.Planning.ScenarioSummary.ZeroCashDate); // without the salary, the money runs out
         Assert.Equal(2, (await _repository.GetTransactionsAsync()).Count);
-        Assert.Contains(vm.ScenarioComparison, r => r.IsDifferent);
+        Assert.Contains(vm.Planning.ScenarioComparison, r => r.IsDifferent);
 
         // The changes are kept for next time.
         var again = await LoadAsync(ownDocumentsFolder: false);
-        Assert.Single(again.ScenarioChangeRows);
+        Assert.Single(again.Planning.ScenarioChangeRows);
     }
 
     [Fact]
@@ -271,19 +271,19 @@ public sealed class PlanningAndPaperTests : IDisposable
         vm.AccountBalanceToday = 1_000;
         await vm.SaveBankAccountCommand.ExecuteAsync(null);
 
-        vm.NewGoalCommand.Execute(null);
-        vm.GoalName = "Japan";
-        vm.GoalTarget = 7_000;
-        vm.GoalDate = DateTime.Today.AddMonths(12);
-        Assert.Equal("Holiday savings", vm.GoalAccount?.Account?.Name); // a savings account is suggested
-        await vm.SaveGoalCommand.ExecuteAsync(null);
+        vm.Planning.NewGoalCommand.Execute(null);
+        vm.Planning.GoalName = "Japan";
+        vm.Planning.GoalTarget = 7_000;
+        vm.Planning.GoalDate = DateTime.Today.AddMonths(12);
+        Assert.Equal("Holiday savings", vm.Planning.GoalAccount?.Account?.Name); // a savings account is suggested
+        await vm.Planning.SaveGoalCommand.ExecuteAsync(null);
 
-        var goal = Assert.Single(vm.GoalRows);
+        var goal = Assert.Single(vm.Planning.GoalRows);
         Assert.Equal(1_000m, goal.Saved);
         Assert.Equal(500m, goal.MonthlyNeeded);
         Assert.True(goal.CanPlanTransfer);
 
-        await vm.PlanGoalTransferCommand.ExecuteAsync(goal);
+        await vm.Planning.PlanGoalTransferCommand.ExecuteAsync(goal);
         var transfer = Assert.Single(vm.Transactions, t => t.IsTransfer);
         Assert.Equal(500m, transfer.Amount);
         Assert.Equal(vm.BankAccounts[1].Id, transfer.ToAccountId);
@@ -331,8 +331,8 @@ public sealed class PlanningAndPaperTests : IDisposable
         });
         var vm = await LoadAsync();
 
-        Assert.Equal(27_000m, vm.NetWorthOn(Today));
-        Assert.Equal(Format.Money(27_000), vm.NetWorthTodayText);
-        Assert.Equal(24, vm.NetWorthHistory.Count);
+        Assert.Equal(27_000m, vm.Planning.NetWorthOn(Today));
+        Assert.Equal(Format.Money(27_000), vm.Planning.NetWorthTodayText);
+        Assert.Equal(24, vm.Planning.NetWorthHistory.Count);
     }
 }

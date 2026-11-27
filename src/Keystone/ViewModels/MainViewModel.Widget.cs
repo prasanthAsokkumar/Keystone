@@ -27,12 +27,12 @@ public partial class MainViewModel
     internal WidgetSnapshot BuildWidgetSnapshot(DateTime now, bool? hideDetails = null)
     {
         var today = DateOnly.FromDateTime(now);
-        var hidden = hideDetails ?? IsLockEnabled;
+        var hidden = hideDetails ?? Lock.IsLockEnabled;
         WidgetItem Item(string title, string? detail, DateOnly? date, DateTime? start = null, bool allDay = false) =>
             hidden ? new WidgetItem("", null, date, start, allDay) : new WidgetItem(title, detail, date, start, allDay);
 
         // Open tasks: overdue and soonest first, those without a date last.
-        var tasks = _tasks.Where(t => !t.IsDone)
+        var tasks = Tasks.All.Where(t => !t.IsDone)
             .OrderBy(t => t.DueDate ?? DateOnly.MaxValue).ThenBy(t => t.CreatedAt)
             .ToList();
 
@@ -40,7 +40,7 @@ public partial class MainViewModel
             .OrderBy(d => d.NextDueDate ?? DateOnly.MaxValue).ThenBy(d => d.Date)
             .ToList();
 
-        var appointments = _appointments
+        var appointments = Appointments.All
             .Where(a => !a.HasPassed(now) && a.Start.Date <= now.Date.AddDays(WidgetSnapshot.AppointmentDays))
             .OrderBy(a => a.Start)
             .ToList();

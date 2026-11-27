@@ -188,22 +188,22 @@ public sealed class SortingAndDragTests : IDisposable
         foreach (var title in new[] { "Renew passport", "Book dentist", "Sort out the cellar" })
             await _repository.AddTaskAsync(new TaskItem { Title = title, CreatedAt = DateTime.Now });
         var vm = await LoadAsync();
-        var before = vm.TaskRows.Select(r => r.Title).ToList();
+        var before = vm.Tasks.TaskRows.Select(r => r.Title).ToList();
 
         // The last one dragged onto the first goes to the top.
-        await vm.DropAsync("reorder:tasks", vm.TaskRows[0], vm.TaskRows[2]);
+        await vm.DropAsync("reorder:tasks", vm.Tasks.TaskRows[0], vm.Tasks.TaskRows[2]);
 
         var expected = new[] { before[2], before[0], before[1] };
-        Assert.Equal(expected, vm.TaskRows.Select(r => r.Title));
+        Assert.Equal(expected, vm.Tasks.TaskRows.Select(r => r.Title));
         Assert.Equal(MainViewModel.ManualSort, vm.ListSorts["tasks"]);
 
         // Kept after a restart, and a header click still sorts.
         await Task.Delay(100);
         var again = await LoadAsync();
-        Assert.Equal(expected, again.TaskRows.Select(r => r.Title));
+        Assert.Equal(expected, again.Tasks.TaskRows.Select(r => r.Title));
         again.SortListCommand.Execute("tasks:title");
-        Assert.Equal(["Book dentist", "Renew passport", "Sort out the cellar"], again.TaskRows.Select(r => r.Title));
-        Assert.False(again.CanDrop("reorder:tasks", again.TaskRows[0], again.TaskRows[0]));
+        Assert.Equal(["Book dentist", "Renew passport", "Sort out the cellar"], again.Tasks.TaskRows.Select(r => r.Title));
+        Assert.False(again.CanDrop("reorder:tasks", again.Tasks.TaskRows[0], again.Tasks.TaskRows[0]));
     }
 
     [Fact]

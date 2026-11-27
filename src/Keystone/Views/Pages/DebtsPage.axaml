@@ -1,0 +1,155 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.DebtsPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Debts, their repayments and what is still owed. -->
+    <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
+        <Grid ColumnDefinitions="*,*,*,*" ColumnSpacing="16">
+            <Border Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Still owed'}" />
+                    <TextBlock Classes="value negative" Text="{Binding TotalDebtText}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Payments next month'}" />
+                    <TextBlock Classes="value" Text="{Binding MonthlyDebtPaymentsText}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Debt-free by'}" />
+                    <TextBlock Classes="value" Text="{Binding DebtFreeText}" />
+                    <TextBlock Classes="muted" Text="{l:T 'A payment doesn’t cover its interest'}"
+                               TextWrapping="Wrap" IsVisible="{Binding HasNeverEndingDebt}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="3" Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Interest still to pay'}" />
+                    <TextBlock Classes="value" Text="{Binding DebtInterestText}" />
+                    <TextBlock Classes="muted" Text="{l:T 'Excludes debts without a payoff date'}"
+                               TextWrapping="Wrap" IsVisible="{Binding HasDebtWithoutEnd}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <TextBlock Grid.Row="1" Classes="error" Text="{Binding DebtError}"
+                   IsVisible="{Binding HasDebtError}" />
+
+        <Panel Grid.Row="2">
+            <Border Classes="card" IsVisible="{Binding !HasDebts}" VerticalAlignment="Top" Padding="32">
+                <StackPanel Spacing="10" HorizontalAlignment="Center">
+                    <TextBlock Classes="sectionTitle" Text="{l:T 'No debts yet'}" HorizontalAlignment="Center" />
+                    <TextBlock Classes="secondary" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="380"
+                               Text="{l:T 'Add loans, credit cards or bills you still have to pay. Their payments are added to your plan automatically.'}" />
+                    <Button Classes="primary" Content="{l:T 'Add your first debt'}" HorizontalAlignment="Center"
+                            Command="{Binding NewDebtCommand}" Margin="0,6,0,0" />
+                </StackPanel>
+            </Border>
+            <ScrollViewer IsVisible="{Binding HasDebts}">
+    <StackPanel>
+    <StackPanel Orientation="Horizontal" Spacing="18" Margin="4,0,0,10" IsVisible="{Binding HasDebts}" VerticalAlignment="Top">
+                <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
+                <controls:SortHeader Label="{l:T 'Name'}" List="debts" Key="name" Sorts="{Binding ListSorts}" />
+                <controls:SortHeader Label="{l:T 'Still owed'}" List="debts" Key="outstanding" Sorts="{Binding ListSorts}" />
+                <controls:SortHeader Label="{l:T 'Paid off'}" List="debts" Key="payoff" Sorts="{Binding ListSorts}" />
+            </StackPanel>
+
+                <ItemsControl ItemsSource="{Binding Debts}" Margin="0,0,14,0">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="12" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DebtItemViewModel">
+                            <Border Classes="card" Padding="20,18" controls:Drag.Item="{Binding}" controls:Drag.Target="reorder:debts" controls:Drag.TargetItem="{Binding}">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="16">
+                                    <Border Classes="iconTile" VerticalAlignment="Top">
+                                        <PathIcon Data="{StaticResource IconCard}" />
+                                    </Border>
+                                    <StackPanel Grid.Column="1" Spacing="10">
+                                        <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                                            <StackPanel>
+                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" FontSize="15" />
+                                                <TextBlock Classes="muted" FontSize="13" Text="{Binding TermsText}"
+                                                           TextWrapping="Wrap" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" HorizontalAlignment="Right">
+                                                <TextBlock Text="{Binding OutstandingText}" FontSize="20"
+                                                           FontWeight="Bold" HorizontalAlignment="Right" />
+                                                <TextBlock Classes="muted" Text="{l:T 'still owed'}" HorizontalAlignment="Right" />
+                                            </StackPanel>
+                                        </Grid>
+                                        <ProgressBar Classes="thin" Value="{Binding PaidPercent}" Maximum="100" />
+                                        <Grid ColumnDefinitions="*,Auto">
+                                            <StackPanel VerticalAlignment="Center" Spacing="2">
+                                                <TextBlock Classes="secondary" FontSize="13" Text="{Binding PayoffText}"
+                                                           IsVisible="{Binding !HasPayoffProblem}" />
+                                                <TextBlock Classes="error" Text="{Binding PayoffText}"
+                                                           IsVisible="{Binding HasPayoffProblem}" />
+                                                <TextBlock Classes="muted" Text="{Binding InterestText}" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="6"
+                                                        VerticalAlignment="Center">
+                                                <Button Classes="secondary" Content="{Binding ExtraPaymentLabel}">
+                                                    <Button.Flyout>
+                                                        <Flyout Placement="BottomEdgeAlignedRight">
+                                                            <StackPanel Spacing="10" Width="240" Margin="4">
+                                                                <TextBlock Text="{Binding ExtraPaymentTitle}" FontWeight="SemiBold" />
+                                                                <NumericUpDown Value="{Binding ExtraAmount}" Minimum="0"
+                                                                               FormatString="N2" Increment="50"
+                                                                               ShowButtonSpinner="False"
+                                                                               PlaceholderText="{l:T 'Amount'}" />
+                                                                <Button Classes="primary" Content="{l:T 'Record payment'}"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        Command="{Binding RecordExtraPaymentCommand}" />
+                                                            </StackPanel>
+                                                        </Flyout>
+                                                    </Button.Flyout>
+                                                </Button>
+                                                <Button Classes="secondary" Content="{l:T 'Borrowed more'}">
+                                                    <Button.Flyout>
+                                                        <Flyout Placement="BottomEdgeAlignedRight">
+                                                            <StackPanel Spacing="10" Width="260" Margin="4">
+                                                                <TextBlock Text="{l:T 'Borrowed more today'}" FontWeight="SemiBold" />
+                                                                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                                                           Text="{l:T 'The debt grows by this amount and the money counts as cash coming in.'}" />
+                                                                <NumericUpDown Value="{Binding BorrowAmount}" Minimum="0"
+                                                                               FormatString="N2" Increment="100"
+                                                                               ShowButtonSpinner="False"
+                                                                               PlaceholderText="{l:T 'Amount'}" />
+                                                                <Button Classes="primary" Content="{l:T 'Record borrowing'}"
+                                                                        HorizontalAlignment="Stretch"
+                                                                        Command="{Binding BorrowMoreCommand}" />
+                                                            </StackPanel>
+                                                        </Flyout>
+                                                    </Button.Flyout>
+                                                </Button>
+                                                <Button Classes="icon" ToolTip.Tip="{l:T 'Edit debt'}"
+                                                        Command="{Binding EditCommand}">
+                                                    <PathIcon Data="{StaticResource IconEdit}" />
+                                                </Button>
+                                                <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete debt'}"
+                                                        Command="{Binding DeleteCommand}">
+                                                    <PathIcon Data="{StaticResource IconDelete}" />
+                                                </Button>
+                                            </StackPanel>
+                                        </Grid>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+    </ScrollViewer>
+        </Panel>
+    </Grid>
+</UserControl>

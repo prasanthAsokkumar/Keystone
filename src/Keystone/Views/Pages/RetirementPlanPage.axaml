@@ -12,9 +12,9 @@
                 <Border Classes="card">
                     <StackPanel Spacing="4">
                         <TextBlock Classes="label" Text="{l:T 'Needed in retirement'}" />
-                        <TextBlock Classes="value" Text="{Binding RetirementNeedText}" />
+                        <TextBlock Classes="value" Text="{Binding Planning.RetirementNeedText}" />
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <NumericUpDown Value="{Binding RetirementNeedPercent}" Minimum="10" Maximum="150" Increment="5" FormatString="0"
+                            <NumericUpDown Value="{Binding Planning.RetirementNeedPercent}" Minimum="10" Maximum="150" Increment="5" FormatString="0"
                                            Width="110" MinHeight="30" />
                             <TextBlock Classes="muted" FontSize="12" Text="{l:T '% of today’s living costs'}" VerticalAlignment="Center" />
                         </StackPanel>
@@ -23,27 +23,27 @@
                 <Border Grid.Column="1" Classes="card">
                     <StackPanel Spacing="4">
                         <TextBlock Classes="label" Text="{l:T 'Expected income'}" />
-                        <TextBlock Classes="value" Text="{Binding RetirementIncomeText}" />
-                        <TextBlock Classes="muted" FontSize="13" Text="{Binding RetirementIncomeDetail}" TextWrapping="Wrap" />
+                        <TextBlock Classes="value" Text="{Binding Planning.RetirementIncomeText}" />
+                        <TextBlock Classes="muted" FontSize="13" Text="{Binding Planning.RetirementIncomeDetail}" TextWrapping="Wrap" />
                     </StackPanel>
                 </Border>
                 <Border Grid.Column="2" Classes="card">
                     <StackPanel Spacing="4">
                         <TextBlock Classes="label" Text="{l:T 'Gap'}" />
-                        <TextBlock Classes="value" Text="{Binding RetirementGapText}" Classes.negative="{Binding HasRetirementGap}"
-                                   Classes.positive="{Binding !HasRetirementGap}" />
-                        <ProgressBar Classes="thin" Minimum="0" Maximum="100" Value="{Binding RetirementCoveredPercent}" Margin="0,6,0,0" />
+                        <TextBlock Classes="value" Text="{Binding Planning.RetirementGapText}" Classes.negative="{Binding Planning.HasRetirementGap}"
+                                   Classes.positive="{Binding !Planning.HasRetirementGap}" />
+                        <ProgressBar Classes="thin" Minimum="0" Maximum="100" Value="{Binding Planning.RetirementCoveredPercent}" Margin="0,6,0,0" />
                     </StackPanel>
                 </Border>
             </Grid>
 
-            <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding !HasRetirementData}"
+            <TextBlock Classes="secondary" TextWrapping="Wrap" IsVisible="{Binding !Planning.HasRetirementData}"
                        Text="{l:T 'Add your pension letters on the Retirement page to see what you can expect.'}" />
 
             <Border Classes="card">
                 <StackPanel Spacing="10">
                     <TextBlock Classes="sectionTitle" Text="{l:T 'Year of birth'}" />
-                    <ItemsControl ItemsSource="{Binding BirthYearRows}">
+                    <ItemsControl ItemsSource="{Binding Planning.BirthYearRows}">
                         <ItemsControl.ItemsPanel>
                             <ItemsPanelTemplate>
                                 <WrapPanel ItemSpacing="24" LineSpacing="8" />
@@ -62,7 +62,7 @@
                 </StackPanel>
             </Border>
 
-            <ItemsControl ItemsSource="{Binding RetirementPeople}">
+            <ItemsControl ItemsSource="{Binding Planning.RetirementPeople}">
                 <ItemsControl.ItemsPanel>
                     <ItemsPanelTemplate>
                         <StackPanel Spacing="16" />

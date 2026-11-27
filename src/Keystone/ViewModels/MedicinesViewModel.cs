@@ -60,9 +60,11 @@ public sealed record MedicineRow(Medicine Medicine, DateOnly Today, string? Aler
 }
 
 /// <summary>Medicines and pills per household member, with how long they last and when to get more.</summary>
-public partial class MainViewModel
+/// <remarks>Its own view model; shared things (people, notices, reminders) come from the main one.</remarks>
+public sealed partial class MedicinesViewModel(MainViewModel main) : ViewModelBase
 {
-    private readonly List<Medicine> _medicines = [];
+    /// <summary>Every member's medicines.</summary>
+    internal List<Medicine> All { get; } = [];
 
     /// <summary>Days ahead a medicine running out or a prescription ending is shown and reminded.</summary>
     internal const int MedicineWarningDays = 7;
@@ -84,35 +86,35 @@ public partial class MainViewModel
     /// <summary>"Runs out in 3 days", "Prescription ends 4 Dec": what to act on, or null.</summary>
     internal string? MedicineAlert(Medicine m)
     {
-        if (!m.IsTaken(Today))
+        if (!m.IsTaken(MainViewModel.Today))
             return null;
-        if (m.RunsOutOn is { } runsOut && runsOut.DayNumber - Today.DayNumber <= MedicineWarningDays)
-            return runsOut < Today ? Loc.T("Run out: get a new pack")
-                : runsOut == Today ? Loc.T("Last full day today: get a new pack")
-                : Loc.Plural(runsOut.DayNumber - Today.DayNumber, "Runs out in {0} day", "Runs out in {0} days");
-        if (m.PrescriptionUntil is { } until && until.DayNumber - Today.DayNumber <= PrescriptionWarningDays)
-            return until < Today ? Loc.F("Prescription ended {0}", Format.Date(until)) : Loc.F("Prescription ends {0}", Format.Date(until));
+        if (m.RunsOutOn is { } runsOut && runsOut.DayNumber - MainViewModel.Today.DayNumber <= MedicineWarningDays)
+            return runsOut < MainViewModel.Today ? Loc.T("Run out: get a new pack")
+                : runsOut == MainViewModel.Today ? Loc.T("Last full day today: get a new pack")
+                : Loc.Plural(runsOut.DayNumber - MainViewModel.Today.DayNumber, "Runs out in {0} day", "Runs out in {0} days");
+        if (m.PrescriptionUntil is { } until && until.DayNumber - MainViewModel.Today.DayNumber <= PrescriptionWarningDays)
+            return until < MainViewModel.Today ? Loc.F("Prescription ended {0}", Format.Date(until)) : Loc.F("Prescription ends {0}", Format.Date(until));
         return null;
     }
 
-    private void RefreshMedicineRows()
+    internal void RefreshMedicineRows()
     {
-        var mine = _medicines.Where(m => m.PersonId == SelectedMemberId).ToList();
-        MedicineRows = Sorted("medicines", mine.Where(m => !m.HasStopped(Today))
+        var mine = All.Where(m => m.PersonId == main.SelectedMemberId).ToList();
+        MedicineRows = main.Sorted("medicines", mine.Where(m => !m.HasStopped(MainViewModel.Today))
                 .OrderBy(m => MedicineAlert(m) is null).ThenBy(m => m.AsNeeded).ThenBy(m => m.Name, StringComparer.CurrentCultureIgnoreCase)
-                .Select(m => new MedicineRow(m, Today, MedicineAlert(m))),
+                .Select(m => new MedicineRow(m, MainViewModel.Today, MedicineAlert(m))),
             r => r.Medicine.SortOrder,
             new SortKey<MedicineRow>("name", r => r.Name),
             new SortKey<MedicineRow>("supply", r => r.Medicine.RunsOutOn?.DayNumber ?? int.MaxValue));
-        StoppedMedicineRows = mine.Where(m => m.HasStopped(Today)).OrderByDescending(m => m.EndsOn)
-            .Select(m => new MedicineRow(m, Today, null)).ToList();
+        StoppedMedicineRows = mine.Where(m => m.HasStopped(MainViewModel.Today)).OrderByDescending(m => m.EndsOn)
+            .Select(m => new MedicineRow(m, MainViewModel.Today, null)).ToList();
     }
 
     private void MedicinesChanged()
     {
-        RefreshHousehold();
-        RefreshDashboard();
-        ScheduleReminders();
+        main.RefreshHousehold();
+        main.RefreshDashboard();
+        main.ScheduleReminders();
     }
 
     /// <summary>A new pack: what's left today plus one pack, counted from today.</summary>
@@ -122,23 +124,23 @@ public partial class MainViewModel
         if (medicine.PackSize is not { } size || size <= 0)
             return;
         var (stock, counted) = (medicine.Stock, medicine.CountedOn);
-        medicine.Stock = (medicine.StockOn(Today) ?? 0) + size;
-        medicine.CountedOn = Today;
+        medicine.Stock = (medicine.StockOn(MainViewModel.Today) ?? 0) + size;
+        medicine.CountedOn = MainViewModel.Today;
         try
         {
-            await repository.SaveAsync(medicine, isNew: false);
+            await main.repository.SaveAsync(medicine, isNew: false);
         }
         catch (Exception ex)
         {
             (medicine.Stock, medicine.CountedOn) = (stock, counted);
-            ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
             return;
         }
         MedicinesChanged();
-        ShowNotice(Loc.F("{0}: {1} added, enough until {2}", medicine.Name, size, Format.Date(medicine.RunsOutOn ?? Today)), async () =>
+        main.ShowNotice(Loc.F("{0}: {1} added, enough until {2}", medicine.Name, size, Format.Date(medicine.RunsOutOn ?? MainViewModel.Today)), async () =>
         {
             (medicine.Stock, medicine.CountedOn) = (stock, counted);
-            await repository.SaveAsync(medicine, isNew: false);
+            await main.repository.SaveAsync(medicine, isNew: false);
             MedicinesChanged();
         });
     }
@@ -148,21 +150,21 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.DeleteAsync<Medicine>(m => m.Id == medicine.Id);
+            await main.repository.DeleteAsync<Medicine>(m => m.Id == medicine.Id);
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
             return;
         }
-        _medicines.Remove(medicine);
+        All.Remove(medicine);
         if (EditingMedicine == medicine)
             CloseMedicinePanel();
         MedicinesChanged();
-        ShowNotice(Loc.F("Deleted “{0}”", medicine.Name), async () =>
+        main.ShowNotice(Loc.F("Deleted “{0}”", medicine.Name), async () =>
         {
-            await repository.SaveAsync(medicine, isNew: true);
-            _medicines.Add(medicine);
+            await main.repository.SaveAsync(medicine, isNew: true);
+            All.Add(medicine);
             MedicinesChanged();
         });
     }
@@ -170,7 +172,6 @@ public partial class MainViewModel
     // ── The form ────────────────────────────────────────────────────────────
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsMedicinePanelOpen { get; set; }
 
     [ObservableProperty]
@@ -247,11 +248,11 @@ public partial class MainViewModel
     private decimal? _medicineStockShown;
 
     [RelayCommand]
-    private void NewMedicine()
+    internal void NewMedicine()
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingMedicine = null;
-        MedicinePerson = PersonOptions.FirstOrDefault(o => o.Id == SelectedMemberId) ?? PersonOption.Shared;
+        MedicinePerson = main.PersonOptions.FirstOrDefault(o => o.Id == main.SelectedMemberId) ?? PersonOption.Shared;
         MedicineName = "";
         MedicineStrength = "";
         MedicineDose = 1;
@@ -276,7 +277,7 @@ public partial class MainViewModel
     {
         NewMedicine();
         EditingMedicine = medicine;
-        MedicinePerson = PersonOptions.FirstOrDefault(o => o.Id == medicine.PersonId) ?? PersonOption.Shared;
+        MedicinePerson = main.PersonOptions.FirstOrDefault(o => o.Id == medicine.PersonId) ?? PersonOption.Shared;
         MedicineName = medicine.Name;
         MedicineStrength = medicine.Strength;
         MedicineDose = medicine.Dose;
@@ -287,7 +288,7 @@ public partial class MainViewModel
         MedicinePrescribedBy = medicine.PrescribedBy;
         MedicineStartedOn = medicine.StartedOn?.ToDateTime(TimeOnly.MinValue);
         MedicineEndsOn = medicine.EndsOn?.ToDateTime(TimeOnly.MinValue);
-        MedicineStock = _medicineStockShown = medicine.StockOn(Today) is { } left ? Math.Round(left, 1) : null;
+        MedicineStock = _medicineStockShown = medicine.StockOn(MainViewModel.Today) is { } left ? Math.Round(left, 1) : null;
         MedicinePackSize = medicine.PackSize;
         MedicinePrescriptionUntil = medicine.PrescriptionUntil?.ToDateTime(TimeOnly.MinValue);
         MedicineNotes = medicine.Notes;
@@ -336,7 +337,7 @@ public partial class MainViewModel
         if (MedicineStock != _medicineStockShown)
         {
             m.Stock = MedicineStock is >= 0 ? MedicineStock : null;
-            m.CountedOn = m.Stock is null ? null : Today;
+            m.CountedOn = m.Stock is null ? null : MainViewModel.Today;
         }
         m.PackSize = MedicinePackSize is > 0 ? MedicinePackSize : null;
         m.PrescriptionUntil = MedicinePrescriptionUntil is { } until ? DateOnly.FromDateTime(until) : null;
@@ -344,7 +345,7 @@ public partial class MainViewModel
 
         try
         {
-            await repository.SaveAsync(m, isNew);
+            await main.repository.SaveAsync(m, isNew);
         }
         catch (Exception ex)
         {
@@ -352,16 +353,37 @@ public partial class MainViewModel
             return;
         }
         if (isNew)
-            _medicines.Add(m);
+            All.Add(m);
         if (m.PersonId is not null)
-            SelectedMemberId = m.PersonId;
+            main.SelectedMemberId = m.PersonId;
         CloseMedicinePanel();
         MedicinesChanged();
     }
 
-    private void CloseMedicinePanel()
+    internal void CloseMedicinePanel()
     {
         IsMedicinePanelOpen = false;
         EditingMedicine = null;
     }
+
+    // ── "More details" in the form: unfolds when one of its fields has something in it ──
+
+    [ObservableProperty]
+    public partial bool MedicineMoreOpen { get; set; }
+
+    partial void OnIsMedicinePanelOpenChanged(bool value)
+    {
+        if (value)
+            MedicineMoreOpen = MedicineStock is not null || MedicinePackSize is not null || Has(MedicinePrescribedBy) ||
+                               MedicinePrescriptionUntil is not null || MedicineEndsOn is not null || Has(MedicineNotes);
+    }
+
+    private static bool Has(string? text) => !string.IsNullOrWhiteSpace(text);
+
+    partial void OnMedicineStockChanged(decimal? value) { if (value is not null) MedicineMoreOpen = true; }
+    partial void OnMedicinePackSizeChanged(int? value) { if (value is not null) MedicineMoreOpen = true; }
+    partial void OnMedicinePrescribedByChanged(string value) { if (Has(value)) MedicineMoreOpen = true; }
+    partial void OnMedicinePrescriptionUntilChanged(DateTime? value) { if (value is not null) MedicineMoreOpen = true; }
+    partial void OnMedicineEndsOnChanged(DateTime? value) { if (value is not null) MedicineMoreOpen = true; }
+    partial void OnMedicineNotesChanged(string value) { if (Has(value)) MedicineMoreOpen = true; }
 }

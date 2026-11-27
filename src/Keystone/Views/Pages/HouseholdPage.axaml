@@ -65,31 +65,31 @@
         </ItemsControl>
 
         <!-- Off sick: what to do, in order -->
-        <Border Classes="card" Background="{DynamicResource WarningSoft}" IsVisible="{Binding IsMemberOffSick}">
+        <Border Classes="card" Background="{DynamicResource WarningSoft}" IsVisible="{Binding Work.IsMemberOffSick}">
             <StackPanel Spacing="10">
                 <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
                     <StackPanel Spacing="2">
-                        <TextBlock Classes="sectionTitle" Text="{Binding SickBannerTitle}" TextWrapping="Wrap" />
+                        <TextBlock Classes="sectionTitle" Text="{Binding Work.SickBannerTitle}" TextWrapping="Wrap" />
                         <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
-                                   Text="{Binding SickBannerDetail}" />
+                                   Text="{Binding Work.SickBannerDetail}" />
                     </StackPanel>
                     <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top">
-                        <Button Classes="secondary" Command="{Binding CopySickMessageCommand}"
+                        <Button Classes="secondary" Command="{Binding Work.CopySickMessageCommand}"
                                 ToolTip.Tip="{l:T 'A short message to your employer, to paste into a text or email'}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <PathIcon Data="{StaticResource IconCopy}" />
                                 <TextBlock Text="{l:T 'Copy message to work'}" />
                             </StackPanel>
                         </Button>
-                        <Button Classes="primary" Command="{Binding BackAtWorkCommand}" Content="{l:T 'Back at work'}" />
+                        <Button Classes="primary" Command="{Binding Work.BackAtWorkCommand}" Content="{l:T 'Back at work'}" />
                     </StackPanel>
                 </Grid>
-                <ItemsControl ItemsSource="{Binding SickSteps}">
+                <ItemsControl ItemsSource="{Binding Work.SickSteps}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:SickStep">
                             <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10" Margin="0,4">
                                 <CheckBox IsChecked="{Binding IsDone, Mode=OneWay}" IsEnabled="{Binding CanToggle}" VerticalAlignment="Top"
-                                          Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).ToggleSickStepCommand}" CommandParameter="{Binding}" />
+                                          Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Work.ToggleSickStepCommand}" CommandParameter="{Binding}" />
                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="1">
                                     <TextBlock Text="{Binding Text}" FontWeight="Medium" TextWrapping="Wrap" Classes.negative="{Binding IsDue}" />
                                     <TextBlock Classes="muted" FontSize="12" Text="{Binding Detail}" IsVisible="{Binding HasDetail}" TextWrapping="Wrap" />
@@ -153,20 +153,20 @@
                                 <PathIcon Data="{StaticResource IconPill}" Width="16" Height="16" Foreground="{DynamicResource Brand}" />
                                 <TextBlock Classes="sectionTitle" Text="{l:T 'Medicines'}" VerticalAlignment="Center" />
                             </StackPanel>
-                            <Button Grid.Column="1" Classes="secondary" Command="{Binding NewMedicineCommand}">
+                            <Button Grid.Column="1" Classes="secondary" Command="{Binding Medicines.NewMedicineCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <PathIcon Data="{StaticResource IconPlus}" />
                                     <TextBlock Text="{l:T 'Add medicine'}" />
                                 </StackPanel>
                             </Button>
                         </Grid>
-                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasMedicineRows}"
+                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !Medicines.HasMedicineRows}"
                                    Text="{l:T 'No medicines. Add the pills or other medicines taken regularly or when needed; with the number on hand, Keystone says when to get a new pack.'}" />
-                        <Grid ColumnDefinitions="*,Auto" Margin="28,4,28,2" IsVisible="{Binding HasMedicineRows}">
+                        <Grid ColumnDefinitions="*,Auto" Margin="28,4,28,2" IsVisible="{Binding Medicines.HasMedicineRows}">
                             <controls:SortHeader Label="{l:T 'Medicine'}" List="medicines" Key="name" Sorts="{Binding ListSorts}" />
                             <controls:SortHeader Grid.Column="1" Label="{l:T 'Lasts until'}" List="medicines" Key="supply" Sorts="{Binding ListSorts}" />
                         </Grid>
-                        <ItemsControl ItemsSource="{Binding MedicineRows}" Margin="12,0,12,4">
+                        <ItemsControl ItemsSource="{Binding Medicines.MedicineRows}" Margin="12,0,12,4">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:MedicineRow">
                                     <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,10">
@@ -180,17 +180,17 @@
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
                                                 <Button Classes="icon" IsVisible="{Binding CanRefill}" ToolTip.Tip="{Binding RefillTip}"
-                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).RefillMedicineCommand}"
+                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Medicines.RefillMedicineCommand}"
                                                         CommandParameter="{Binding Medicine}">
                                                     <PathIcon Data="{StaticResource IconRepeat}" />
                                                 </Button>
                                                 <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
-                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).EditMedicineCommand}"
+                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Medicines.EditMedicineCommand}"
                                                         CommandParameter="{Binding Medicine}">
                                                     <PathIcon Data="{StaticResource IconEdit}" />
                                                 </Button>
                                                 <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
-                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteMedicineCommand}"
+                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Medicines.DeleteMedicineCommand}"
                                                         CommandParameter="{Binding Medicine}">
                                                     <PathIcon Data="{StaticResource IconDelete}" />
                                                 </Button>
@@ -200,9 +200,9 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <StackPanel IsVisible="{Binding HasStoppedMedicineRows}" Margin="12,4,12,8">
+                        <StackPanel IsVisible="{Binding Medicines.HasStoppedMedicineRows}" Margin="12,4,12,8">
                             <TextBlock Classes="label" Text="{l:T 'Stopped'}" Margin="16,4,16,4" />
-                            <ItemsControl ItemsSource="{Binding StoppedMedicineRows}">
+                            <ItemsControl ItemsSource="{Binding Medicines.StoppedMedicineRows}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:MedicineRow">
                                         <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="16,2" Opacity="0.65">
@@ -211,12 +211,12 @@
                                                 <TextBlock Classes="muted" FontSize="12" Text="{Binding SupplyText}" />
                                             </StackPanel>
                                             <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
-                                                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).EditMedicineCommand}"
+                                                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Medicines.EditMedicineCommand}"
                                                     CommandParameter="{Binding Medicine}">
                                                 <PathIcon Data="{StaticResource IconEdit}" />
                                             </Button>
                                             <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
-                                                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteMedicineCommand}"
+                                                    Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Medicines.DeleteMedicineCommand}"
                                                     CommandParameter="{Binding Medicine}">
                                                 <PathIcon Data="{StaticResource IconDelete}" />
                                             </Button>
@@ -238,16 +238,16 @@
                                 <PathIcon Data="{StaticResource IconBriefcase}" Width="16" Height="16" Foreground="{DynamicResource Brand}" />
                                 <TextBlock Classes="sectionTitle" Text="{l:T 'Work'}" VerticalAlignment="Center" />
                             </StackPanel>
-                            <Button Grid.Column="1" Classes="secondary" Command="{Binding NewEmploymentCommand}">
+                            <Button Grid.Column="1" Classes="secondary" Command="{Binding Work.NewEmploymentCommand}">
                                 <StackPanel Orientation="Horizontal" Spacing="8">
                                     <PathIcon Data="{StaticResource IconPlus}" />
                                     <TextBlock Text="{l:T 'Add job'}" />
                                 </StackPanel>
                             </Button>
                         </Grid>
-                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasEmploymentRows}"
+                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !Work.HasEmploymentRows}"
                                    Text="{l:T 'No job added. Add the employer with the manager and HR, and how they want to hear when you’re ill, so the numbers are at hand on a bad morning.'}" />
-                        <ItemsControl ItemsSource="{Binding EmploymentRows}" Margin="12,0,12,8">
+                        <ItemsControl ItemsSource="{Binding Work.EmploymentRows}" Margin="12,0,12,8">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:EmploymentRow">
                                     <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,12"
@@ -260,12 +260,12 @@
                                                 </StackPanel>
                                                 <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Top">
                                                     <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
-                                                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).EditEmploymentCommand}"
+                                                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Work.EditEmploymentCommand}"
                                                             CommandParameter="{Binding Job}">
                                                         <PathIcon Data="{StaticResource IconEdit}" />
                                                     </Button>
                                                     <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
-                                                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteEmploymentCommand}"
+                                                            Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Work.DeleteEmploymentCommand}"
                                                             CommandParameter="{Binding Job}">
                                                         <PathIcon Data="{StaticResource IconDelete}" />
                                                     </Button>
@@ -295,26 +295,26 @@
                         <Grid ColumnDefinitions="*,Auto" Margin="16,12,12,4">
                             <StackPanel Spacing="2">
                                 <TextBlock Classes="sectionTitle" Text="{l:T 'Sick days'}" />
-                                <TextBlock Classes="muted" FontSize="12" Text="{Binding SickDaysText}" TextWrapping="Wrap" />
+                                <TextBlock Classes="muted" FontSize="12" Text="{Binding Work.SickDaysText}" TextWrapping="Wrap" />
                             </StackPanel>
-                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top" IsVisible="{Binding !IsMemberOffSick}">
-                                <Button Classes="primary" Command="{Binding ReportSickCommand}" CommandParameter="illness"
+                            <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="8" VerticalAlignment="Top" IsVisible="{Binding !Work.IsMemberOffSick}">
+                                <Button Classes="primary" Command="{Binding Work.ReportSickCommand}" CommandParameter="illness"
                                         ToolTip.Tip="{l:T 'Starts the time off today and shows whom to tell'}">
                                     <TextBlock Text="{l:T 'Ill today'}" />
                                 </Button>
-                                <Button Classes="secondary" Command="{Binding ReportSickCommand}" CommandParameter="accident"
+                                <Button Classes="secondary" Command="{Binding Work.ReportSickCommand}" CommandParameter="accident"
                                         ToolTip.Tip="{l:T 'An accident goes to the accident insurer through the employer'}">
                                     <TextBlock Text="{l:T 'Accident'}" />
                                 </Button>
                             </StackPanel>
                         </Grid>
-                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,8" TextWrapping="Wrap" IsVisible="{Binding !HasSickLeaveRows}"
+                        <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,8" TextWrapping="Wrap" IsVisible="{Binding !Work.HasSickLeaveRows}"
                                    Text="{l:T 'No sick days. On a day off ill, click “Ill today” to see whom to tell and when a doctor’s certificate is due.'}" />
-                        <Grid ColumnDefinitions="*,Auto" Margin="28,4,28,2" IsVisible="{Binding HasSickLeaveRows}">
+                        <Grid ColumnDefinitions="*,Auto" Margin="28,4,28,2" IsVisible="{Binding Work.HasSickLeaveRows}">
                             <controls:SortHeader Label="{l:T 'When'}" List="sickLeaves" Key="date" Sorts="{Binding ListSorts}" />
                             <controls:SortHeader Grid.Column="1" Label="{l:T 'Days'}" List="sickLeaves" Key="days" Sorts="{Binding ListSorts}" Margin="0,0,72,0" />
                         </Grid>
-                        <ItemsControl ItemsSource="{Binding SickLeaveRows}" Margin="12,0,12,4">
+                        <ItemsControl ItemsSource="{Binding Work.SickLeaveRows}" Margin="12,0,12,4">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:SickLeaveRow">
                                     <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,8">
@@ -329,12 +329,12 @@
                                                        Classes.warning="{Binding IsOngoing}" />
                                             <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                                 <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
-                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).EditSickLeaveCommand}"
+                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Work.EditSickLeaveCommand}"
                                                         CommandParameter="{Binding Leave}">
                                                     <PathIcon Data="{StaticResource IconEdit}" />
                                                 </Button>
                                                 <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
-                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteSickLeaveCommand}"
+                                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Work.DeleteSickLeaveCommand}"
                                                         CommandParameter="{Binding Leave}">
                                                     <PathIcon Data="{StaticResource IconDelete}" />
                                                 </Button>
@@ -344,7 +344,7 @@
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
                         </ItemsControl>
-                        <Button Classes="link" Margin="16,4,16,10" Command="{Binding NewSickLeaveCommand}" Content="{l:T 'Add earlier sick days'}" />
+                        <Button Classes="link" Margin="16,4,16,10" Command="{Binding Work.NewSickLeaveCommand}" Content="{l:T 'Add earlier sick days'}" />
                     </StackPanel>
                 </Border>
             </StackPanel>

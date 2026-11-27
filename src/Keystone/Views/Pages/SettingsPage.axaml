@@ -1,0 +1,390 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.SettingsPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Settings in tabs. -->
+    <ScrollViewer>
+        <StackPanel Spacing="16" MaxWidth="760" HorizontalAlignment="Left">
+            <Border Classes="segments" HorizontalAlignment="Left">
+                <StackPanel Orientation="Horizontal">
+                    <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'General'}" IsChecked="{Binding IsSettingsGeneralTab}" />
+                    <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'Accounts'}" IsChecked="{Binding IsSettingsAccountsTab}" />
+                    <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'Household'}" IsChecked="{Binding IsSettingsHouseholdTab}" />
+                    <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'Reminders &amp; calendar'}" IsChecked="{Binding IsSettingsRemindersTab}" />
+                    <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'Documents &amp; AI'}" IsChecked="{Binding IsSettingsDocumentsTab}" />
+                    <RadioButton Classes="segment" GroupName="SettingsTabs" MinWidth="90" Content="{l:T 'Backup &amp; lock'}" IsChecked="{Binding IsSettingsSecurityTab}" />
+                </StackPanel>
+            </Border>
+
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsAccountsTab}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="16">
+                        <StackPanel Spacing="2">
+                            <TextBlock Classes="sectionTitle" Text="{l:T 'Bank accounts'}" />
+                            <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                       Text="{l:T 'Each account’s balance comes from its starting balance plus its entries. Match it to what your bank shows today, or import a bank statement.'}" />
+                        </StackPanel>
+                        <Button Grid.Column="1" Classes="secondary" Command="{Binding NewBankAccountCommand}" VerticalAlignment="Top">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconPlus}" />
+                                <TextBlock Text="{l:T 'Add account'}" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <ItemsControl ItemsSource="{Binding AccountRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:AccountRow">
+                                <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="0,10">
+                                    <Grid ColumnDefinitions="Auto,*,Auto,Auto" ColumnSpacing="12">
+                                        <Border Classes="iconTile">
+                                            <PathIcon Data="{StaticResource IconBank}" />
+                                        </Border>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding DetailText}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding BalanceText}" FontWeight="SemiBold" TextAlignment="Right"
+                                                       Classes.negative="{Binding IsNegative}" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding OverdraftText}" TextAlignment="Right"
+                                                       IsVisible="{Binding HasOverdraft}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
+                                            <Button Classes="icon" ToolTip.Tip="{l:T 'Match my bank balance'}">
+                                                <PathIcon Data="{StaticResource IconCheck}" />
+                                                <Button.Flyout>
+                                                    <Flyout Placement="BottomEdgeAlignedRight">
+                                                        <StackPanel Spacing="10" Width="250" Margin="4">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold" />
+                                                            <TextBlock Classes="muted" TextWrapping="Wrap" FontSize="13"
+                                                                       Text="{l:T 'What does your bank show for this account today?'}" />
+                                                            <NumericUpDown FormatString="N2" ShowButtonSpinner="False" PlaceholderText="{Binding BalanceText}"
+                                                                           Value="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).BankBalance}" />
+                                                            <Button Classes="primary" Content="{l:T 'Match'}" HorizontalAlignment="Stretch"
+                                                                    Click="MatchAccount_Click" Tag="{Binding Account}" />
+                                                        </StackPanel>
+                                                    </Flyout>
+                                                </Button.Flyout>
+                                            </Button>
+                                            <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).EditBankAccountCommand}"
+                                                    CommandParameter="{Binding Account}">
+                                                <PathIcon Data="{StaticResource IconEdit}" />
+                                            </Button>
+                                            <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}" IsVisible="{Binding !IsPrimary}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteBankAccountCommand}"
+                                                    CommandParameter="{Binding Account}">
+                                                <PathIcon Data="{StaticResource IconDelete}" />
+                                            </Button>
+                                        </StackPanel>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <TextBlock Classes="error" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" />
+                </StackPanel>
+            </Border>
+
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsGeneralTab}">
+                <Grid ColumnDefinitions="*,200" ColumnSpacing="24">
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Language'}" />
+                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                   Text="{l:T 'The language of the app, its dates and amounts. Your own entries and documents stay as you wrote them.'}" />
+                    </StackPanel>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding Languages}" SelectedItem="{Binding SelectedLanguage}"
+                              HorizontalAlignment="Stretch" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsGeneralTab}">
+                <Grid ColumnDefinitions="*,200" ColumnSpacing="24">
+                    <StackPanel Spacing="2" VerticalAlignment="Center">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Financial year'}" />
+                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                   Text="{l:T 'The month your year starts in. Used for &quot;Saving this year&quot; and the Year page.'}" />
+                    </StackPanel>
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding MonthNames}"
+                              SelectedIndex="{Binding FinancialYearStartIndex}" VerticalAlignment="Center" />
+                </Grid>
+            </Border>
+
+            <!-- Reminders -->
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsHouseholdTab}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Classes="iconTile">
+                            <PathIcon Data="{StaticResource IconBell}" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Classes="sectionTitle" Text="{l:T 'Reminders'}" />
+                            <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                       Text="{l:T 'Notifications for bills due, tasks, insurance notice deadlines and pillar 3a in December. They arrive even when Keystone is closed.'}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="2" IsChecked="{Binding RemindersEnabled}" OnContent="" OffContent=""
+                                      VerticalAlignment="Top" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,140" ColumnSpacing="12" IsVisible="{Binding RemindersEnabled}">
+                        <TextBlock Classes="secondary" FontSize="13" Text="{l:T 'Time of day'}" VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding ReminderHourNames}" SelectedIndex="{Binding ReminderHourIndex}" />
+                    </Grid>
+                    <StackPanel Spacing="6" IsVisible="{Binding RemindersEnabled}">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Coming up'}" IsVisible="{Binding HasUpcomingReminders}" />
+                        <ItemsControl ItemsSource="{Binding UpcomingReminders}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:ReminderRow">
+                                    <Grid ColumnDefinitions="150,*" ColumnSpacing="12" Margin="0,3">
+                                        <TextBlock Classes="muted" FontSize="13" Text="{Binding WhenText}" />
+                                        <StackPanel Grid.Column="1">
+                                            <TextBlock FontSize="13" FontWeight="Medium" Text="{Binding Title}" TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Body}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Classes="muted" FontSize="13" Text="{Binding ReminderPermissionText}" TextWrapping="Wrap"
+                                   VerticalAlignment="Center" Classes.warning="{Binding IsNotificationsDenied}" />
+                        <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Open System Settings'}"
+                                Command="{Binding OpenNotificationSettingsCommand}" IsVisible="{Binding IsNotificationsDenied}" />
+                        <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Send a test reminder'}"
+                                Command="{Binding SendTestReminderCommand}" IsVisible="{Binding CanSendNotifications}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Calendar -->
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsHouseholdTab}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Classes="iconTile">
+                            <PathIcon Data="{StaticResource IconAppointment}" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Classes="sectionTitle" Text="{l:T 'Calendar sync'}" />
+                            <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                       Text="{l:T 'Keeps your appointments in step with a calendar in the Calendar app, both ways: what you add or change in Keystone shows there, and what you add or change there shows here. With an iCloud or Google calendar, also on your iPhone.'}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="2" IsChecked="{Binding Appointments.IsCalendarSyncEnabled}" IsEnabled="{Binding Appointments.CanUseCalendar}"
+                                      OnContent="" OffContent="" VerticalAlignment="Top" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,280" ColumnSpacing="12" IsVisible="{Binding Appointments.ShowsCalendarChoice}">
+                        <TextBlock Classes="secondary" FontSize="13" Text="{l:T 'Calendar'}" VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding Appointments.CalendarOptions}" SelectedItem="{Binding Appointments.SelectedCalendar}"
+                                  PlaceholderText="{l:T 'Choose a calendar'}" HorizontalAlignment="Stretch" />
+                    </Grid>
+                    <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding Appointments.ShowsCalendarChoice}"
+                               Text="{l:T 'Appointments from 30 days ago to a year ahead are compared. Deleting an appointment in one place deletes it in the other. A calendar of its own keeps household appointments apart from work.'}" />
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center"
+                                   Text="{Binding Appointments.CalendarPermissionText}" Classes.warning="{Binding Appointments.IsCalendarDenied}" />
+                        <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Open System Settings'}"
+                                Command="{Binding Appointments.OpenCalendarSettingsCommand}" IsVisible="{Binding Appointments.IsCalendarDenied}" />
+                        <Button Grid.Column="2" Classes="secondary" Command="{Binding Appointments.CreateKeystoneCalendarCommand}"
+                                IsVisible="{Binding Appointments.ShowsCalendarChoice}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <PathIcon Data="{StaticResource IconPlus}" />
+                                <TextBlock Text="{l:T 'New “Keystone” calendar'}" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <TextBlock Classes="error" FontSize="13" TextWrapping="Wrap" Text="{Binding Appointments.CalendarSyncError}"
+                               IsVisible="{Binding Appointments.HasCalendarSyncError}" />
+                </StackPanel>
+            </Border>
+
+            <!-- App lock -->
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsSecurityTab}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <Border Classes="iconTile">
+                            <PathIcon Data="{StaticResource IconLock}" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Classes="sectionTitle" Text="{l:T 'App lock'}" />
+                            <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                       Text="{l:T 'Ask for Touch ID or your Mac password when Keystone opens and after time away.'}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="2" IsChecked="{Binding Lock.IsLockEnabled}" IsEnabled="{Binding Lock.CanLock}"
+                                      OnContent="" OffContent="" VerticalAlignment="Top" />
+                    </Grid>
+                    <Grid ColumnDefinitions="*,240" ColumnSpacing="12" IsVisible="{Binding Lock.IsLockEnabled}">
+                        <TextBlock Classes="secondary" FontSize="13" Text="{l:T 'Lock again'}" VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding Lock.LockDelayNames}" SelectedIndex="{Binding Lock.LockDelayIndex}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <!-- Backup -->
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsSecurityTab}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="Auto,*" ColumnSpacing="12">
+                        <Border Classes="iconTile">
+                            <PathIcon Data="{StaticResource IconCloud}" />
+                        </Border>
+                        <StackPanel Grid.Column="1" Spacing="2">
+                            <TextBlock Classes="sectionTitle" Text="{l:T 'Backup'}" />
+                            <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap" Text="{Binding Backup.BackupNote}" />
+                        </StackPanel>
+                    </Grid>
+                    <Grid ColumnDefinitions="*,Auto,Auto,Auto" ColumnSpacing="8">
+                        <TextBlock Classes="secondary" FontSize="13" Text="{Binding Backup.BackupStatusText}" VerticalAlignment="Center"
+                                   TextWrapping="Wrap" />
+                        <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Back up now'}" Command="{Binding Backup.BackUpNowCommand}" />
+                        <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Open folder'}" Command="{Binding Backup.OpenBackupsFolderCommand}" />
+                        <Button Grid.Column="3" Classes="secondary" Content="{l:T 'Restore…'}" Click="RestoreBackup_Click" />
+                    </Grid>
+                    <Border Background="{DynamicResource WarningSoft}" CornerRadius="10" Padding="14"
+                            IsVisible="{Binding Backup.HasRestoreCandidate}">
+                        <StackPanel Spacing="10">
+                            <TextBlock Text="{Binding Backup.RestoreQuestion}" TextWrapping="Wrap" />
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <Button Classes="primary" Content="{l:T 'Restore'}" Command="{Binding Backup.RestoreBackupCommand}" />
+                                <Button Classes="secondary" Content="{l:T 'Cancel'}" Command="{Binding Backup.CancelRestoreCommand}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Border>
+                    <TextBlock Classes="error" Text="{Binding Backup.BackupError}" IsVisible="{Binding Backup.HasBackupError}" />
+                </StackPanel>
+            </Border>
+
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsRemindersTab}">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Household'}" />
+                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                   Text="{l:T 'Tie income and expenses to a person. Entries without one are shared. Removing a person keeps their entries as shared; their medicines, jobs and sick days are removed with them.'}" />
+                        <Button Classes="link" Command="{Binding OpenHouseholdCommand}" Content="{l:T 'Details, health and work of each person are on the Household page →'}" Margin="0,4,0,0" />
+                    </StackPanel>
+                    <ItemsControl ItemsSource="{Binding People}">
+                        <ItemsControl.ItemsPanel>
+                            <ItemsPanelTemplate>
+                                <StackPanel Spacing="6" />
+                            </ItemsPanelTemplate>
+                        </ItemsControl.ItemsPanel>
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="models:Person">
+                                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="10,6">
+                                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                                        <Border Width="32" Height="32" CornerRadius="16"
+                                                Background="{DynamicResource BrandSoft}">
+                                            <TextBlock Text="{Binding Name, Converter={x:Static vm:Format.InitialConverter}}"
+                                                       HorizontalAlignment="Center" VerticalAlignment="Center"
+                                                       FontWeight="Bold" Foreground="{DynamicResource BrandText}" />
+                                        </Border>
+                                        <TextBlock Grid.Column="1" Text="{Binding Name}" FontWeight="Medium"
+                                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                                        <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Remove'}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeletePersonCommand}"
+                                                CommandParameter="{Binding}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                        <TextBox Text="{Binding NewPersonName}" PlaceholderText="{l:T 'Name, e.g. Anna'}">
+                            <TextBox.KeyBindings>
+                                <KeyBinding Gesture="Enter" Command="{Binding AddPersonCommand}" />
+                            </TextBox.KeyBindings>
+                        </TextBox>
+                        <Button Grid.Column="1" Classes="secondary" Command="{Binding AddPersonCommand}">
+                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                <PathIcon Data="{StaticResource IconPlus}" />
+                                <TextBlock Text="{l:T 'Add person'}" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
+                    <TextBlock Classes="error" Text="{Binding HouseholdError}" IsVisible="{Binding HasHouseholdError}" />
+                </StackPanel>
+            </Border>
+
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsDocumentsTab}">
+                <StackPanel Spacing="14">
+                    <StackPanel Spacing="2">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Documents folder'}" />
+                        <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                   Text="{l:T 'Bills, letters and notices are filed here as Person / Year / Type. Use a OneDrive folder to keep them backed up and available on your phone.'}" />
+                    </StackPanel>
+                    <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                        <TextBox Text="{Binding DocumentsFolder}" IsReadOnly="True" />
+                        <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Change…'}" Click="ChangeDocumentsFolder_Click" />
+                        <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Use default'}"
+                                Command="{Binding ResetDocumentsFolderCommand}"
+                                IsVisible="{Binding !IsDefaultDocumentsFolder}" />
+                    </Grid>
+                    <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="12">
+                        <PathIcon Data="{StaticResource IconInbox}" Width="18" Height="18" Foreground="{DynamicResource Brand}" />
+                        <TextBlock Grid.Column="1" Classes="secondary" FontSize="13" TextWrapping="Wrap" Text="{Binding InboxNote}"
+                                   VerticalAlignment="Center" />
+                        <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Open inbox'}" Command="{Binding OpenInboxFolderCommand}" />
+                    </Grid>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsDocumentsTab}">
+                <StackPanel Spacing="14">
+                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="24">
+                        <StackPanel Spacing="2">
+                            <TextBlock Classes="sectionTitle" Text="{l:T 'Local AI'}" />
+                            <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                                       Text="{l:T 'Reads dropped bills, payslips and statements to suggest income and expenses, and fills in a document’s details when you add it. It runs an open-source model on this Mac with Ollama, so documents never leave your computer.'}" />
+                        </StackPanel>
+                        <ToggleSwitch Grid.Column="1" IsChecked="{Binding IsImportEnabled}" VerticalAlignment="Top"
+                                      OnContent="{l:T 'On'}" OffContent="{l:T 'Off'}" />
+                    </Grid>
+                    <StackPanel Spacing="14" IsVisible="{Binding IsImportEnabled}">
+                        <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14,10">
+                            <StackPanel Spacing="4">
+                                <TextBlock FontSize="13" FontWeight="SemiBold" Text="{l:T 'One-time setup'}" />
+                                <TextBlock Classes="secondary" FontSize="13" TextWrapping="Wrap"
+                                           Text="{l:T 'Run Ollama with Docker from the project folder, then download the model:'}" />
+                                <SelectableTextBlock Text="docker compose up -d" FontFamily="Menlo,monospace" FontSize="13" />
+                                <SelectableTextBlock Text="{Binding AiSetupCommand}" FontFamily="Menlo,monospace" FontSize="13" />
+                                <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                           Text="{l:T 'Or install the Ollama app from ollama.com, which is faster on Apple Silicon because it can use the GPU.'}" />
+                            </StackPanel>
+                        </Border>
+                        <Grid ColumnDefinitions="*,*,Auto" ColumnSpacing="12">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Ollama address'}" />
+                                <TextBox Text="{Binding AiEndpoint}" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Model'}" />
+                                <ComboBox ItemsSource="{Binding InstalledModels}" Text="{Binding AiModel}" IsEditable="True"
+                                          HorizontalAlignment="Stretch" />
+                            </StackPanel>
+                            <Button Grid.Column="2" Classes="primary" Content="{l:T 'Save and test'}" VerticalAlignment="Bottom"
+                                    Command="{Binding SaveAiSettingsCommand}" />
+                        </Grid>
+                        <TextBlock Text="{Binding AiStatus}" TextWrapping="Wrap" FontSize="13" IsVisible="{Binding HasAiStatus}"
+                                   Classes="positive" Classes.negative="{Binding AiStatusIsError}"
+                                   Classes.positive="{Binding !AiStatusIsError}" />
+                    </StackPanel>
+                </StackPanel>
+            </Border>
+
+            <Border Classes="card" Padding="24" IsVisible="{Binding IsSettingsGeneralTab}">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="sectionTitle" Text="{l:T 'Your data'}" />
+                    <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                               Text="{l:T 'Everything is stored on this Mac only, in:'}" />
+                    <SelectableTextBlock Text="{Binding DatabasePath}" FontSize="13"
+                                         Foreground="{DynamicResource TextSecondary}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+
+            <TextBlock Classes="error" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" />
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -1,0 +1,175 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.EntryPanel"
+             x:DataType="vm:MainViewModel">
+    <!-- The form for an income, expense or transfer. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <StackPanel Spacing="2">
+                <TextBlock Text="{Binding FormTitle}" FontSize="20" FontWeight="Bold" />
+                <TextBlock Classes="muted" FontSize="13" Text="{l:T 'Changes apply to every repeat of this entry'}"
+                           IsVisible="{Binding IsEditing}" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}"
+                    VerticalAlignment="Top">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
+                Padding="28,16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Button Classes="primary" Content="{Binding SubmitText}" HorizontalAlignment="Stretch"
+                        IsDefault="True" Command="{Binding SaveTransactionCommand}" />
+                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}"
+                        Command="{Binding ClosePanelCommand}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Spacing="18" Margin="28,12,28,20">
+                <Border Classes="segments" IsVisible="{Binding !HasSeveralAccounts}">
+                    <Grid ColumnDefinitions="*,*">
+                        <RadioButton Classes="segment" GroupName="EntryType" Content="{l:T 'Expense'}"
+                                     IsChecked="{Binding NewIsExpense}" />
+                        <RadioButton Grid.Column="1" Classes="segment" GroupName="EntryType" Content="{l:T 'Income'}"
+                                     IsChecked="{Binding NewIsIncome}" />
+                    </Grid>
+                </Border>
+                <Border Classes="segments" IsVisible="{Binding HasSeveralAccounts}">
+                    <Grid ColumnDefinitions="*,*,*">
+                        <RadioButton Classes="segment" GroupName="EntryType3" Content="{l:T 'Expense'}"
+                                     IsChecked="{Binding NewIsExpense}" />
+                        <RadioButton Grid.Column="1" Classes="segment" GroupName="EntryType3" Content="{l:T 'Income'}"
+                                     IsChecked="{Binding NewIsIncome}" />
+                        <RadioButton Grid.Column="2" Classes="segment" GroupName="EntryType3" Content="{l:T 'Transfer'}"
+                                     IsChecked="{Binding NewIsTransfer}" />
+                    </Grid>
+                </Border>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12" IsVisible="{Binding HasSeveralAccounts}">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{Binding AccountLabel}" />
+                        <ComboBox ItemsSource="{Binding AccountOptions}" SelectedItem="{Binding NewAccount}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4" IsVisible="{Binding NewIsTransfer}">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'To account'}" />
+                        <ComboBox ItemsSource="{Binding AccountOptions}" SelectedItem="{Binding NewToAccount}" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Description'}" />
+                    <TextBox Text="{Binding NewDescription}" PlaceholderText="{l:T 'e.g. Apartment rent'}" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Amount'}" />
+                        <NumericUpDown Value="{Binding NewAmount}" Minimum="0" FormatString="N2"
+                                       Increment="10" PlaceholderText="0.00" ShowButtonSpinner="False" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
+                        <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding NewPerson}" />
+                    </StackPanel>
+                </Grid>
+
+                <StackPanel Spacing="4" IsVisible="{Binding !NewIsTransfer}">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Category'}" />
+                    <ComboBox ItemsSource="{Binding CategoryOptions}" Text="{Binding NewCategory}"
+                              IsEditable="True" PlaceholderText="{l:T 'Choose or type a category'}" />
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'How often'}" />
+                    <Border Classes="segments">
+                        <Grid ColumnDefinitions="*,*,*,*">
+                            <RadioButton Classes="segment" GroupName="EntryRecurrence" Content="{l:T 'Once'}"
+                                         IsChecked="{Binding NewIsOneTime}" />
+                            <RadioButton Grid.Column="1" Classes="segment" GroupName="EntryRecurrence"
+                                         Content="{l:T 'Monthly'}" IsChecked="{Binding NewIsMonthly}" />
+                            <RadioButton Grid.Column="2" Classes="segment" GroupName="EntryRecurrence"
+                                         Content="{l:T 'Quarterly'}" IsChecked="{Binding NewIsQuarterly}" />
+                            <RadioButton Grid.Column="3" Classes="segment" GroupName="EntryRecurrence"
+                                         Content="{l:T 'Yearly'}" IsChecked="{Binding NewIsYearly}" />
+                        </Grid>
+                    </Border>
+                    <TextBlock Classes="muted" Text="{Binding RecurrenceHint}" TextWrapping="Wrap"
+                               IsVisible="{Binding NewIsRecurring}" />
+                </StackPanel>
+
+                <Grid ColumnDefinitions="*,*" ColumnSpacing="12">
+                    <StackPanel Spacing="4">
+                        <TextBlock Classes="fieldLabel" Text="{Binding DateLabel}" TextTrimming="CharacterEllipsis" />
+                        <CalendarDatePicker SelectedDate="{Binding NewDate}" />
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Spacing="4" IsVisible="{Binding NewIsRecurring}">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Ends on (optional)'}" />
+                        <CalendarDatePicker SelectedDate="{Binding NewEndDate}" />
+                    </StackPanel>
+                </Grid>
+
+                <TextBlock Classes="error" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" />
+
+                <Border IsVisible="{Binding CanChangeOneTime}" Padding="16,14" CornerRadius="10"
+                        Background="{DynamicResource SurfaceSunken}">
+                    <StackPanel Spacing="10">
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="{l:T 'Change one time only'}" FontWeight="SemiBold" />
+                            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                       Text="{l:T 'A 13th salary, a bonus, a smaller bill or a month without it. The other times stay as they are.'}" />
+                        </StackPanel>
+                        <Grid ColumnDefinitions="*,*" ColumnSpacing="10">
+                            <StackPanel Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'When'}" />
+                                <ComboBox ItemsSource="{Binding ChangeDateOptions}" SelectedItem="{Binding ChangeDate}"
+                                          HorizontalAlignment="Stretch" MaxDropDownHeight="320" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Spacing="4">
+                                <TextBlock Classes="fieldLabel" Text="{l:T 'Amount this time'}" />
+                                <NumericUpDown Value="{Binding ChangeAmount}" Minimum="0" FormatString="N2"
+                                               ShowButtonSpinner="False" IsEnabled="{Binding ChangeAmountEnabled}" />
+                            </StackPanel>
+                        </Grid>
+                        <TextBox Text="{Binding ChangeNote}" PlaceholderText="{l:T 'Note (optional), e.g. 13th salary'}" />
+                        <Grid ColumnDefinitions="*,Auto">
+                            <CheckBox Content="{l:T 'Skip this time'}" IsChecked="{Binding ChangeSkip}" />
+                            <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Save for this time'}"
+                                    Command="{Binding SaveEntryChangeCommand}" />
+                        </Grid>
+                        <TextBlock Classes="error" Text="{Binding ChangeError}" IsVisible="{Binding HasChangeError}"
+                                   TextWrapping="Wrap" />
+                        <ItemsControl ItemsSource="{Binding EntryChangeRows}" IsVisible="{Binding HasEntryChanges}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:EntryChangeRow">
+                                    <Grid ColumnDefinitions="100,*,Auto" ColumnSpacing="8" Margin="0,2">
+                                        <TextBlock Classes="secondary" FontSize="13" Text="{Binding DateText}"
+                                                   VerticalAlignment="Center" />
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                            <TextBlock FontSize="13" Text="{Binding AmountText}" TextWrapping="Wrap" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Note}"
+                                                       IsVisible="{Binding HasNote}" TextTrimming="CharacterEllipsis" />
+                                        </StackPanel>
+                                        <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Back to the usual'}"
+                                                Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveEntryChangeCommand}"
+                                                CommandParameter="{Binding}">
+                                            <PathIcon Data="{StaticResource IconDelete}" />
+                                        </Button>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </StackPanel>
+                </Border>
+
+                <TextBlock Classes="muted" TextWrapping="Wrap" IsVisible="{Binding !IsEditing}"
+                           Text="{l:T 'The panel stays open after adding, so you can enter several in a row.'}" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

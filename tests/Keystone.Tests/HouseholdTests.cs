@@ -110,17 +110,17 @@ public sealed class HouseholdTests : IDisposable
         var vm = await LoadAsync();
         await AddMemberAsync(vm, "Lukas");
 
-        vm.NewMedicineCommand.Execute(null);
-        vm.MedicineName = "Euthyrox";
-        vm.MedicineStrength = "50 µg";
-        vm.MedicineMorning = true;
-        vm.MedicineStock = 3;
-        vm.MedicinePackSize = 100;
-        vm.MedicinePrescribedBy = "Dr. Keller";
-        await vm.SaveMedicineCommand.ExecuteAsync(null);
-        Assert.Null(vm.MedicineError);
+        vm.Medicines.NewMedicineCommand.Execute(null);
+        vm.Medicines.MedicineName = "Euthyrox";
+        vm.Medicines.MedicineStrength = "50 µg";
+        vm.Medicines.MedicineMorning = true;
+        vm.Medicines.MedicineStock = 3;
+        vm.Medicines.MedicinePackSize = 100;
+        vm.Medicines.MedicinePrescribedBy = "Dr. Keller";
+        await vm.Medicines.SaveMedicineCommand.ExecuteAsync(null);
+        Assert.Null(vm.Medicines.MedicineError);
 
-        var row = vm.MedicineRows.Single();
+        var row = vm.Medicines.MedicineRows.Single();
         Assert.Equal("Euthyrox 50 µg", row.Name);
         Assert.Equal("Runs out in 2 days", row.Alert); // today, tomorrow and the day after
         Assert.True(vm.MemberTabs.Single().HasAlert);
@@ -128,14 +128,14 @@ public sealed class HouseholdTests : IDisposable
         Assert.Contains(vm.PlanReminders(DateTime.Today.AddDays(-10)), r => r.Id.StartsWith($"medicine-{row.Medicine.Id}-refill-"));
         Assert.Contains("Euthyrox 50 µg, 1 tablet Morning", vm.HealthSummaryText(vm.People.Single()));
 
-        await vm.RefillMedicineCommand.ExecuteAsync(row.Medicine);
+        await vm.Medicines.RefillMedicineCommand.ExecuteAsync(row.Medicine);
         Assert.Equal(103, row.Medicine.Stock);
-        Assert.Null(vm.MedicineRows.Single().Alert);
+        Assert.Null(vm.Medicines.MedicineRows.Single().Alert);
         Assert.DoesNotContain(vm.AttentionRows, a => a.Kind == AttentionKind.Medicine);
 
         // A changed count is counted from today; reopening shows today's count.
-        vm.EditMedicineCommand.Execute(row.Medicine);
-        Assert.Equal(103, vm.MedicineStock);
+        vm.Medicines.EditMedicineCommand.Execute(row.Medicine);
+        Assert.Equal(103, vm.Medicines.MedicineStock);
     }
 
     [Fact]
@@ -143,16 +143,16 @@ public sealed class HouseholdTests : IDisposable
     {
         var vm = await LoadAsync();
         await AddMemberAsync(vm, "Sofia");
-        vm.NewMedicineCommand.Execute(null);
-        vm.MedicineName = "Ventolin";
-        vm.MedicineMorning = false;
-        await vm.SaveMedicineCommand.ExecuteAsync(null);
-        Assert.NotNull(vm.MedicineError);
+        vm.Medicines.NewMedicineCommand.Execute(null);
+        vm.Medicines.MedicineName = "Ventolin";
+        vm.Medicines.MedicineMorning = false;
+        await vm.Medicines.SaveMedicineCommand.ExecuteAsync(null);
+        Assert.NotNull(vm.Medicines.MedicineError);
 
-        vm.MedicineAsNeeded = true;
-        await vm.SaveMedicineCommand.ExecuteAsync(null);
-        Assert.Null(vm.MedicineError);
-        Assert.Equal("1 tablet when needed", vm.MedicineRows.Single().DetailText);
+        vm.Medicines.MedicineAsNeeded = true;
+        await vm.Medicines.SaveMedicineCommand.ExecuteAsync(null);
+        Assert.Null(vm.Medicines.MedicineError);
+        Assert.Equal("1 tablet when needed", vm.Medicines.MedicineRows.Single().DetailText);
     }
 
     [Fact]
@@ -161,53 +161,53 @@ public sealed class HouseholdTests : IDisposable
         var vm = await LoadAsync();
         await AddMemberAsync(vm, "Anna");
 
-        vm.NewEmploymentCommand.Execute(null);
-        vm.EmploymentEmployer = "Spital Muster";
-        vm.EmploymentRole = "Nurse";
-        vm.EmploymentWorkload = 80;
-        vm.EmploymentStartedOn = Today.AddYears(-6).ToDateTime(TimeOnly.MinValue);
-        vm.EmploymentManagerName = "Martin Frei";
-        vm.EmploymentManagerPhone = "061 000 00 10";
-        vm.EmploymentCertificateDay = 3;
-        await vm.SaveEmploymentCommand.ExecuteAsync(null);
-        Assert.Null(vm.EmploymentError);
+        vm.Work.NewEmploymentCommand.Execute(null);
+        vm.Work.EmploymentEmployer = "Spital Muster";
+        vm.Work.EmploymentRole = "Nurse";
+        vm.Work.EmploymentWorkload = 80;
+        vm.Work.EmploymentStartedOn = Today.AddYears(-6).ToDateTime(TimeOnly.MinValue);
+        vm.Work.EmploymentManagerName = "Martin Frei";
+        vm.Work.EmploymentManagerPhone = "061 000 00 10";
+        vm.Work.EmploymentCertificateDay = 3;
+        await vm.Work.SaveEmploymentCommand.ExecuteAsync(null);
+        Assert.Null(vm.Work.EmploymentError);
 
-        var job = vm.EmploymentRows.Single();
+        var job = vm.Work.EmploymentRows.Single();
         Assert.Equal("Call Martin Frei before 08:00 on the first day", job.SickRuleText);
         Assert.Equal("Doctor’s certificate from day 3", job.CertificateText);
         Assert.Contains("3 months", job.SickPayText); // Bern scale in the 7th year of service
         Assert.Contains(job.Contacts, c => c.Value == "061 000 00 10" && c.CanCopy);
 
-        await vm.ReportSickCommand.ExecuteAsync("illness");
-        Assert.True(vm.IsMemberOffSick);
-        Assert.Equal("Anna is off sick · day 1", vm.SickBannerTitle);
-        var tell = vm.SickSteps[0];
+        await vm.Work.ReportSickCommand.ExecuteAsync("illness");
+        Assert.True(vm.Work.IsMemberOffSick);
+        Assert.Equal("Anna is off sick · day 1", vm.Work.SickBannerTitle);
+        var tell = vm.Work.SickSteps[0];
         Assert.Equal("061 000 00 10", tell.CopyText);
         Assert.True(tell.IsDue);
         Assert.Contains(vm.AttentionRows, a => a.Kind == AttentionKind.SickLeave && a.Detail.Contains("tell work"));
 
-        var leave = vm.CurrentSickLeave!.Leave;
+        var leave = vm.Work.CurrentSickLeave!.Leave;
         Assert.Equal(Today.AddDays(2), leave.CertificateDueOn(3));
         Assert.Contains(vm.PlanReminders(DateTime.Today.AddDays(-1)), r => r.Id == $"sick-{leave.Id}-certificate-{Today.AddDays(2):yyyyMMdd}");
 
-        var message = vm.SickMessage(leave);
+        var message = vm.Work.SickMessage(leave);
         Assert.StartsWith("Hello Martin", message);
         Assert.Contains("from day 3", message);
         Assert.EndsWith("Anna", message);
 
-        await vm.ToggleSickStepCommand.ExecuteAsync(tell);
+        await vm.Work.ToggleSickStepCommand.ExecuteAsync(tell);
         Assert.True(leave.Informed);
-        Assert.True(vm.SickSteps[0].IsDone);
+        Assert.True(vm.Work.SickSteps[0].IsDone);
 
-        await vm.BackAtWorkCommand.ExecuteAsync(null);
-        Assert.False(vm.IsMemberOffSick);
+        await vm.Work.BackAtWorkCommand.ExecuteAsync(null);
+        Assert.False(vm.Work.IsMemberOffSick);
         Assert.Equal(Today, leave.To); // reported and back on the same day
-        Assert.Equal("1 sick day in " + Today.Year, vm.SickDaysText);
+        Assert.Equal("1 sick day in " + Today.Year, vm.Work.SickDaysText);
 
         // Saved: a fresh load shows the same.
         var reloaded = await LoadAsync();
-        Assert.Single(reloaded.SickLeaveRows);
-        Assert.Equal("Spital Muster", reloaded.SickLeaveRows.Single().EmployerName);
+        Assert.Single(reloaded.Work.SickLeaveRows);
+        Assert.Equal("Spital Muster", reloaded.Work.SickLeaveRows.Single().EmployerName);
     }
 
     [Fact]
@@ -215,19 +215,19 @@ public sealed class HouseholdTests : IDisposable
     {
         var vm = await LoadAsync();
         await AddMemberAsync(vm, "Lukas");
-        vm.NewSickLeaveCommand.Execute(null);
-        vm.SickLeaveFrom = new DateTime(Today.Year - 1, 2, 2);
-        vm.SickLeaveTo = new DateTime(Today.Year - 1, 2, 6);
-        vm.SickLeaveReason = "Flu";
-        vm.SickLeaveCertificateSent = false;
-        await vm.SaveSickLeaveCommand.ExecuteAsync(null);
-        Assert.Null(vm.SickLeaveError);
+        vm.Work.NewSickLeaveCommand.Execute(null);
+        vm.Work.SickLeaveFrom = new DateTime(Today.Year - 1, 2, 2);
+        vm.Work.SickLeaveTo = new DateTime(Today.Year - 1, 2, 6);
+        vm.Work.SickLeaveReason = "Flu";
+        vm.Work.SickLeaveCertificateSent = false;
+        await vm.Work.SaveSickLeaveCommand.ExecuteAsync(null);
+        Assert.Null(vm.Work.SickLeaveError);
 
-        var row = vm.SickLeaveRows.Single();
+        var row = vm.Work.SickLeaveRows.Single();
         Assert.Equal("5 days", row.DaysText);
         Assert.True(row.CertificateMissing);
-        Assert.Equal($"5 sick days in {Today.Year - 1}", vm.SickDaysText);
-        Assert.False(vm.IsMemberOffSick);
+        Assert.Equal($"5 sick days in {Today.Year - 1}", vm.Work.SickDaysText);
+        Assert.False(vm.Work.IsMemberOffSick);
     }
 
     [Fact]
@@ -235,17 +235,17 @@ public sealed class HouseholdTests : IDisposable
     {
         var vm = await LoadAsync();
         await AddMemberAsync(vm, "Sofia");
-        vm.NewMedicineCommand.Execute(null);
-        vm.MedicineName = "Vitamin D";
-        await vm.SaveMedicineCommand.ExecuteAsync(null);
-        vm.NewEmploymentCommand.Execute(null);
-        vm.EmploymentEmployer = "Bäckerei Muster";
-        await vm.SaveEmploymentCommand.ExecuteAsync(null);
-        await vm.ReportSickCommand.ExecuteAsync("illness");
+        vm.Medicines.NewMedicineCommand.Execute(null);
+        vm.Medicines.MedicineName = "Vitamin D";
+        await vm.Medicines.SaveMedicineCommand.ExecuteAsync(null);
+        vm.Work.NewEmploymentCommand.Execute(null);
+        vm.Work.EmploymentEmployer = "Bäckerei Muster";
+        await vm.Work.SaveEmploymentCommand.ExecuteAsync(null);
+        await vm.Work.ReportSickCommand.ExecuteAsync("illness");
 
         await vm.DeletePersonCommand.ExecuteAsync(vm.People.Single());
         Assert.False(vm.HasMembers);
-        Assert.Empty(vm.MedicineRows);
+        Assert.Empty(vm.Medicines.MedicineRows);
 
         var reloaded = await LoadAsync();
         Assert.Empty(await _repository.GetAllAsync<Medicine>());
@@ -259,20 +259,20 @@ public sealed class HouseholdTests : IDisposable
     {
         var vm = await LoadAsync();
         await AddMemberAsync(vm, "Anna");
-        vm.NewEmploymentCommand.Execute(null);
-        vm.EmploymentEmployer = "Spital Muster";
-        vm.EmploymentHrName = "Personaldienst";
-        vm.EmploymentHrEmail = "hr@example.com";
-        vm.EmploymentReportByIndex = (int)SickReportChannel.Email;
-        vm.EmploymentReportTimeIndex = 0; // no set time
-        await vm.SaveEmploymentCommand.ExecuteAsync(null);
-        Assert.Equal("Email Personaldienst on the first day", vm.EmploymentRows.Single().SickRuleText);
+        vm.Work.NewEmploymentCommand.Execute(null);
+        vm.Work.EmploymentEmployer = "Spital Muster";
+        vm.Work.EmploymentHrName = "Personaldienst";
+        vm.Work.EmploymentHrEmail = "hr@example.com";
+        vm.Work.EmploymentReportByIndex = (int)SickReportChannel.Email;
+        vm.Work.EmploymentReportTimeIndex = 0; // no set time
+        await vm.Work.SaveEmploymentCommand.ExecuteAsync(null);
+        Assert.Equal("Email Personaldienst on the first day", vm.Work.EmploymentRows.Single().SickRuleText);
 
         Loc.Instance.SetLanguage("de");
         try
         {
             vm.SelectMemberCommand.Execute(vm.MemberTabs.Single());
-            Assert.Equal("Schreib am ersten Tag eine E-Mail an Personaldienst", vm.EmploymentRows.Single().SickRuleText);
+            Assert.Equal("Schreib am ersten Tag eine E-Mail an Personaldienst", vm.Work.EmploymentRows.Single().SickRuleText);
         }
         finally
         {

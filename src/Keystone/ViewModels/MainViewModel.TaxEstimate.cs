@@ -51,7 +51,7 @@ public partial class MainViewModel
         decimal Spent(string category) => occurrences.Where(o => o.Source.Type == TransactionType.Expense && o.Source.Category == category).Sum(o => o.Amount);
 
         var income = occurrences.Where(o => o.Source.IsIncome && !o.Source.IsBorrowing).Sum(o => o.Amount);
-        var pillar3a = Pillar3aRowsFor(PersonOption.Everyone, year).Sum(r => Math.Min(r.Paid, r.Limit));
+        var pillar3a = Retirement.Pillar3aRowsFor(PersonOption.Everyone, year).Sum(r => Math.Min(r.Paid, r.Limit));
         var medical = Math.Max(0, Spent(Categories.MedicalCosts) - income * 0.05m); // only above 5% of income
         var interest = DebtPlans.Sum(p => p.Entries.Where(e => e.Date.Year == year).Sum(e => e.Interest));
         var deductions = pillar3a + Spent(Categories.PensionBuyIn) + Spent(Categories.Childcare) + Spent(Categories.Donations) + medical + interest;

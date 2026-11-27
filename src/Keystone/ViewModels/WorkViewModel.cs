@@ -76,10 +76,13 @@ public sealed record SickLeaveRow(SickLeave Leave, string EmployerName, DateOnly
 /// Members' jobs, and what to do when someone is ill or has had an accident: whom to tell, how and by when, from
 /// which day a doctor's certificate is needed, and who pays. Sick days are kept per member.
 /// </summary>
-public partial class MainViewModel
+/// <remarks>Its own view model; shared things (people, notices, reminders) come from the main one.</remarks>
+public sealed partial class WorkViewModel(MainViewModel main) : ViewModelBase
 {
-    private readonly List<Employment> _employments = [];
-    private readonly List<SickLeave> _sickLeaves = [];
+    /// <summary>Every member's jobs.</summary>
+    internal List<Employment> Jobs { get; } = [];
+    /// <summary>Every member's times off sick.</summary>
+    internal List<SickLeave> SickLeaves { get; } = [];
 
     /// <summary>Times the employer wants to hear by on the first morning; index 0 is "no set time".</summary>
     private static readonly TimeOnly?[] ReportTimes =
@@ -125,38 +128,38 @@ public partial class MainViewModel
 
     /// <summary>The member's current job, for reporting sick.</summary>
     private Employment? CurrentJobOf(int? personId) =>
-        _employments.Where(j => j.PersonId == personId && !j.HasEnded(Today)).OrderBy(j => j.SortOrder).ThenBy(j => j.Id).FirstOrDefault();
+        Jobs.Where(j => j.PersonId == personId && !j.HasEnded(MainViewModel.Today)).OrderBy(j => j.SortOrder).ThenBy(j => j.Id).FirstOrDefault();
 
-    private Employment? JobOf(SickLeave leave) =>
-        _employments.FirstOrDefault(j => j.Id == leave.EmploymentId) ?? CurrentJobOf(leave.PersonId);
+    internal Employment? JobOf(SickLeave leave) =>
+        Jobs.FirstOrDefault(j => j.Id == leave.EmploymentId) ?? CurrentJobOf(leave.PersonId);
 
-    private int CertificateDayOf(SickLeave leave) => JobOf(leave)?.CertificateFromDay ?? SwissSickPay.UsualCertificateDay;
+    internal int CertificateDayOf(SickLeave leave) => JobOf(leave)?.CertificateFromDay ?? SwissSickPay.UsualCertificateDay;
 
-    private void RefreshWorkRows()
+    internal void RefreshWorkRows()
     {
-        var id = SelectedMemberId;
-        EmploymentRows = _employments.Where(j => j.PersonId == id)
-            .OrderBy(j => j.HasEnded(Today)).ThenBy(j => j.SortOrder).ThenByDescending(j => j.StartedOn)
+        var id = main.SelectedMemberId;
+        EmploymentRows = Jobs.Where(j => j.PersonId == id)
+            .OrderBy(j => j.HasEnded(MainViewModel.Today)).ThenBy(j => j.SortOrder).ThenByDescending(j => j.StartedOn)
             .Select(EmploymentRowOf).ToList();
 
-        var leaves = _sickLeaves.Where(s => s.PersonId == id).ToList();
-        SickLeaveRows = Sorted("sickLeaves", leaves.OrderByDescending(s => s.From)
-                .Select(s => new SickLeaveRow(s, JobOf(s)?.Employer ?? "", Today, CertificateDayOf(s))),
+        var leaves = SickLeaves.Where(s => s.PersonId == id).ToList();
+        SickLeaveRows = main.Sorted("sickLeaves", leaves.OrderByDescending(s => s.From)
+                .Select(s => new SickLeaveRow(s, JobOf(s)?.Employer ?? "", MainViewModel.Today, CertificateDayOf(s))),
             null,
             new SortKey<SickLeaveRow>("date", r => r.Leave.From, DescendingFirst: true),
-            new SortKey<SickLeaveRow>("days", r => r.Leave.Days(Today), DescendingFirst: true));
+            new SortKey<SickLeaveRow>("days", r => r.Leave.Days(MainViewModel.Today), DescendingFirst: true));
 
-        var current = leaves.Where(s => s.IsOngoing(Today)).OrderByDescending(s => s.From).FirstOrDefault();
-        CurrentSickLeave = current is null ? null : new SickLeaveRow(current, JobOf(current)?.Employer ?? "", Today, CertificateDayOf(current));
+        var current = leaves.Where(s => s.IsOngoing(MainViewModel.Today)).OrderByDescending(s => s.From).FirstOrDefault();
+        CurrentSickLeave = current is null ? null : new SickLeaveRow(current, JobOf(current)?.Employer ?? "", MainViewModel.Today, CertificateDayOf(current));
         SickSteps = current is null ? [] : StepsFor(current);
         SickBannerTitle = current is null ? "" : current.IsAccident
-            ? Loc.F("{0} is off after an accident · day {1}", PersonName(current.PersonId), current.Days(Today))
-            : Loc.F("{0} is off sick · day {1}", PersonName(current.PersonId), current.Days(Today));
+            ? Loc.F("{0} is off after an accident · day {1}", main.PersonName(current.PersonId), current.Days(MainViewModel.Today))
+            : Loc.F("{0} is off sick · day {1}", main.PersonName(current.PersonId), current.Days(MainViewModel.Today));
         SickBannerDetail = current is null ? "" : string.Join(" · ", new[]
             { Loc.F("Since {0}", Format.Date(current.From)), JobOf(current)?.Employer ?? "", current.Reason }.Where(s => s != ""));
 
         var years = leaves.GroupBy(s => s.From.Year).OrderByDescending(g => g.Key).Take(2).ToList();
-        SickDaysText = string.Join(" · ", years.Select(g => Loc.Plural(g.Sum(s => s.Days(Today)), "{0} sick day in {1}", "{0} sick days in {1}", g.Key)));
+        SickDaysText = string.Join(" · ", years.Select(g => Loc.Plural(g.Sum(s => s.Days(MainViewModel.Today)), "{0} sick day in {1}", "{0} sick days in {1}", g.Key)));
     }
 
     private EmploymentRow EmploymentRowOf(Employment job)
@@ -181,13 +184,13 @@ public partial class MainViewModel
 
         var sickPay = job.SickPayInsurer != ""
             ? Loc.F("Sick pay insured with {0}: usually 80% of the pay for up to 720 days after a waiting time.", job.SickPayInsurer)
-            : job.StartedOn is { } started && !job.HasEnded(Today) && SwissSickPay.BernScale(started, Today) is { } scale
+            : job.StartedOn is { } started && !job.HasEnded(MainViewModel.Today) && SwissSickPay.BernScale(started, MainViewModel.Today) is { } scale
                 ? Loc.F("No sick pay insurance entered: the law’s minimum this year of service is about {0} of full pay (Bern scale).",
                     SwissSickPay.BernScaleText(scale))
                 : "";
         return new EmploymentRow(job, contacts, SickRuleTextOf(job),
             Loc.Plural(job.CertificateFromDay, "Doctor’s certificate from day {0}", "Doctor’s certificate from day {0}"),
-            sickPay, job.HasEnded(Today));
+            sickPay, job.HasEnded(MainViewModel.Today));
     }
 
     /// <summary>"Call Martin Frei before 08:00 on the first day": one whole sentence per way, so it translates.</summary>
@@ -236,10 +239,10 @@ public partial class MainViewModel
         var due = leave.CertificateDueOn(day);
         steps.Add(new SickStep(
             Loc.Plural(day, "Doctor’s certificate from day {0}", "Doctor’s certificate from day {0}"),
-            due <= Today ? Loc.F("Needed now: day {0} was {1}", day, Format.Date(due)) : Loc.F("Needed if still off on {0}", Format.Date(due)),
-            leave.CertificateSent, leave.NeedsCertificate(Today, day), "certificate"));
+            due <= MainViewModel.Today ? Loc.F("Needed now: day {0} was {1}", day, Format.Date(due)) : Loc.F("Needed if still off on {0}", Format.Date(due)),
+            leave.CertificateSent, leave.NeedsCertificate(MainViewModel.Today, day), "certificate"));
 
-        if (job?.SickPayInsurer is { Length: > 0 } sickPay && leave.Days(Today) >= 14)
+        if (job?.SickPayInsurer is { Length: > 0 } sickPay && leave.Days(MainViewModel.Today) >= 14)
             steps.Add(new SickStep(Loc.F("The employer reports a longer absence to {0}", sickPay),
                 Loc.T("Ask HR whether they have done it; the daily allowance starts after the waiting time."), false, false));
         return steps;
@@ -249,11 +252,11 @@ public partial class MainViewModel
     internal string SickMessage(SickLeave leave)
     {
         var job = JobOf(leave);
-        var person = People.FirstOrDefault(p => p.Id == leave.PersonId)?.Name ?? "";
+        var person = main.People.FirstOrDefault(p => p.Id == leave.PersonId)?.Name ?? "";
         var greeting = job?.FirstContact.Name is { Length: > 0 } name ? Loc.F("Hello {0}", name.Split(' ')[0]) : Loc.T("Hello");
         var body = leave.IsAccident
-            ? Loc.F("I’ve had an accident and can’t work today ({0}).", Format.Date(Today))
-            : Loc.F("I’m ill and can’t work today ({0}).", Format.Date(Today));
+            ? Loc.F("I’ve had an accident and can’t work today ({0}).", Format.Date(MainViewModel.Today))
+            : Loc.F("I’m ill and can’t work today ({0}).", Format.Date(MainViewModel.Today));
         var certificate = Loc.Plural(job?.CertificateFromDay ?? SwissSickPay.UsualCertificateDay,
             "I’ll keep you posted and send a doctor’s certificate if I’m off from day {0}.",
             "I’ll keep you posted and send a doctor’s certificate if I’m off from day {0}.");
@@ -263,37 +266,37 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task CopySickMessageAsync()
     {
-        if (CurrentSickLeave is not { } row || CopyToClipboard is null)
+        if (CurrentSickLeave is not { } row || main.CopyToClipboard is null)
             return;
-        await CopyToClipboard(SickMessage(row.Leave));
-        ShowNotice(Loc.T("Message copied: paste it into a text or email"));
+        await main.CopyToClipboard(SickMessage(row.Leave));
+        main.ShowNotice(Loc.T("Message copied: paste it into a text or email"));
     }
 
     /// <summary>Starts a time off sick from today for the selected member, so the steps show.</summary>
     [RelayCommand]
     private async Task ReportSickAsync(string? kind)
     {
-        if (SelectedMember is not { } person)
+        if (main.SelectedMember is not { } person)
             return;
-        if (_sickLeaves.Any(s => s.PersonId == person.Id && s.IsOngoing(Today)))
+        if (SickLeaves.Any(s => s.PersonId == person.Id && s.IsOngoing(MainViewModel.Today)))
             return;
         var leave = new SickLeave
         {
             PersonId = person.Id,
             EmploymentId = CurrentJobOf(person.Id)?.Id,
-            From = Today,
+            From = MainViewModel.Today,
             IsAccident = kind == "accident",
         };
         try
         {
-            await repository.SaveAsync(leave, isNew: true);
+            await main.repository.SaveAsync(leave, isNew: true);
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
             return;
         }
-        _sickLeaves.Add(leave);
+        SickLeaves.Add(leave);
         SickLeavesChanged();
     }
 
@@ -303,13 +306,13 @@ public partial class MainViewModel
     {
         if (CurrentSickLeave?.Leave is not { } leave)
             return;
-        leave.To = Today > leave.From ? Today.AddDays(-1) : leave.From;
+        leave.To = MainViewModel.Today > leave.From ? MainViewModel.Today.AddDays(-1) : leave.From;
         await SaveSickLeaveChangeAsync(leave, () => leave.To = null);
-        ShowNotice(Loc.F("Welcome back, {0}: {1} off", PersonName(leave.PersonId), Loc.Plural(leave.Days(Today), "{0} day", "{0} days")),
+        main.ShowNotice(Loc.F("Welcome back, {0}: {1} off", main.PersonName(leave.PersonId), Loc.Plural(leave.Days(MainViewModel.Today), "{0} day", "{0} days")),
             async () =>
             {
                 leave.To = null;
-                await repository.SaveAsync(leave, isNew: false);
+                await main.repository.SaveAsync(leave, isNew: false);
                 SickLeavesChanged();
             });
     }
@@ -336,12 +339,12 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.SaveAsync(leave, isNew: false);
+            await main.repository.SaveAsync(leave, isNew: false);
         }
         catch (Exception ex)
         {
             undo();
-            ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
             return;
         }
         SickLeavesChanged();
@@ -349,9 +352,9 @@ public partial class MainViewModel
 
     private void SickLeavesChanged()
     {
-        RefreshHousehold();
-        RefreshDashboard();
-        ScheduleReminders();
+        main.RefreshHousehold();
+        main.RefreshDashboard();
+        main.ScheduleReminders();
     }
 
     [RelayCommand]
@@ -359,21 +362,21 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.DeleteAsync<SickLeave>(s => s.Id == leave.Id);
+            await main.repository.DeleteAsync<SickLeave>(s => s.Id == leave.Id);
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
             return;
         }
-        _sickLeaves.Remove(leave);
+        SickLeaves.Remove(leave);
         if (EditingSickLeave == leave)
             CloseSickLeavePanel();
         SickLeavesChanged();
-        ShowNotice(Loc.F("Deleted the time off from {0}", Format.Date(leave.From)), async () =>
+        main.ShowNotice(Loc.F("Deleted the time off from {0}", Format.Date(leave.From)), async () =>
         {
-            await repository.SaveAsync(leave, isNew: true);
-            _sickLeaves.Add(leave);
+            await main.repository.SaveAsync(leave, isNew: true);
+            SickLeaves.Add(leave);
             SickLeavesChanged();
         });
     }
@@ -383,29 +386,29 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.DeleteAsync<Employment>(j => j.Id == job.Id);
+            await main.repository.DeleteAsync<Employment>(j => j.Id == job.Id);
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
             return;
         }
-        _employments.Remove(job);
+        Jobs.Remove(job);
         // The database drops the link from its sick days; do the same here.
-        var linked = _sickLeaves.Where(s => s.EmploymentId == job.Id).ToList();
+        var linked = SickLeaves.Where(s => s.EmploymentId == job.Id).ToList();
         foreach (var leave in linked)
             leave.EmploymentId = null;
         if (EditingEmployment == job)
             CloseEmploymentPanel();
         SickLeavesChanged();
-        ShowNotice(Loc.F("Deleted “{0}”", job.Employer), async () =>
+        main.ShowNotice(Loc.F("Deleted “{0}”", job.Employer), async () =>
         {
-            await repository.SaveAsync(job, isNew: true);
-            _employments.Add(job);
+            await main.repository.SaveAsync(job, isNew: true);
+            Jobs.Add(job);
             foreach (var leave in linked)
             {
                 leave.EmploymentId = job.Id;
-                await repository.SaveAsync(leave, isNew: false);
+                await main.repository.SaveAsync(leave, isNew: false);
             }
             SickLeavesChanged();
         });
@@ -414,7 +417,6 @@ public partial class MainViewModel
     // ── The job form ────────────────────────────────────────────────────────
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsEmploymentPanelOpen { get; set; }
 
     [ObservableProperty]
@@ -453,9 +455,9 @@ public partial class MainViewModel
     [RelayCommand]
     private void NewEmployment()
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingEmployment = null;
-        EmploymentPerson = PersonOptions.FirstOrDefault(o => o.Id == SelectedMemberId) ?? PersonOption.Shared;
+        EmploymentPerson = main.PersonOptions.FirstOrDefault(o => o.Id == main.SelectedMemberId) ?? PersonOption.Shared;
         EmploymentEmployer = EmploymentRole = EmploymentAddress = EmploymentPhone = "";
         EmploymentManagerName = EmploymentManagerPhone = EmploymentManagerEmail = "";
         EmploymentHrName = EmploymentHrPhone = EmploymentHrEmail = "";
@@ -474,7 +476,7 @@ public partial class MainViewModel
     {
         NewEmployment();
         EditingEmployment = job;
-        EmploymentPerson = PersonOptions.FirstOrDefault(o => o.Id == job.PersonId) ?? PersonOption.Shared;
+        EmploymentPerson = main.PersonOptions.FirstOrDefault(o => o.Id == job.PersonId) ?? PersonOption.Shared;
         EmploymentEmployer = job.Employer;
         EmploymentRole = job.Role;
         EmploymentWorkload = job.Workload;
@@ -528,7 +530,7 @@ public partial class MainViewModel
 
         try
         {
-            await repository.SaveAsync(job, isNew);
+            await main.repository.SaveAsync(job, isNew);
         }
         catch (Exception ex)
         {
@@ -536,14 +538,14 @@ public partial class MainViewModel
             return;
         }
         if (isNew)
-            _employments.Add(job);
+            Jobs.Add(job);
         if (job.PersonId is not null)
-            SelectedMemberId = job.PersonId;
+            main.SelectedMemberId = job.PersonId;
         CloseEmploymentPanel();
         SickLeavesChanged();
     }
 
-    private void CloseEmploymentPanel()
+    internal void CloseEmploymentPanel()
     {
         IsEmploymentPanelOpen = false;
         EditingEmployment = null;
@@ -552,7 +554,6 @@ public partial class MainViewModel
     // ── The sick-leave form (for past absences, or to correct one) ──────────
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsSickLeavePanelOpen { get; set; }
 
     [ObservableProperty]
@@ -578,7 +579,7 @@ public partial class MainViewModel
     [RelayCommand]
     private void NewSickLeave()
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingSickLeave = null;
         SickLeaveFrom = DateTime.Today;
         SickLeaveTo = DateTime.Today;
@@ -622,7 +623,7 @@ public partial class MainViewModel
             return;
         }
         var isNew = EditingSickLeave is null;
-        var personId = isNew ? SelectedMemberId : EditingSickLeave!.PersonId;
+        var personId = isNew ? main.SelectedMemberId : EditingSickLeave!.PersonId;
         if (personId is null)
         {
             SickLeaveError = Loc.T("Add a household member first.");
@@ -633,7 +634,7 @@ public partial class MainViewModel
         leave.From = from;
         leave.To = to;
         // The job held on the first day off.
-        leave.EmploymentId = _employments.Where(j => j.PersonId == personId && (j.StartedOn is null || j.StartedOn <= from) && (j.EndedOn is null || j.EndedOn >= from))
+        leave.EmploymentId = Jobs.Where(j => j.PersonId == personId && (j.StartedOn is null || j.StartedOn <= from) && (j.EndedOn is null || j.EndedOn >= from))
             .OrderBy(j => j.SortOrder).ThenBy(j => j.Id).FirstOrDefault()?.Id ?? leave.EmploymentId;
         leave.IsAccident = SickLeaveIsAccident;
         leave.Reason = SickLeaveReason.Trim();
@@ -642,7 +643,7 @@ public partial class MainViewModel
         leave.Notes = SickLeaveNotes.Trim();
         try
         {
-            await repository.SaveAsync(leave, isNew);
+            await main.repository.SaveAsync(leave, isNew);
         }
         catch (Exception ex)
         {
@@ -650,14 +651,48 @@ public partial class MainViewModel
             return;
         }
         if (isNew)
-            _sickLeaves.Add(leave);
+            SickLeaves.Add(leave);
         CloseSickLeavePanel();
         SickLeavesChanged();
     }
 
-    private void CloseSickLeavePanel()
+    internal void CloseSickLeavePanel()
     {
         IsSickLeavePanelOpen = false;
         EditingSickLeave = null;
     }
+
+    /// <summary>After the language changed: the texts, keeping the choices made in the form.</summary>
+    internal override void RefreshTexts()
+    {
+        var (reportBy, reportTime) = (EmploymentReportByIndex, EmploymentReportTimeIndex);
+        base.RefreshTexts();
+        (EmploymentReportByIndex, EmploymentReportTimeIndex) = (reportBy, reportTime);
+    }
+
+    // ── "More details" in the job form: unfolds when one of its fields has something in it ──
+
+    [ObservableProperty]
+    public partial bool EmploymentMoreOpen { get; set; }
+
+    partial void OnIsEmploymentPanelOpenChanged(bool value)
+    {
+        if (value)
+            EmploymentMoreOpen = EmploymentStartedOn is not null || EmploymentEndedOn is not null || Has(EmploymentAddress) ||
+                                 Has(EmploymentPhone) || Has(EmploymentHrName) || Has(EmploymentHrPhone) || Has(EmploymentHrEmail) ||
+                                 Has(EmploymentSickPayInsurer) || Has(EmploymentAccidentInsurer) || Has(EmploymentNotes);
+    }
+
+    private static bool Has(string? text) => !string.IsNullOrWhiteSpace(text);
+
+    partial void OnEmploymentStartedOnChanged(DateTime? value) { if (value is not null) EmploymentMoreOpen = true; }
+    partial void OnEmploymentEndedOnChanged(DateTime? value) { if (value is not null) EmploymentMoreOpen = true; }
+    partial void OnEmploymentAddressChanged(string value) { if (Has(value)) EmploymentMoreOpen = true; }
+    partial void OnEmploymentPhoneChanged(string value) { if (Has(value)) EmploymentMoreOpen = true; }
+    partial void OnEmploymentHrNameChanged(string value) { if (Has(value)) EmploymentMoreOpen = true; }
+    partial void OnEmploymentHrPhoneChanged(string value) { if (Has(value)) EmploymentMoreOpen = true; }
+    partial void OnEmploymentHrEmailChanged(string value) { if (Has(value)) EmploymentMoreOpen = true; }
+    partial void OnEmploymentSickPayInsurerChanged(string value) { if (Has(value)) EmploymentMoreOpen = true; }
+    partial void OnEmploymentAccidentInsurerChanged(string value) { if (Has(value)) EmploymentMoreOpen = true; }
+    partial void OnEmploymentNotesChanged(string value) { if (Has(value)) EmploymentMoreOpen = true; }
 }

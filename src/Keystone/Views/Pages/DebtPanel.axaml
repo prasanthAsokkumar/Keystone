@@ -1,0 +1,103 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.DebtPanel"
+             x:DataType="vm:MainViewModel">
+    <!-- The form for a debt and its payments. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <StackPanel Spacing="2">
+                <TextBlock Text="{Binding DebtFormTitle}" FontSize="20" FontWeight="Bold" />
+                <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                           Text="{l:T 'Payments are added to your expenses automatically. Don’t also enter them as entries.'}" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}"
+                    VerticalAlignment="Top">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
+                Padding="28,16">
+            <Grid ColumnDefinitions="*,Auto" ColumnSpacing="10">
+                <Button Classes="primary" Content="{Binding DebtSubmitText}" HorizontalAlignment="Stretch"
+                        Command="{Binding AddDebtCommand}" />
+                <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Cancel'}"
+                        Command="{Binding ClosePanelCommand}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Spacing="18" Margin="28,12,28,20">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Name'}" />
+                    <TextBox Text="{Binding NewDebtName}" PlaceholderText="{l:T 'e.g. Car loan'}" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{Binding DebtBalanceLabel}" />
+                    <NumericUpDown Value="{Binding NewDebtBalance}" Minimum="0" FormatString="N2"
+                                   Increment="100" PlaceholderText="0.00" ShowButtonSpinner="False" />
+                </StackPanel>
+
+                <StackPanel Spacing="8">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'How it’s repaid'}" />
+                    <Border Classes="segments">
+                        <Grid ColumnDefinitions="*,*,*">
+                            <RadioButton Classes="segment" GroupName="DebtRepayment" Content="{l:T 'Monthly'}"
+                                         IsChecked="{Binding NewDebtIsMonthly}" />
+                            <RadioButton Grid.Column="1" Classes="segment" GroupName="DebtRepayment"
+                                         Content="{l:T 'All at once'}" IsChecked="{Binding NewDebtIsLumpSum}" />
+                            <RadioButton Grid.Column="2" Classes="segment" GroupName="DebtRepayment"
+                                         Content="{l:T 'Interest only'}" IsChecked="{Binding NewDebtIsInterestOnly}" />
+                        </Grid>
+                    </Border>
+                </StackPanel>
+
+                <StackPanel Spacing="4" IsVisible="{Binding NewDebtIsNotInterestOnly}">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Interest rate per year (%)'}" />
+                    <NumericUpDown Value="{Binding NewDebtRate}" Minimum="0" Maximum="100"
+                                   FormatString="0.##" Increment="0.25" />
+                </StackPanel>
+                <StackPanel Spacing="4" IsVisible="{Binding NewDebtIsInterestOnly}">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Interest per 1,000 per month'}" />
+                    <NumericUpDown Value="{Binding NewDebtInterestPer1000}" Minimum="0"
+                                   FormatString="0.##" Increment="5" PlaceholderText="e.g. 25" />
+                    <TextBlock Classes="muted" TextWrapping="Wrap"
+                               Text="{l:T 'Interest is paid monthly on what you still owe. Use Repay on the debt whenever you pay back part of it.'}" />
+                </StackPanel>
+                <StackPanel Spacing="4" IsVisible="{Binding !NewDebtIsLumpSum}">
+                    <TextBlock Classes="fieldLabel" Text="{Binding DebtPaymentLabel}" />
+                    <NumericUpDown Value="{Binding NewDebtPayment}" Minimum="0" FormatString="N2"
+                                   Increment="10" PlaceholderText="0.00" ShowButtonSpinner="False" />
+                </StackPanel>
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="fieldLabel" Text="{Binding DebtDateLabel}" />
+                    <CalendarDatePicker SelectedDate="{Binding NewDebtDate}" />
+                </StackPanel>
+
+                <StackPanel Spacing="6" IsVisible="{Binding HasDebtPaymentRows}">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Extra payments and borrowing'}" />
+                    <ItemsControl ItemsSource="{Binding DebtPaymentRows}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DebtPaymentRow">
+                                <Grid ColumnDefinitions="110,*,Auto" ColumnSpacing="8" Margin="0,2">
+                                    <TextBlock Classes="secondary" FontSize="13" Text="{Binding DateText}" VerticalAlignment="Center" />
+                                    <TextBlock Grid.Column="1" FontSize="13" Text="{Binding Text}" VerticalAlignment="Center" />
+                                    <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Remove'}"
+                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveDebtPaymentCommand}"
+                                            CommandParameter="{Binding}">
+                                        <PathIcon Data="{StaticResource IconDelete}" />
+                                    </Button>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+                <TextBlock Classes="error" Text="{Binding DebtError}" IsVisible="{Binding HasDebtError}" />
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

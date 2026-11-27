@@ -9,35 +9,35 @@
     <Grid RowDefinitions="Auto,Auto,*" RowSpacing="16">
         <Border Classes="segments" HorizontalAlignment="Left" Width="480">
             <Grid ColumnDefinitions="*,*,*">
-                <RadioButton Classes="segment" GroupName="DeadlineTabs" Content="{l:T 'Contracts'}" IsChecked="{Binding IsContractsTab}" />
+                <RadioButton Classes="segment" GroupName="DeadlineTabs" Content="{l:T 'Contracts'}" IsChecked="{Binding Deadlines.IsContractsTab}" />
                 <RadioButton Grid.Column="1" Classes="segment" GroupName="DeadlineTabs" Content="{l:T 'Important dates'}"
-                             IsChecked="{Binding IsDatesTab}" />
+                             IsChecked="{Binding Deadlines.IsDatesTab}" />
                 <RadioButton Grid.Column="2" Classes="segment" GroupName="DeadlineTabs" Content="{l:T 'Warranties'}"
-                             IsChecked="{Binding IsWarrantiesTab}" />
+                             IsChecked="{Binding Deadlines.IsWarrantiesTab}" />
             </Grid>
         </Border>
 
         <!-- Summary -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding IsContractsTab}">
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding Deadlines.IsContractsTab}">
             <Border Classes="card">
                 <StackPanel Spacing="4">
                     <TextBlock Classes="label" Text="{l:T 'Contracts per year'}" />
-                    <TextBlock Classes="value" Text="{Binding ContractCostText}" />
-                    <TextBlock Classes="muted" FontSize="13" Text="{Binding ContractCostDetail}" TextWrapping="Wrap" />
+                    <TextBlock Classes="value" Text="{Binding Deadlines.ContractCostText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Deadlines.ContractCostDetail}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="card">
                 <StackPanel Spacing="4">
                     <TextBlock Classes="label" Text="{l:T 'Notice deadlines, contracts and insurance'}" />
-                    <TextBlock Classes="value" Text="{Binding ContractDeadlineText}" Classes.warning="{Binding IsContractDeadlineSoon}"
-                               IsVisible="{Binding !HasAllDeadlineRows}" />
-                    <TextBlock Classes="muted" FontSize="13" Text="{Binding ContractDeadlineDetail}" TextWrapping="Wrap"
-                               IsVisible="{Binding !HasAllDeadlineRows}" />
-                    <ItemsControl ItemsSource="{Binding TopDeadlineRows}" IsVisible="{Binding HasAllDeadlineRows}" Margin="0,4,0,0">
+                    <TextBlock Classes="value" Text="{Binding Deadlines.ContractDeadlineText}" Classes.warning="{Binding Deadlines.IsContractDeadlineSoon}"
+                               IsVisible="{Binding !Deadlines.HasAllDeadlineRows}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Deadlines.ContractDeadlineDetail}" TextWrapping="Wrap"
+                               IsVisible="{Binding !Deadlines.HasAllDeadlineRows}" />
+                    <ItemsControl ItemsSource="{Binding Deadlines.TopDeadlineRows}" IsVisible="{Binding Deadlines.HasAllDeadlineRows}" Margin="0,4,0,0">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:NoticeDeadlineRow">
                                 <Button Classes="searchResult" HorizontalAlignment="Stretch" Margin="-8,0"
-                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).OpenNoticeDeadlineCommand}"
+                                        Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Deadlines.OpenNoticeDeadlineCommand}"
                                         CommandParameter="{Binding}">
                                     <Grid ColumnDefinitions="96,*,Auto" ColumnSpacing="10">
                                         <TextBlock Text="{Binding DateText}" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center"
@@ -57,12 +57,12 @@
                 </StackPanel>
             </Border>
         </Grid>
-        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding IsDatesTab}">
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding Deadlines.IsDatesTab}">
             <Border Classes="card">
                 <StackPanel Spacing="4">
                     <TextBlock Classes="label" Text="{l:T 'Next date'}" />
-                    <TextBlock Classes="value" Text="{Binding NextImportantDateText}" />
-                    <TextBlock Classes="muted" FontSize="13" Text="{Binding NextImportantDateDetail}" TextWrapping="Wrap" />
+                    <TextBlock Classes="value" Text="{Binding Deadlines.NextImportantDateText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Deadlines.NextImportantDateDetail}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="card">
@@ -73,12 +73,12 @@
                 </StackPanel>
             </Border>
         </Grid>
-        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding IsWarrantiesTab}">
+        <Grid Grid.Row="1" ColumnDefinitions="*,*" ColumnSpacing="16" IsVisible="{Binding Deadlines.IsWarrantiesTab}">
             <Border Classes="card">
                 <StackPanel Spacing="4">
                     <TextBlock Classes="label" Text="{l:T 'Under warranty'}" />
-                    <TextBlock Classes="value" Text="{Binding WarrantySummaryText}" />
-                    <TextBlock Classes="muted" FontSize="13" Text="{Binding WarrantySummaryDetail}" TextWrapping="Wrap" />
+                    <TextBlock Classes="value" Text="{Binding Deadlines.WarrantySummaryText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Deadlines.WarrantySummaryDetail}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="card">
@@ -94,18 +94,18 @@
         <Border Grid.Row="2" Classes="card" Padding="8">
             <Panel>
                 <!-- Contracts -->
-                <Panel IsVisible="{Binding IsContractsTab}">
-                    <TextBlock Classes="secondary" IsVisible="{Binding !HasContractRows}" HorizontalAlignment="Center"
+                <Panel IsVisible="{Binding Deadlines.IsContractsTab}">
+                    <TextBlock Classes="secondary" IsVisible="{Binding !Deadlines.HasContractRows}" HorizontalAlignment="Center"
                                VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
                                Text="{l:T 'No contracts yet. Add your mobile, internet, gym or leasing contracts to see what they cost and when to cancel.'}" />
-                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,2" IsVisible="{Binding HasContractRows}" VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,2" IsVisible="{Binding Deadlines.HasContractRows}" VerticalAlignment="Top">
                         <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
                         <controls:SortHeader Label="{l:T 'Provider'}" List="contracts" Key="provider" Sorts="{Binding ListSorts}" />
                         <controls:SortHeader Label="{l:T 'Person'}" List="contracts" Key="person" Sorts="{Binding ListSorts}" />
                         <controls:SortHeader Label="{l:T 'Cost per year'}" List="contracts" Key="cost" Sorts="{Binding ListSorts}" />
                         <controls:SortHeader Label="{l:T 'Cancel by'}" List="contracts" Key="deadline" Sorts="{Binding ListSorts}" />
                     </StackPanel>
-                    <ListBox Classes="table" ItemsSource="{Binding ContractRows}" IsVisible="{Binding HasContractRows}" Margin="12,34,12,4">
+                    <ListBox Classes="table" ItemsSource="{Binding Deadlines.ContractRows}" IsVisible="{Binding Deadlines.HasContractRows}" Margin="12,34,12,4">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:ContractRow">
                                 <Grid ColumnDefinitions="*,130,150,190,106" ColumnSpacing="16" Background="Transparent" controls:Drag.Item="{Binding}" controls:Drag.Target="reorder:contracts" controls:Drag.TargetItem="{Binding}"
@@ -135,12 +135,12 @@
                                             <PathIcon Data="{StaticResource IconOpen}" />
                                         </Button>
                                         <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
-                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditContractCommand}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Deadlines.EditContractCommand}"
                                                 CommandParameter="{Binding Contract}">
                                             <PathIcon Data="{StaticResource IconEdit}" />
                                         </Button>
                                         <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
-                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteContractCommand}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Deadlines.DeleteContractCommand}"
                                                 CommandParameter="{Binding Contract}">
                                             <PathIcon Data="{StaticResource IconDelete}" />
                                         </Button>
@@ -152,17 +152,17 @@
                 </Panel>
 
                 <!-- Important dates -->
-                <Panel IsVisible="{Binding IsDatesTab}">
-                    <TextBlock Classes="secondary" IsVisible="{Binding !HasImportantDateRows}" HorizontalAlignment="Center"
+                <Panel IsVisible="{Binding Deadlines.IsDatesTab}">
+                    <TextBlock Classes="secondary" IsVisible="{Binding !Deadlines.HasImportantDateRows}" HorizontalAlignment="Center"
                                VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
                                Text="{l:T 'No dates yet. Add when passports and ID cards expire, the car inspection or the vignette.'}" />
-                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,2" IsVisible="{Binding HasImportantDateRows}" VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,2" IsVisible="{Binding Deadlines.HasImportantDateRows}" VerticalAlignment="Top">
                         <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
                         <controls:SortHeader Label="{l:T 'Title'}" List="dates" Key="title" Sorts="{Binding ListSorts}" />
                         <controls:SortHeader Label="{l:T 'Person'}" List="dates" Key="person" Sorts="{Binding ListSorts}" />
                         <controls:SortHeader Label="{l:T 'Date'}" List="dates" Key="date" Sorts="{Binding ListSorts}" />
                     </StackPanel>
-                    <ListBox Classes="table" ItemsSource="{Binding ImportantDateRows}" IsVisible="{Binding HasImportantDateRows}" Margin="12,34,12,4">
+                    <ListBox Classes="table" ItemsSource="{Binding Deadlines.ImportantDateRows}" IsVisible="{Binding Deadlines.HasImportantDateRows}" Margin="12,34,12,4">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:ImportantDateRow">
                                 <Grid ColumnDefinitions="*,130,190,72" ColumnSpacing="16" Background="Transparent"
@@ -181,12 +181,12 @@
                                     </StackPanel>
                                     <Grid Grid.Column="3" ColumnDefinitions="34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
                                         <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
-                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditImportantDateCommand}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Deadlines.EditImportantDateCommand}"
                                                 CommandParameter="{Binding Date}">
                                             <PathIcon Data="{StaticResource IconEdit}" />
                                         </Button>
                                         <Button Grid.Column="1" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
-                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteImportantDateCommand}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Deadlines.DeleteImportantDateCommand}"
                                                 CommandParameter="{Binding Date}">
                                             <PathIcon Data="{StaticResource IconDelete}" />
                                         </Button>
@@ -198,18 +198,18 @@
                 </Panel>
 
                 <!-- Warranties -->
-                <Panel IsVisible="{Binding IsWarrantiesTab}">
-                    <TextBlock Classes="secondary" IsVisible="{Binding !HasWarrantyRows}" HorizontalAlignment="Center"
+                <Panel IsVisible="{Binding Deadlines.IsWarrantiesTab}">
+                    <TextBlock Classes="secondary" IsVisible="{Binding !Deadlines.HasWarrantyRows}" HorizontalAlignment="Center"
                                VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
                                Text="{l:T 'No warranties yet. Add bigger purchases with their receipt, so you know until when they’re covered.'}" />
-                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,2" IsVisible="{Binding HasWarrantyRows}" VerticalAlignment="Top">
+                    <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,2" IsVisible="{Binding Deadlines.HasWarrantyRows}" VerticalAlignment="Top">
                         <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
                         <controls:SortHeader Label="{l:T 'Item'}" List="warranties" Key="item" Sorts="{Binding ListSorts}" />
                         <controls:SortHeader Label="{l:T 'Person'}" List="warranties" Key="person" Sorts="{Binding ListSorts}" />
                         <controls:SortHeader Label="{l:T 'Price'}" List="warranties" Key="price" Sorts="{Binding ListSorts}" />
                         <controls:SortHeader Label="{l:T 'Ends'}" List="warranties" Key="expires" Sorts="{Binding ListSorts}" />
                     </StackPanel>
-                    <ListBox Classes="table" ItemsSource="{Binding WarrantyRows}" IsVisible="{Binding HasWarrantyRows}" Margin="12,34,12,4">
+                    <ListBox Classes="table" ItemsSource="{Binding Deadlines.WarrantyRows}" IsVisible="{Binding Deadlines.HasWarrantyRows}" Margin="12,34,12,4">
                         <ListBox.ItemTemplate>
                             <DataTemplate x:DataType="vm:WarrantyRow">
                                 <Grid ColumnDefinitions="*,130,170,106" ColumnSpacing="16" Background="Transparent"
@@ -230,12 +230,12 @@
                                             <PathIcon Data="{StaticResource IconOpen}" />
                                         </Button>
                                         <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
-                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditWarrantyCommand}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Deadlines.EditWarrantyCommand}"
                                                 CommandParameter="{Binding Warranty}">
                                             <PathIcon Data="{StaticResource IconEdit}" />
                                         </Button>
                                         <Button Grid.Column="2" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
-                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteWarrantyCommand}"
+                                                Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Deadlines.DeleteWarrantyCommand}"
                                                 CommandParameter="{Binding Warranty}">
                                             <PathIcon Data="{StaticResource IconDelete}" />
                                         </Button>

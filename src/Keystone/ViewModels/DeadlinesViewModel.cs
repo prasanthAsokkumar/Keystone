@@ -21,11 +21,15 @@ public sealed record NoticeDeadlineRow(DateOnly CancelBy, string Name, string Ki
 }
 
 /// <summary>The Contracts & dates page: contracts with notice deadlines, important dates and warranties.</summary>
-public partial class MainViewModel
+/// <remarks>Its own view model; shared things (people, documents, policies, notices) come from the main one.</remarks>
+public sealed partial class DeadlinesViewModel(MainViewModel main) : ViewModelBase
 {
-    private readonly List<Contract> _contracts = [];
-    private readonly List<ImportantDate> _dates = [];
-    private readonly List<Warranty> _warranties = [];
+    /// <summary>Every contract.</summary>
+    internal List<Contract> Contracts { get; } = [];
+    /// <summary>Every important date.</summary>
+    internal List<ImportantDate> Dates { get; } = [];
+    /// <summary>Every warranty.</summary>
+    internal List<Warranty> Warranties { get; } = [];
 
     /// <summary>0: contracts, 1: important dates, 2: warranties.</summary>
     [ObservableProperty]
@@ -51,40 +55,24 @@ public partial class MainViewModel
         }
     }
 
-    private async Task LoadDeadlinesAsync()
+    internal async Task LoadDeadlinesAsync()
     {
-        _contracts.Clear();
-        _contracts.AddRange(await repository.GetAllAsync<Contract>());
-        _dates.Clear();
-        _dates.AddRange(await repository.GetAllAsync<ImportantDate>());
-        _warranties.Clear();
-        _warranties.AddRange(await repository.GetAllAsync<Warranty>());
+        Contracts.Clear();
+        Contracts.AddRange(await main.repository.GetAllAsync<Contract>());
+        Dates.Clear();
+        Dates.AddRange(await main.repository.GetAllAsync<ImportantDate>());
+        Warranties.Clear();
+        Warranties.AddRange(await main.repository.GetAllAsync<Warranty>());
         RefreshDeadlines();
     }
 
-    private void RefreshDeadlines()
+    internal void RefreshDeadlines()
     {
         RefreshContracts();
         RefreshImportantDates();
         RefreshWarranties();
-        ScheduleReminders();
+        main.ScheduleReminders();
     }
-
-    private IReadOnlyList<DocumentOption> DocumentOptionsFor(int? selectedId, params DocumentKind[] kinds) =>
-    [
-        new DocumentOption(null, ""),
-        .. Documents
-            .Where(d => kinds.Contains(d.Kind) || d.Id == selectedId)
-            .OrderByDescending(d => d.Date)
-            .Select(DocumentOptionOf),
-    ];
-
-    private DocumentOption DocumentOptionOf(HouseholdDocument document) => new(document,
-        document.Sender == "" ? document.Title : $"{document.Sender}: {document.Title}",
-        document.PersonId is null ? Loc.T(PersonOption.SharedName) : PersonName(document.PersonId), Format.Date(document.Date));
-
-    [RelayCommand]
-    private void OpenLinkedDocument(HouseholdDocument document) => OpenDocument(document);
 
     // ── Contracts ───────────────────────────────────────────────────────────
 
@@ -111,23 +99,23 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial bool IsContractDeadlineSoon { get; set; }
 
-    private void RefreshContracts()
+    internal void RefreshContracts()
     {
-        var documents = Documents.ToDictionary(d => d.Id);
-        ContractRows = Sorted("contracts", _contracts
-            .Where(c => InView(c.PersonId))
-            .OrderBy(c => c.HasEnded(Today))
-            .ThenBy(c => c.NextDeadline(Today)?.CancelBy ?? DateOnly.MaxValue)
+        var documents = main.Documents.ToDictionary(d => d.Id);
+        ContractRows = main.Sorted("contracts", Contracts
+            .Where(c => main.InView(c.PersonId))
+            .OrderBy(c => c.HasEnded(MainViewModel.Today))
+            .ThenBy(c => c.NextDeadline(MainViewModel.Today)?.CancelBy ?? DateOnly.MaxValue)
             .ThenBy(c => c.Provider, StringComparer.CurrentCultureIgnoreCase)
-            .Select(c => new ContractRow(c, PersonName(c.PersonId),
-                c.DocumentId is { } id && documents.TryGetValue(id, out var d) ? d : null, Today)),
+            .Select(c => new ContractRow(c, main.PersonName(c.PersonId),
+                c.DocumentId is { } id && documents.TryGetValue(id, out var d) ? d : null, MainViewModel.Today)),
             r => r.Contract.SortOrder,
             new SortKey<ContractRow>("provider", r => r.Contract.Provider),
             new SortKey<ContractRow>("person", r => r.PersonName),
             new SortKey<ContractRow>("cost", r => r.Contract.YearlyCost, DescendingFirst: true),
-            new SortKey<ContractRow>("deadline", r => r.Contract.NextDeadline(Today)?.CancelBy));
+            new SortKey<ContractRow>("deadline", r => r.Contract.NextDeadline(MainViewModel.Today)?.CancelBy));
 
-        var running = _contracts.Where(c => !c.HasEnded(Today)).ToList();
+        var running = Contracts.Where(c => !c.HasEnded(MainViewModel.Today)).ToList();
         var yearly = running.Sum(c => c.YearlyCost);
         ContractCostText = Format.Money(yearly);
         ContractCostDetail = running.Count == 0
@@ -165,28 +153,27 @@ public partial class MainViewModel
 
     private List<NoticeDeadlineRow> AllNoticeDeadlines()
     {
-        var until = Today.AddYears(1);
+        var until = MainViewModel.Today.AddYears(1);
         var rows = new List<NoticeDeadlineRow>();
-        foreach (var c in _contracts.Where(c => !c.HasEnded(Today) && InView(c.PersonId)))
-            if (c.NextDeadline(Today) is { } d && d.CancelBy <= until)
+        foreach (var c in Contracts.Where(c => !c.HasEnded(MainViewModel.Today) && main.InView(c.PersonId)))
+            if (c.NextDeadline(MainViewModel.Today) is { } d && d.CancelBy <= until)
                 rows.Add(new NoticeDeadlineRow(d.CancelBy, c.Provider, Contract.KindName(c.Kind), PersonNameOrEmpty(c.PersonId), false,
-                    DaysLeftText(d.CancelBy), d.CancelBy.DayNumber - Today.DayNumber <= InsuranceDeadlineWarningDays,
+                    MainViewModel.DaysLeftText(d.CancelBy), d.CancelBy.DayNumber - MainViewModel.Today.DayNumber <= MainViewModel.InsuranceDeadlineWarningDays,
                     () => EditContractCommand.Execute(c)));
-        foreach (var p in _policies.Where(p => !p.HasEnded(Today) && InView(p.PersonId)))
-            if (p.NextDeadline(Today) is { } d && d.CancelBy <= until)
+        foreach (var p in main._policies.Where(p => !p.HasEnded(MainViewModel.Today) && main.InView(p.PersonId)))
+            if (p.NextDeadline(MainViewModel.Today) is { } d && d.CancelBy <= until)
                 rows.Add(new NoticeDeadlineRow(d.CancelBy, p.Insurer, InsurancePolicy.KindName(p.Kind), PersonNameOrEmpty(p.PersonId), true,
-                    DaysLeftText(d.CancelBy), d.CancelBy.DayNumber - Today.DayNumber <= InsuranceDeadlineWarningDays,
-                    () => { CurrentPage = AppPage.Insurance; EditInsuranceCommand.Execute(p); }));
+                    MainViewModel.DaysLeftText(d.CancelBy), d.CancelBy.DayNumber - MainViewModel.Today.DayNumber <= MainViewModel.InsuranceDeadlineWarningDays,
+                    () => { main.CurrentPage = AppPage.Insurance; main.EditInsuranceCommand.Execute(p); }));
         return rows.OrderBy(r => r.CancelBy).ThenBy(r => r.Name, StringComparer.CurrentCultureIgnoreCase).ToList();
     }
 
-    private string PersonNameOrEmpty(int? id) => id is null ? "" : PersonName(id);
+    private string PersonNameOrEmpty(int? id) => id is null ? "" : main.PersonName(id);
 
     [RelayCommand]
     private void OpenNoticeDeadline(NoticeDeadlineRow row) => row.Open();
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsContractPanelOpen { get; set; }
 
     [ObservableProperty]
@@ -246,7 +233,7 @@ public partial class MainViewModel
 
     public string ContractCancelByText => ContractEnd is not { } end
         ? Loc.T("Without an end date, it can be cancelled any time with its notice period.")
-        : NoticeDeadline.Next(DateOnly.FromDateTime(end), ContractRenews, (int)(ContractNoticeMonths ?? 0), Today) is { } d
+        : NoticeDeadline.Next(DateOnly.FromDateTime(end), ContractRenews, (int)(ContractNoticeMonths ?? 0), MainViewModel.Today) is { } d
             ? Loc.F("Cancel by {0} for the term ending {1}.", Format.Date(d.CancelBy), Format.Date(d.End))
             : Loc.T("This contract has ended.");
 
@@ -259,9 +246,9 @@ public partial class MainViewModel
     private Recurrence ContractRecurrence => ContractRecurrenceIndex switch { 1 => Recurrence.Quarterly, 2 => Recurrence.Yearly, _ => Recurrence.Monthly };
 
     [RelayCommand]
-    private void NewContract()
+    internal void NewContract()
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingContract = null;
         ContractProvider = "";
         ContractKindIndex = 0;
@@ -275,19 +262,19 @@ public partial class MainViewModel
         ContractNotes = "";
         ContractAddToExpenses = false;
         ContractError = null;
-        ContractDocumentOptions = DocumentOptionsFor(null, DocumentKind.Contract);
+        ContractDocumentOptions = main.DocumentOptionsFor(null, DocumentKind.Contract);
         ContractDocument = ContractDocumentOptions[0];
         IsContractPanelOpen = true;
     }
 
     [RelayCommand]
-    private void EditContract(Contract contract)
+    internal void EditContract(Contract contract)
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingContract = contract;
         ContractProvider = contract.Provider;
         ContractKindIndex = (int)contract.Kind;
-        ContractPerson = PersonOptions.FirstOrDefault(o => o.Id == contract.PersonId) ?? PersonOption.Shared;
+        ContractPerson = main.PersonOptions.FirstOrDefault(o => o.Id == contract.PersonId) ?? PersonOption.Shared;
         ContractCustomerNumber = contract.CustomerNumber;
         ContractCost = contract.Cost;
         ContractRecurrenceIndex = contract.CostRecurrence switch { Recurrence.Quarterly => 1, Recurrence.Yearly => 2, _ => 0 };
@@ -297,7 +284,7 @@ public partial class MainViewModel
         ContractNotes = contract.Notes;
         ContractAddToExpenses = false;
         ContractError = null;
-        ContractDocumentOptions = DocumentOptionsFor(contract.DocumentId, DocumentKind.Contract);
+        ContractDocumentOptions = main.DocumentOptionsFor(contract.DocumentId, DocumentKind.Contract);
         ContractDocument = ContractDocumentOptions.FirstOrDefault(o => o.Document?.Id == contract.DocumentId) ?? ContractDocumentOptions[0];
         IsContractPanelOpen = true;
     }
@@ -331,12 +318,12 @@ public partial class MainViewModel
 
         try
         {
-            await repository.SaveAsync(contract, existing is null);
+            await main.repository.SaveAsync(contract, existing is null);
             if (existing is null && ContractAddToExpenses && contract.Cost > 0)
             {
-                var entry = await repository.AddTransactionAsync(new Transaction
+                var entry = await main.repository.AddTransactionAsync(new Transaction
                 {
-                    Date = new DateOnly(Today.Year, Today.Month, 1).AddMonths(1),
+                    Date = new DateOnly(MainViewModel.Today.Year, MainViewModel.Today.Month, 1).AddMonths(1),
                     Description = $"{contract.Provider}: {Contract.KindName(contract.Kind)}",
                     Category = Contract.CategoryFor(contract.Kind),
                     Amount = contract.Cost,
@@ -344,8 +331,8 @@ public partial class MainViewModel
                     Recurrence = contract.CostRecurrence,
                     PersonId = contract.PersonId,
                 });
-                InsertSorted(entry);
-                Recalculate();
+                main.InsertSorted(entry);
+                main.Recalculate();
             }
         }
         catch (Exception ex)
@@ -355,8 +342,8 @@ public partial class MainViewModel
         }
 
         if (existing is not null)
-            _contracts.Remove(existing);
-        _contracts.Add(contract);
+            Contracts.Remove(existing);
+        Contracts.Add(contract);
         CloseDeadlinePanels();
         RefreshDeadlines();
     }
@@ -366,7 +353,7 @@ public partial class MainViewModel
     {
         if (await DeleteRecordAsync<Contract>(c => c.Id == contract.Id))
         {
-            _contracts.Remove(contract);
+            Contracts.Remove(contract);
             RefreshDeadlines();
         }
     }
@@ -375,7 +362,7 @@ public partial class MainViewModel
 
     public IReadOnlyList<string> ImportantDateKindNames => Enum.GetValues<ImportantDateKind>().Select(ImportantDate.KindName).ToList();
 
-    public IReadOnlyList<string> RepeatMonthNames => Translate("Once", "Every 6 months", "Every year", "Every 2 years", "Every 3 years");
+    public IReadOnlyList<string> RepeatMonthNames => MainViewModel.Translate("Once", "Every 6 months", "Every year", "Every 2 years", "Every 3 years");
 
     private static readonly int[] RepeatMonthValues = [0, 6, 12, 24, 36];
 
@@ -391,25 +378,24 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial string NextImportantDateDetail { get; set; } = "";
 
-    private void RefreshImportantDates()
+    internal void RefreshImportantDates()
     {
-        ImportantDateRows = Sorted("dates", _dates
-            .Where(d => InView(d.PersonId))
-            .OrderBy(d => d.HasPassed(Today))
-            .ThenBy(d => d.NextDate(Today))
-            .Select(d => new ImportantDateRow(d, PersonName(d.PersonId), Today)), null,
+        ImportantDateRows = main.Sorted("dates", Dates
+            .Where(d => main.InView(d.PersonId))
+            .OrderBy(d => d.HasPassed(MainViewModel.Today))
+            .ThenBy(d => d.NextDate(MainViewModel.Today))
+            .Select(d => new ImportantDateRow(d, main.PersonName(d.PersonId), MainViewModel.Today)), null,
             new SortKey<ImportantDateRow>("title", r => r.Date.Title),
             new SortKey<ImportantDateRow>("person", r => r.PersonName),
-            new SortKey<ImportantDateRow>("date", r => r.Date.NextDate(Today)));
-        var next = _dates.Where(d => !d.HasPassed(Today)).OrderBy(d => d.NextDate(Today)).FirstOrDefault();
-        NextImportantDateText = next is null ? "–" : Format.Date(next.NextDate(Today));
+            new SortKey<ImportantDateRow>("date", r => r.Date.NextDate(MainViewModel.Today)));
+        var next = Dates.Where(d => !d.HasPassed(MainViewModel.Today)).OrderBy(d => d.NextDate(MainViewModel.Today)).FirstOrDefault();
+        NextImportantDateText = next is null ? "–" : Format.Date(next.NextDate(MainViewModel.Today));
         NextImportantDateDetail = next is null
             ? Loc.T("Add passports, the car inspection or the vignette")
-            : Loc.F("{0} · {1}", next.Title, DaysLeftText(next.NextDate(Today)));
+            : Loc.F("{0} · {1}", next.Title, MainViewModel.DaysLeftText(next.NextDate(MainViewModel.Today)));
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsImportantDatePanelOpen { get; set; }
 
     [ObservableProperty]
@@ -457,13 +443,13 @@ public partial class MainViewModel
             ImportantDateTitle = ImportantDate.KindName(kind);
         // The vignette is due every January.
         if (kind == ImportantDateKind.Vignette && ImportantDateDate is null)
-            ImportantDateDate = new DateTime(Today.Year + 1, 1, 31);
+            ImportantDateDate = new DateTime(MainViewModel.Today.Year + 1, 1, 31);
     }
 
     [RelayCommand]
-    private void NewImportantDate()
+    internal void NewImportantDate()
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingImportantDate = null;
         ImportantDateTitle = "";
         ImportantDateDate = null;
@@ -476,13 +462,13 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void EditImportantDate(ImportantDate date)
+    internal void EditImportantDate(ImportantDate date)
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingImportantDate = date;
         ImportantDateTitle = date.Title;
         ImportantDateKindIndex = (int)date.Kind;
-        ImportantDatePerson = PersonOptions.FirstOrDefault(o => o.Id == date.PersonId) ?? PersonOption.Shared;
+        ImportantDatePerson = main.PersonOptions.FirstOrDefault(o => o.Id == date.PersonId) ?? PersonOption.Shared;
         ImportantDateDate = date.Date.ToDateTime(TimeOnly.MinValue);
         ImportantDateRepeatIndex = Math.Max(0, Array.IndexOf(RepeatMonthValues, date.RepeatMonths));
         ImportantDateRemindDays = date.RemindDaysBefore;
@@ -515,7 +501,7 @@ public partial class MainViewModel
         };
         try
         {
-            await repository.SaveAsync(date, existing is null);
+            await main.repository.SaveAsync(date, existing is null);
         }
         catch (Exception ex)
         {
@@ -524,8 +510,8 @@ public partial class MainViewModel
         }
 
         if (existing is not null)
-            _dates.Remove(existing);
-        _dates.Add(date);
+            Dates.Remove(existing);
+        Dates.Add(date);
         CloseDeadlinePanels();
         RefreshDeadlines();
     }
@@ -535,7 +521,7 @@ public partial class MainViewModel
     {
         if (await DeleteRecordAsync<ImportantDate>(d => d.Id == date.Id))
         {
-            _dates.Remove(date);
+            Dates.Remove(date);
             RefreshDeadlines();
         }
     }
@@ -554,29 +540,28 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial string WarrantySummaryDetail { get; set; } = "";
 
-    private void RefreshWarranties()
+    internal void RefreshWarranties()
     {
-        var documents = Documents.ToDictionary(d => d.Id);
-        WarrantyRows = Sorted("warranties", _warranties
-            .Where(w => InView(w.PersonId))
-            .OrderBy(w => w.HasExpired(Today))
+        var documents = main.Documents.ToDictionary(d => d.Id);
+        WarrantyRows = main.Sorted("warranties", Warranties
+            .Where(w => main.InView(w.PersonId))
+            .OrderBy(w => w.HasExpired(MainViewModel.Today))
             .ThenBy(w => w.ExpiresOn)
-            .Select(w => new WarrantyRow(w, PersonName(w.PersonId),
-                w.DocumentId is { } id && documents.TryGetValue(id, out var d) ? d : null, Today)), null,
+            .Select(w => new WarrantyRow(w, main.PersonName(w.PersonId),
+                w.DocumentId is { } id && documents.TryGetValue(id, out var d) ? d : null, MainViewModel.Today)), null,
             new SortKey<WarrantyRow>("item", r => r.Warranty.Item),
             new SortKey<WarrantyRow>("person", r => r.PersonName),
             new SortKey<WarrantyRow>("price", r => r.Warranty.Price, DescendingFirst: true),
             new SortKey<WarrantyRow>("expires", r => r.Warranty.ExpiresOn));
-        var running = _warranties.Count(w => !w.HasExpired(Today));
-        var soon = _warranties.Count(w => !w.HasExpired(Today) && w.ExpiresOn.DayNumber - Today.DayNumber <= 60);
+        var running = Warranties.Count(w => !w.HasExpired(MainViewModel.Today));
+        var soon = Warranties.Count(w => !w.HasExpired(MainViewModel.Today) && w.ExpiresOn.DayNumber - MainViewModel.Today.DayNumber <= 60);
         WarrantySummaryText = running.ToString(Loc.Instance.Culture);
-        WarrantySummaryDetail = _warranties.Count == 0
+        WarrantySummaryDetail = Warranties.Count == 0
             ? Loc.T("Add purchases with their receipt")
             : soon > 0 ? Loc.Plural(soon, "{0} ends within 2 months", "{0} end within 2 months") : Loc.T("None ends soon");
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsWarrantyPanelOpen { get; set; }
 
     [ObservableProperty]
@@ -625,9 +610,9 @@ public partial class MainViewModel
         : "";
 
     [RelayCommand]
-    private void NewWarranty()
+    internal void NewWarranty()
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingWarranty = null;
         WarrantyItem = "";
         WarrantyStore = "";
@@ -637,7 +622,7 @@ public partial class MainViewModel
         WarrantyMonths = Warranty.DefaultMonths;
         WarrantyNotes = "";
         WarrantyError = null;
-        WarrantyDocumentOptions = DocumentOptionsFor(null, DocumentKind.Invoice, DocumentKind.Bill);
+        WarrantyDocumentOptions = main.DocumentOptionsFor(null, DocumentKind.Invoice, DocumentKind.Bill);
         WarrantyDocument = WarrantyDocumentOptions[0];
         IsWarrantyPanelOpen = true;
     }
@@ -645,17 +630,17 @@ public partial class MainViewModel
     [RelayCommand]
     private void EditWarranty(Warranty warranty)
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingWarranty = warranty;
         WarrantyItem = warranty.Item;
         WarrantyStore = warranty.Store;
-        WarrantyPerson = PersonOptions.FirstOrDefault(o => o.Id == warranty.PersonId) ?? PersonOption.Shared;
+        WarrantyPerson = main.PersonOptions.FirstOrDefault(o => o.Id == warranty.PersonId) ?? PersonOption.Shared;
         WarrantyPurchaseDate = warranty.PurchaseDate.ToDateTime(TimeOnly.MinValue);
         WarrantyPrice = warranty.Price;
         WarrantyMonths = warranty.Months;
         WarrantyNotes = warranty.Notes;
         WarrantyError = null;
-        WarrantyDocumentOptions = DocumentOptionsFor(warranty.DocumentId, DocumentKind.Invoice, DocumentKind.Bill);
+        WarrantyDocumentOptions = main.DocumentOptionsFor(warranty.DocumentId, DocumentKind.Invoice, DocumentKind.Bill);
         WarrantyDocument = WarrantyDocumentOptions.FirstOrDefault(o => o.Document?.Id == warranty.DocumentId) ?? WarrantyDocumentOptions[0];
         IsWarrantyPanelOpen = true;
     }
@@ -685,7 +670,7 @@ public partial class MainViewModel
         };
         try
         {
-            await repository.SaveAsync(warranty, existing is null);
+            await main.repository.SaveAsync(warranty, existing is null);
         }
         catch (Exception ex)
         {
@@ -694,8 +679,8 @@ public partial class MainViewModel
         }
 
         if (existing is not null)
-            _warranties.Remove(existing);
-        _warranties.Add(warranty);
+            Warranties.Remove(existing);
+        Warranties.Add(warranty);
         CloseDeadlinePanels();
         RefreshDeadlines();
     }
@@ -705,28 +690,28 @@ public partial class MainViewModel
     {
         if (await DeleteRecordAsync<Warranty>(w => w.Id == warranty.Id))
         {
-            _warranties.Remove(warranty);
+            Warranties.Remove(warranty);
             RefreshDeadlines();
         }
     }
 
     // ── Shared ──────────────────────────────────────────────────────────────
 
-    private async Task<bool> DeleteRecordAsync<T>(System.Linq.Expressions.Expression<Func<T, bool>> match) where T : class
+    internal async Task<bool> DeleteRecordAsync<T>(System.Linq.Expressions.Expression<Func<T, bool>> match) where T : class
     {
         try
         {
-            await repository.DeleteAsync(match);
+            await main.repository.DeleteAsync(match);
             return true;
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
             return false;
         }
     }
 
-    private void CloseDeadlinePanels()
+    internal void CloseDeadlinePanels()
     {
         IsContractPanelOpen = false;
         IsImportantDatePanelOpen = false;
@@ -735,6 +720,23 @@ public partial class MainViewModel
         EditingImportantDate = null;
         EditingWarranty = null;
     }
+
+    // ── "More details" in the contract form: unfolds when one of its fields has something in it ──
+
+    [ObservableProperty]
+    public partial bool ContractMoreOpen { get; set; }
+
+    partial void OnIsContractPanelOpenChanged(bool value)
+    {
+        if (value)
+            ContractMoreOpen = Has(ContractCustomerNumber) || Has(ContractNotes) || ContractDocument?.Document is not null;
+    }
+
+    private static bool Has(string? text) => !string.IsNullOrWhiteSpace(text);
+
+    partial void OnContractCustomerNumberChanged(string value) { if (Has(value)) ContractMoreOpen = true; }
+    partial void OnContractNotesChanged(string value) { if (Has(value)) ContractMoreOpen = true; }
+    partial void OnContractDocumentChanged(DocumentOption? value) { if (value?.Document is not null) ContractMoreOpen = true; }
 }
 
 /// <summary>One contract in the list.</summary>

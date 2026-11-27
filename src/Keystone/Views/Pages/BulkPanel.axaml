@@ -1,0 +1,140 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.BulkPanel"
+             x:DataType="vm:MainViewModel">
+    <!-- Many documents filed at once. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <StackPanel Spacing="8">
+                <TextBlock Text="{Binding BulkTitle}" FontSize="20" FontWeight="Bold" />
+                <ProgressBar Classes="thin" Minimum="0" Maximum="100" Value="{Binding BulkProgress}"
+                             IsVisible="{Binding IsBulkBusy}" />
+                <TextBlock Classes="muted" FontSize="13" Text="{Binding BulkStatusText}" TextWrapping="Wrap" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}"
+                    VerticalAlignment="Top">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
+                Padding="28,16">
+            <StackPanel Spacing="10">
+                <TextBlock Classes="error" Text="{Binding BulkError}" IsVisible="{Binding HasBulkError}" />
+                <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="10">
+                    <Button Classes="primary" Content="{Binding BulkSaveText}" HorizontalAlignment="Stretch"
+                            Command="{Binding SaveBulkCommand}" IsEnabled="{Binding CanSaveBulk}" />
+                    <Button Grid.Column="1" Classes="secondary" Click="AddDocument_Click">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{StaticResource IconPlus}" />
+                            <TextBlock Text="{l:T 'Add files'}" />
+                        </StackPanel>
+                    </Button>
+                    <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Cancel'}"
+                            Command="{Binding ClosePanelCommand}" />
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <ScrollViewer>
+            <ItemsControl ItemsSource="{Binding BulkItems}" Margin="28,8,34,20">
+                <ItemsControl.ItemsPanel>
+                    <ItemsPanelTemplate>
+                        <StackPanel Spacing="12" />
+                    </ItemsPanelTemplate>
+                </ItemsControl.ItemsPanel>
+                <ItemsControl.ItemTemplate>
+                    <DataTemplate x:DataType="vm:BulkDocumentItem">
+                        <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14,12">
+                            <StackPanel Spacing="10">
+                                <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="8">
+                                    <CheckBox IsChecked="{Binding IsSelected}" MinWidth="0" Padding="0"
+                                              ToolTip.Tip="{l:T 'Save this file'}" />
+                                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Spacing="2">
+                                        <TextBlock Text="{Binding FileName}" FontWeight="SemiBold"
+                                                   TextTrimming="CharacterEllipsis" ToolTip.Tip="{Binding SourcePath}" />
+                                        <StackPanel Orientation="Horizontal" Spacing="8" IsVisible="{Binding HasStatus}">
+                                            <ProgressBar Classes="thin" IsIndeterminate="True" Width="60"
+                                                         VerticalAlignment="Center" IsVisible="{Binding IsReading}" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding StatusText}"
+                                                       TextWrapping="Wrap" Classes.negative="{Binding IsFailed}" />
+                                        </StackPanel>
+                                    </StackPanel>
+                                    <Button Grid.Column="2" Classes="icon" ToolTip.Tip="{l:T 'Remove from the list'}"
+                                            VerticalAlignment="Top"
+                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveBulkItemCommand}"
+                                            CommandParameter="{Binding}">
+                                        <PathIcon Data="{StaticResource IconClose}" />
+                                    </Button>
+                                </Grid>
+
+                                <Border Background="{DynamicResource WarningSoft}" CornerRadius="8" Padding="10,8"
+                                        IsVisible="{Binding HasDuplicate}">
+                                    <TextBlock Text="{Binding DuplicateText}" TextWrapping="Wrap" FontSize="12" FontWeight="Medium" />
+                                </Border>
+
+                                <StackPanel Spacing="10" IsEnabled="{Binding IsEditable}">
+                                    <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Type'}" />
+                                            <ComboBox SelectedIndex="{Binding KindIndex}"
+                                                      ItemsSource="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DocumentKindNames}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" />
+                                            <ComboBox SelectedItem="{Binding Person}"
+                                                      ItemsSource="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).PersonOptions}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="2" Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Document date'}" />
+                                            <CalendarDatePicker SelectedDate="{Binding Date}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <Grid ColumnDefinitions="2*,*" ColumnSpacing="10">
+                                        <StackPanel Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'Title'}" />
+                                            <TextBox Text="{Binding Title}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" Spacing="4">
+                                            <TextBlock Classes="fieldLabel" Text="{l:T 'From'}" />
+                                            <TextBox Text="{Binding Sender}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <StackPanel Spacing="8" IsVisible="{Binding IsPayable}">
+                                        <StackPanel Orientation="Horizontal" Spacing="6" IsVisible="{Binding HasPaymentDetails}">
+                                            <PathIcon Data="{StaticResource IconQr}" Width="13" Height="13" Foreground="{DynamicResource Brand}" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding PaymentIban}" FontFamily="Menlo, monospace" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding PaymentReference}" FontFamily="Menlo, monospace" />
+                                        </StackPanel>
+                                        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="10">
+                                            <StackPanel Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'Amount to pay'}" />
+                                                <NumericUpDown Value="{Binding Amount}" Minimum="0" FormatString="N2"
+                                                               PlaceholderText="0.00" ShowButtonSpinner="False" />
+                                            </StackPanel>
+                                            <StackPanel Grid.Column="1" Spacing="4">
+                                                <TextBlock Classes="fieldLabel" Text="{l:T 'Due on'}" />
+                                                <CalendarDatePicker SelectedDate="{Binding DueDate}" />
+                                            </StackPanel>
+                                            <CheckBox Grid.Column="2" IsChecked="{Binding IsPaid}" Content="{l:T 'Already paid'}"
+                                                      VerticalAlignment="Bottom" Margin="0,0,0,6" />
+                                        </Grid>
+                                        <CheckBox IsChecked="{Binding CreateEntry}" IsVisible="{Binding CanCreateEntry}"
+                                                  Content="{l:T 'Add to expenses on the due date, so your runway includes it'}" />
+                                    </StackPanel>
+                                    <CheckBox IsChecked="{Binding AddFollowUp}" IsVisible="{Binding HasFollowUp}">
+                                        <TextBlock Text="{Binding FollowUpText}" TextWrapping="Wrap" />
+                                    </CheckBox>
+                                </StackPanel>
+                            </StackPanel>
+                        </Border>
+                    </DataTemplate>
+                </ItemsControl.ItemTemplate>
+            </ItemsControl>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

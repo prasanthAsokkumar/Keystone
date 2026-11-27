@@ -10,14 +10,16 @@ using Keystone.Models;
 namespace Keystone.ViewModels;
 
 /// <summary>The Tasks page: things to do, with due dates, for anyone in the household.</summary>
-public partial class MainViewModel
+/// <remarks>Its own view model; shared things (people, notices, reminders) come from the main one.</remarks>
+public sealed partial class TasksViewModel(MainViewModel main) : ViewModelBase
 {
     /// <summary>Tasks due within this many days show on the Overview.</summary>
     private const int TaskReminderDays = 7;
 
-    private readonly List<TaskItem> _tasks = [];
+    /// <summary>Every task, done ones too.</summary>
+    internal List<TaskItem> All { get; } = [];
 
-    public IReadOnlyList<string> TaskStatusFilters => Translate("To do", "Done", "All tasks");
+    public IReadOnlyList<string> TaskStatusFilters => MainViewModel.Translate("To do", "Done", "All tasks");
 
     [ObservableProperty]
     public partial string TaskSearch { get; set; } = "";
@@ -34,7 +36,7 @@ public partial class MainViewModel
 
     public bool HasTaskRows => TaskRows.Count > 0;
 
-    public string TasksEmptyText => _tasks.Count == 0
+    public string TasksEmptyText => All.Count == 0
         ? Loc.T("No tasks yet. Type one above and press Enter.")
         : TaskStatusFilterIndex == 0 && TaskSearch == "" && TaskPersonFilter is { IsEveryone: true }
             ? Loc.T("All done. Nothing left to do.")
@@ -60,28 +62,28 @@ public partial class MainViewModel
     partial void OnTaskStatusFilterIndexChanged(int value) => RefreshTaskRows();
 
     [RelayCommand]
-    private void ShowTasksDue()
+    internal void ShowTasksDue()
     {
         TaskSearch = "";
         TaskPersonFilter = PersonOption.Everyone;
         TaskStatusFilterIndex = 0;
-        CurrentPage = AppPage.Tasks;
+        main.CurrentPage = AppPage.Tasks;
     }
 
-    private async Task LoadTasksAsync()
+    internal async Task LoadTasksAsync()
     {
-        _tasks.Clear();
-        _tasks.AddRange(await repository.GetTasksAsync());
+        All.Clear();
+        All.AddRange(await main.repository.GetTasksAsync());
         RefreshTaskRows();
     }
 
-    private void RefreshTaskRows()
+    internal void RefreshTaskRows()
     {
-        var names = People.ToDictionary(p => p.Id, p => p.Name);
+        var names = main.People.ToDictionary(p => p.Id, p => p.Name);
         var search = TaskSearch.Trim();
         var person = TaskPersonFilter ?? PersonOption.Everyone;
 
-        TaskRows = Sorted("tasks", _tasks
+        TaskRows = main.Sorted("tasks", All
             .Where(t => person.IsEveryone || t.PersonId == person.Id)
             .Where(t => TaskStatusFilterIndex switch
             {
@@ -98,18 +100,18 @@ public partial class MainViewModel
             .ThenByDescending(t => t.CompletedOn ?? DateOnly.MinValue)
             .ThenBy(t => t.CreatedAt)
             .Select(t => new TaskRow(
-                t, t.PersonId is { } id && names.TryGetValue(id, out var name) ? name : PersonOption.Shared.ToString(), Today)),
+                t, t.PersonId is { } id && names.TryGetValue(id, out var name) ? name : PersonOption.Shared.ToString(), MainViewModel.Today)),
             r => r.Task.SortOrder,
             new SortKey<TaskRow>("title", r => r.Task.Title),
             new SortKey<TaskRow>("person", r => r.PersonName),
             new SortKey<TaskRow>("due", r => r.Task.DueDate));
 
-        ScheduleReminders();
-        var open = _tasks.Count(t => !t.IsDone);
+        main.ScheduleReminders();
+        var open = All.Count(t => !t.IsDone);
         TaskCountText = Loc.F("{0} to do", open);
 
-        var due = _tasks.Where(t => t.IsDueWithin(Today, TaskReminderDays)).ToList();
-        var overdue = due.Count(t => t.IsOverdue(Today));
+        var due = All.Where(t => t.IsDueWithin(MainViewModel.Today, TaskReminderDays)).ToList();
+        var overdue = due.Count(t => t.IsOverdue(MainViewModel.Today));
         HasOverdueTasks = overdue > 0;
         TasksDueText = due.Count == 0
             ? ""
@@ -154,7 +156,7 @@ public partial class MainViewModel
         };
         try
         {
-            await repository.AddTaskAsync(task);
+            await main.repository.AddTaskAsync(task);
         }
         catch (Exception ex)
         {
@@ -162,7 +164,7 @@ public partial class MainViewModel
             return;
         }
 
-        _tasks.Add(task);
+        All.Add(task);
         // Keep the person for the next task; most tasks are added in a row for the same person.
         NewTaskTitle = "";
         NewTaskDueDate = null;
@@ -175,17 +177,17 @@ public partial class MainViewModel
     private async Task ToggleTaskAsync(TaskItem task)
     {
         var completedOn = task.CompletedOn;
-        task.CompletedOn = task.IsDone ? null : Today;
+        task.CompletedOn = task.IsDone ? null : MainViewModel.Today;
         try
         {
-            await repository.UpdateTaskAsync(task);
+            await main.repository.UpdateTaskAsync(task);
             if (task.IsDone)
                 await AddNextRepeatAsync(task);
         }
         catch (Exception ex)
         {
             task.CompletedOn = completedOn;
-            ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
         }
 
         RefreshTaskRows();
@@ -199,13 +201,13 @@ public partial class MainViewModel
     {
         if (!done.Repeats)
             return;
-        var due = done.DueDate ?? Today;
+        var due = done.DueDate ?? MainViewModel.Today;
         var next = TaskItem.NextDue(due, done.Repeat);
-        while (next < Today)
+        while (next < MainViewModel.Today)
             next = TaskItem.NextDue(next, done.Repeat);
 
         // Don't add it twice, e.g. when a task is ticked, unticked and ticked again.
-        if (_tasks.Any(t => !t.IsDone && t.Title == done.Title && t.DueDate == next))
+        if (All.Any(t => !t.IsDone && t.Title == done.Title && t.DueDate == next))
             return;
 
         var task = new TaskItem
@@ -213,8 +215,8 @@ public partial class MainViewModel
             Title = done.Title, Notes = done.Notes, PersonId = done.PersonId, Repeat = done.Repeat,
             DueDate = next, CreatedAt = DateTime.Now,
         };
-        await repository.AddTaskAsync(task);
-        _tasks.Add(task);
+        await main.repository.AddTaskAsync(task);
+        All.Add(task);
     }
 
     [RelayCommand]
@@ -222,15 +224,15 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.DeleteTaskAsync(task.Id);
+            await main.repository.DeleteTaskAsync(task.Id);
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
             return;
         }
 
-        _tasks.Remove(task);
+        All.Remove(task);
         if (EditingTask == task)
             CloseTaskPanel();
         RefreshTaskRows();
@@ -239,7 +241,6 @@ public partial class MainViewModel
     // ── Task panel ──────────────────────────────────────────────────────────
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsTaskPanelOpen { get; set; }
 
     [ObservableProperty]
@@ -264,7 +265,7 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial int TaskRepeatIndex { get; set; }
 
-    public IReadOnlyList<string> TaskRepeatNames => Translate("Never", "Every week", "Every month", "Every 3 months", "Every year");
+    public IReadOnlyList<string> TaskRepeatNames => MainViewModel.Translate("Never", "Every week", "Every month", "Every 3 months", "Every year");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasTaskError))]
@@ -275,11 +276,11 @@ public partial class MainViewModel
     [RelayCommand]
     private void EditTask(TaskItem task)
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingTask = task;
         TaskTitle = task.Title;
         TaskDueDate = task.DueDate?.ToDateTime(TimeOnly.MinValue);
-        TaskPerson = PersonOptions.FirstOrDefault(o => o.Id == task.PersonId) ?? PersonOption.Shared;
+        TaskPerson = main.PersonOptions.FirstOrDefault(o => o.Id == task.PersonId) ?? PersonOption.Shared;
         TaskNotes = task.Notes;
         TaskIsDone = task.IsDone;
         TaskRepeatIndex = (int)task.Repeat;
@@ -310,13 +311,13 @@ public partial class MainViewModel
             Notes = TaskNotes.Trim(),
             DueDate = TaskDueDate is { } due ? DateOnly.FromDateTime(due) : null,
             PersonId = TaskPerson.Id,
-            CompletedOn = TaskIsDone ? task.CompletedOn ?? Today : null,
+            CompletedOn = TaskIsDone ? task.CompletedOn ?? MainViewModel.Today : null,
             Repeat = Enum.IsDefined((TaskRepeat)TaskRepeatIndex) ? (TaskRepeat)TaskRepeatIndex : TaskRepeat.Never,
             CreatedAt = task.CreatedAt,
         };
         try
         {
-            await repository.UpdateTaskAsync(updated);
+            await main.repository.UpdateTaskAsync(updated);
         }
         catch (Exception ex)
         {
@@ -324,7 +325,7 @@ public partial class MainViewModel
             return;
         }
 
-        _tasks[_tasks.IndexOf(task)] = updated;
+        All[All.IndexOf(task)] = updated;
         if (!task.IsDone && updated.IsDone)
         {
             try
@@ -333,14 +334,14 @@ public partial class MainViewModel
             }
             catch (Exception ex)
             {
-                ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+                main.ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
             }
         }
         CloseTaskPanel();
         RefreshTaskRows();
     }
 
-    private void CloseTaskPanel()
+    internal void CloseTaskPanel()
     {
         IsTaskPanelOpen = false;
         EditingTask = null;

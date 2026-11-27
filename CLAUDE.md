@@ -34,9 +34,9 @@ End a piece of work by giving them that command.
 | Tasks | Due dates, person, notes; repeating weekly/monthly/quarterly/yearly (ticking a repeating task creates the next one). |
 | Appointments | Timed or all-day appointments with place, person, notes and a reminder. Two-way sync with one chosen calendar in the Calendar app through EventKit (`CalendarSync` logic, `MacCalendar` interop): compares 30 days back to a year ahead, the later change wins, deletions go both ways. Needs the app bundle (Info.plist calendar usage strings). |
 | Notes | Notes with projects and pins, saved as you type. |
-| Household | `Views/Pages/HouseholdPage`/`HouseholdPanels`, `MainViewModel.Household.cs`/`.Medicines.cs`/`.Work.cs`, `Models/Health.cs`: one profile per member (`Person`: birth date (sets `BirthYear`), phone, email, AHV number, blood type, allergies, conditions, family doctor, emergency contact; "Copy" gives the health summary as text). Medicines (`Medicine`: dose × morning/noon/evening/night or as needed, course end, stock counted on a day → `RunsOutOn`, pack size for one-click refill, prescription end; alerts 7 days / 14 days ahead on the Overview and as reminders). Jobs (`Employment`: manager/HR contacts, how and by when to report sick, doctor's certificate from day N, sick pay and accident insurer; Bern scale from `SwissSickPay` when no sick pay insurer). Sick days (`SickLeave`): "Ill today"/"Accident" starts one with steps (tell work, certificate due date, accident to the employer), a copyable message to work, "Back at work" ends it (a time off ending today is over); per-year totals. Deleting a member deletes their medicines, jobs and sick days (cascade). Members can also still be added in Settings. |
+| Household | `Views/Pages/HouseholdPage`/`HouseholdPanels`, `MainViewModel.Household.cs` (members), `MedicinesViewModel`, `WorkViewModel` (jobs, sick days), `Models/Health.cs`: one profile per member (`Person`: birth date (sets `BirthYear`), phone, email, AHV number, blood type, allergies, conditions, family doctor, emergency contact; "Copy" gives the health summary as text). Medicines (`Medicine`: dose × morning/noon/evening/night or as needed, course end, stock counted on a day → `RunsOutOn`, pack size for one-click refill, prescription end; alerts 7 days / 14 days ahead on the Overview and as reminders). Jobs (`Employment`: manager/HR contacts, how and by when to report sick, doctor's certificate from day N, sick pay and accident insurer; Bern scale from `SwissSickPay` when no sick pay insurer). Sick days (`SickLeave`): "Ill today"/"Accident" starts one with steps (tell work, certificate due date, accident to the employer), a copyable message to work, "Back at work" ends it (a time off ending today is over); per-year totals. Deleting a member deletes their medicines, jobs and sick days (cascade). Members can also still be added in Settings. |
 | Debts | Monthly, lump-sum and interest-only debts with extra repayments; borrowing more (a `DebtPayment` with a negative amount: the debt grows, the money comes in as income that isn't earnings); edit a debt's terms (the amount stays "owed on" its start date); payments feed the runway. |
-| Assets | Securities, crypto, property, vehicles, valuables, money lent (`Asset`, `AssetValue` in `Models/Asset.cs`; `MainViewModel.Assets.cs`, `Views/Pages/AssetsPage`/`AssetPanel`): values over time (one per day), sold date, change since the last value, a nudge when a value is over a year old. `AssetsOn(date)` counts in `NetWorthOn` (Planning) and in the Taxes page's assets on 31 December (property: note to use the tax value). |
+| Assets | Securities, crypto, property, vehicles, valuables, money lent (`Asset`, `AssetValue` in `Models/Asset.cs`; `AssetsViewModel`, `Views/Pages/AssetsPage`/`AssetPanel`): values over time (one per day), sold date, change since the last value, a nudge when a value is over a year old. `AssetsOn(date)` counts in `NetWorthOn` (Planning) and in the Taxes page's assets on 31 December (property: note to use the tax value). |
 | Retirement | AHV, pension fund (BVG), vested benefits, pillar 3a/3b accounts per person with yearly statements (balance, projected capital and pension at 65, buy-in). Pillar 3a paid this year vs the legal limit. AI reads pension letters. |
 | Insurance | Policies with premium, term end and notice deadline (basic health insurance: by 30 November). Premiums (expenses in Health insurance / Other insurance) and insurance papers (policies, papers from a policy's insurer, or naming insurance) are listed here, not on the Expenses tab (`MainViewModel.OwnPages.cs`, `HasOwnPage`). Open bills of insurers (or from a known Swiss insurer by sender, `SwissInsurers`) are listed under "Bills to pay" here and on Taxes (tax bills), and not again among the papers. "Health costs" (`HealthCosts`, `MainViewModel.HealthCosts.cs`): per calendar year and person, health premiums (category Health insurance, from occurrences) and cost-sharing bills (Leistungsabrechnungen: documents saying so, or non-premium bills from a health insurer), with the year's maximum (`InsurancePolicy.Deductible` + 10% share cap 700, children 350). "Your cover" (`SwissCover`, `MainViewModel.Cover.cs`) lists the insurances common in Switzerland (basic health per person, liability, contents, car, building, accident, legal protection, supplementary, life, income protection, travel) with what the household has, gaps, "+" to add one, and "doesn't apply" (saved in `AppSettings.HiddenCover`). |
 | Contracts & dates | Contracts (mobile, internet, gym, leasing, rent…) with notice deadlines; the summary lists all notice deadlines of the next 12 months, contracts' and insurance policies' together (`AllDeadlineRows`); important dates (passport, ID, driving licence, MFK, tyres, vignette) with lead times and repeats; warranties (2 years by default) with receipt. |
@@ -76,9 +76,10 @@ src/Keystone/
   Services/Mac/  macOS integration through P/Invoke: ObjC (runtime, blocks), TouchId (LocalAuthentication),
                  MacNotifications (UserNotifications), MacCalendar (EventKit), QrBillScanner (CoreGraphics/ImageIO + ZXing),
                  TextRecognizer (Vision text recognition for scans and photos)
-  ViewModels/    One MainViewModel split into partial files per area (MainViewModel.<Area>.cs), plus row records
-  Views/         MainWindow.axaml (shell, older pages, side panels), Pages/*.axaml (newer pages and forms as
-                 UserControls with x:DataType="vm:MainViewModel"), Styles.axaml; icons are StreamGeometry in App.axaml
+  ViewModels/    MainViewModel (partial files MainViewModel.<Area>.cs for the money and paperwork core) and one
+                 view model per self-contained area (<Area>ViewModel.cs), plus row records
+  Views/         MainWindow.axaml (shell: sidebar, page header, where pages and panels sit, lock screen),
+                 Pages/*.axaml (every page and form as a UserControl), Styles.axaml; icons are StreamGeometry in App.axaml
   Controls/      RunwayChart (history, projection, optional comparison line), MonthlyBarChart
   Localization/  Loc, TExtension ({l:T '...'}), German.cs
   Data/          KeystoneDbContext, KeystoneRepository (short-lived contexts per call), Migrations,
@@ -92,6 +93,14 @@ docs/screenshots/       README screenshots (made-up family, never real data)
 - **MVVM**: CommunityToolkit.Mvvm with `[ObservableProperty] public partial ... { get; set; }` and
   `[RelayCommand]`. Avalonia compiled bindings everywhere (`x:DataType`). Rows are records built by
   `Refresh*()` methods; lists are reassigned, not mutated.
+- **Area view models**: areas that keep their own state have their own view model, reached from `MainViewModel` as
+  a property: `Notes`, `Lock` (app lock), `Backup`, `Medicines`, `Work` (jobs, sick days), `Assets`, `Appointments`,
+  `Tasks`, `Retirement`, `Planning`, `Deadlines` (contracts, dates, warranties). Views bind `{Binding Tasks.TaskRows}`;
+  tests use `vm.Tasks.…`. Most take `MainViewModel main` for shared things (people, `ShowNotice`, `ScheduleReminders`,
+  `Sorted`, `CloseOtherPanels`); Notes, Lock and Backup only get callbacks. Each is created with `Area(...)` in the
+  constructor, so its `*PanelOpen` changes raise `IsPanelOpen` and `RefreshTexts()` runs on a language change.
+  Their item lists (`Tasks.All`, `Deadlines.Contracts`…) are what the Overview, reminders, search and widget read.
+  Entries, accounts, documents, insurance and taxes stay in `MainViewModel`: they share `Recalculate()`.
 - **Movable sections**: a page's cards can be moved and folded (`PageSection`, `MainViewModel.PageLayout.cs`,
   `Controls/SectionTools`, saved in `AppSettings.PageLayout`). Each card has a `Tag` with its key; the page's
   code-behind puts them in order (see `InsurancePage.axaml.cs`). Used by Insurance and Overview.
@@ -108,10 +117,11 @@ docs/screenshots/       README screenshots (made-up family, never real data)
 - **Person view** (`MainViewModel.PersonView.cs`): the sidebar's person picker sets every page's person filter and
   narrows lists without one through `InView(personId)`; a bar under the title says so ("Show everyone"). Shared
   items (no person) are left out, as the per-page filters do.
-- **Shorter forms** (`MainViewModel.FormDetails.cs`): optional fields sit in an `Expander` bound to `<Form>MoreOpen`,
+- **Shorter forms** (`MainViewModel.FormDetails.cs`, and at the end of an area's view model for its own forms): optional fields sit in an `Expander` bound to `<Form>MoreOpen`,
   which opens when the form opens with content in them or when one gets content (editing, the AI). Add new optional
   fields to both the open check and a change hook.
-- **Side panels**: each form is a `Is<X>PanelOpen` property. Add it to `IsPanelOpen` and close it in
+- **Side panels**: each form is a `Is<X>PanelOpen` property (in an area view model it reaches `IsPanelOpen` by itself),
+  its content a `Views/Pages/<X>Panel` UserControl inside a `Border Classes="panel"` in MainWindow. Add it to `IsPanelOpen` and close it in
   `CloseOtherPanels`/`NewEntry`/`NewDebt`/`ClosePanel`/`EditTransaction` (they share the
   `CloseRetirementPanels(); CloseInsurancePanel(); CloseAccountPanel(); CloseDeadlinePanels(); ClosePlanningPanels();` block).
 - **Loading**: `MainViewModel.LoadAsync` reads settings, people, accounts, documents (+ text index), insurance,
@@ -123,7 +133,8 @@ docs/screenshots/       README screenshots (made-up family, never real data)
   `ExternalId` holds the bank reference so a statement can't be imported twice. The old single
   `AppSettings.StartingBalance` became the main account's opening balance on first load (setting kept, unused).
 - **Language change**: `OnLanguageChanged` saves every `*Index` selection, raises `OnPropertyChanged(string.Empty)`,
-  restores them and refreshes code-built texts. New ComboBox indexes must be added to that tuple.
+  calls each area's `RefreshTexts()`, restores the selections and refreshes code-built texts. New ComboBox indexes must
+  be added to that tuple (an area's as `Tasks.TaskRepeatIndex`), or kept by the area's own `RefreshTexts` override.
 - **Reminders**: `PlanReminders` → `ReminderPlanner.Plan` → `MacNotifications.Replace` (debounced 1.5 s via
   `ScheduleReminders()`). Ids must be stable and prefixed (`bill-`, `task-`, `insurance-`, `contract-`, `date-`,
   `warranty-`, `pillar3a-`, `medicine-`, `sick-`). macOS keeps at most 64 pending; we schedule 60.

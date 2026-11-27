@@ -99,7 +99,7 @@ public partial class MainViewModel
             : string.Join(" · ", amounts.OrderBy(a => PersonName(a.PersonId), StringComparer.CurrentCultureIgnoreCase)
                 .Select(a => $"{PersonName(a.PersonId)} {Format.Money(a.Amount)}"));
 
-    private void RefreshTaxes()
+    internal void RefreshTaxes()
     {
         RefreshOwnPageLists();
         if (_isLoading)
@@ -120,7 +120,7 @@ public partial class MainViewModel
 
         // ── Deductions ──
         var deductions = new List<TaxLine>();
-        foreach (var row in Pillar3aRowsFor(TaxPersonFilter ?? PersonOption.Everyone, TaxYear).Where(r => r.Paid > 0))
+        foreach (var row in Retirement.Pillar3aRowsFor(TaxPersonFilter ?? PersonOption.Everyone, TaxYear).Where(r => r.Paid > 0))
             deductions.Add(new TaxLine(Loc.F("Pillar 3a · {0}", row.PersonName), Loc.F("Limit {0}", Format.Money(row.Limit)),
                 Format.Money(Math.Min(row.Paid, row.Limit)),
                 row.IsOver ? Loc.F("{0} was paid; only the limit can be deducted.", Format.Money(row.Paid)) : "", row.IsOver));
@@ -158,7 +158,7 @@ public partial class MainViewModel
                 assets.Add(new TaxLine(account.Name, account.Iban == "" ? BankAccount.KindName(account.Kind) : BankAccount.FormatIban(account.Iban),
                     Format.Money(AccountBalance(account, yearEnd))));
             // Investments and other assets at their last value up to 31 December.
-            foreach (var asset in _assets.Where(a => a.ValueOn(yearEnd) != 0).OrderByDescending(a => a.ValueOn(yearEnd)))
+            foreach (var asset in Assets.All.Where(a => a.ValueOn(yearEnd) != 0).OrderByDescending(a => a.ValueOn(yearEnd)))
             {
                 var asOf = asset.Values.Where(v => v.Date <= yearEnd).OrderBy(v => v.Date).Last().Date;
                 assets.Add(new TaxLine(asset.Name, $"{Asset.KindName(asset.Kind)} · {Loc.F("value from {0}", Format.Date(asOf))}",
@@ -185,7 +185,7 @@ public partial class MainViewModel
                     Categories.Display(Categories.Childcare), Categories.Display(Categories.MedicalCosts),
                     Categories.Display(Categories.Donations))),
             new TaxSection(Loc.T("Assets and debts on 31 December"), assets,
-                assets.Count > 0 ? Format.Money(BankAccounts.Sum(a => AccountBalance(a, yearEnd)) + AssetsOn(yearEnd) - DebtPlans.Sum(p => p.OutstandingOn(yearEnd))) : "",
+                assets.Count > 0 ? Format.Money(BankAccounts.Sum(a => AccountBalance(a, yearEnd)) + Assets.AssetsOn(yearEnd) - DebtPlans.Sum(p => p.OutstandingOn(yearEnd))) : "",
                 Loc.T("Shown for the whole household.")),
         ];
 
@@ -216,7 +216,7 @@ public partial class MainViewModel
                 found is not null, found));
         }
 
-        foreach (var account in _pensionAccounts.Where(a => a.Pillar == PensionPillar.Pillar3a && InTaxFilter(a.PersonId)))
+        foreach (var account in Retirement.All.Where(a => a.Pillar == PensionPillar.Pillar3a && InTaxFilter(a.PersonId)))
         {
             var letter = account.Statements.Where(s => s.Date.Year == TaxYear || (s.Date.Year == TaxYear + 1 && s.Date.Month <= 3))
                 .Select(s => Documents.FirstOrDefault(d => d.Id == s.DocumentId)).FirstOrDefault(d => d is not null);

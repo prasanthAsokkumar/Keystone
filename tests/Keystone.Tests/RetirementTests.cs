@@ -91,42 +91,42 @@ public sealed class RetirementTests : IDisposable
         await vm.LoadAsync();
 
         // The first letter creates the account.
-        vm.NewStatementCommand.Execute(null);
-        Assert.True(vm.IsNewStatementAccount);
-        vm.NewPensionAccountName = "Pensionskasse Basel-Stadt";
-        vm.NewPensionPillarIndex = (int)PensionPillar.PensionFund;
-        vm.NewPensionPerson = vm.PersonOptions.First(o => o.Id == person.Id);
-        vm.StatementDate = new DateTime(2025, 1, 1);
-        vm.StatementBalance = 100_000;
-        await vm.SaveStatementCommand.ExecuteAsync(null);
-        Assert.Null(vm.StatementError);
+        vm.Retirement.NewStatementCommand.Execute(null);
+        Assert.True(vm.Retirement.IsNewStatementAccount);
+        vm.Retirement.NewPensionAccountName = "Pensionskasse Basel-Stadt";
+        vm.Retirement.NewPensionPillarIndex = (int)PensionPillar.PensionFund;
+        vm.Retirement.NewPensionPerson = vm.PersonOptions.First(o => o.Id == person.Id);
+        vm.Retirement.StatementDate = new DateTime(2025, 1, 1);
+        vm.Retirement.StatementBalance = 100_000;
+        await vm.Retirement.SaveStatementCommand.ExecuteAsync(null);
+        Assert.Null(vm.Retirement.StatementError);
 
         // A year later, the next letter for the same account.
-        var account = Assert.Single(vm.PensionAccountRows).Account;
-        vm.AddStatementToCommand.Execute(account);
-        Assert.False(vm.IsNewStatementAccount);
-        vm.StatementDate = new DateTime(2026, 1, 1);
-        vm.StatementBalance = 112_000;
-        vm.StatementProjectedCapital = 480_000;
-        vm.StatementProjectedPension = 32_640;
-        vm.StatementBuyIn = 85_000;
-        await vm.SaveStatementCommand.ExecuteAsync(null);
+        var account = Assert.Single(vm.Retirement.PensionAccountRows).Account;
+        vm.Retirement.AddStatementToCommand.Execute(account);
+        Assert.False(vm.Retirement.IsNewStatementAccount);
+        vm.Retirement.StatementDate = new DateTime(2026, 1, 1);
+        vm.Retirement.StatementBalance = 112_000;
+        vm.Retirement.StatementProjectedCapital = 480_000;
+        vm.Retirement.StatementProjectedPension = 32_640;
+        vm.Retirement.StatementBuyIn = 85_000;
+        await vm.Retirement.SaveStatementCommand.ExecuteAsync(null);
 
         // AHV letters project a pension; they hold no savings.
-        vm.NewStatementCommand.Execute(null);
-        vm.StatementAccount = vm.StatementAccountOptions[^1];
-        vm.NewPensionAccountName = "AHV";
-        vm.NewPensionPillarIndex = (int)PensionPillar.Ahv;
-        vm.StatementDate = new DateTime(2026, 3, 1);
-        vm.StatementProjectedPension = 27_000;
-        await vm.SaveStatementCommand.ExecuteAsync(null);
-        Assert.Null(vm.StatementError);
+        vm.Retirement.NewStatementCommand.Execute(null);
+        vm.Retirement.StatementAccount = vm.Retirement.StatementAccountOptions[^1];
+        vm.Retirement.NewPensionAccountName = "AHV";
+        vm.Retirement.NewPensionPillarIndex = (int)PensionPillar.Ahv;
+        vm.Retirement.StatementDate = new DateTime(2026, 3, 1);
+        vm.Retirement.StatementProjectedPension = 27_000;
+        await vm.Retirement.SaveStatementCommand.ExecuteAsync(null);
+        Assert.Null(vm.Retirement.StatementError);
 
-        Assert.Equal(Format(112_000), vm.RetirementSavingsText);
-        Assert.Contains(Format(12_000), vm.RetirementSavingsDetail);
-        Assert.Equal($"{Format((32_640 + 27_000) / 12m)} / month", vm.ExpectedPensionText);
-        Assert.Equal(Format(85_000), vm.BuyInText);
-        var row = vm.PensionAccountRows.First(r => r.Account.Pillar == PensionPillar.PensionFund);
+        Assert.Equal(Format(112_000), vm.Retirement.RetirementSavingsText);
+        Assert.Contains(Format(12_000), vm.Retirement.RetirementSavingsDetail);
+        Assert.Equal($"{Format((32_640 + 27_000) / 12m)} / month", vm.Retirement.ExpectedPensionText);
+        Assert.Equal(Format(85_000), vm.Retirement.BuyInText);
+        var row = vm.Retirement.PensionAccountRows.First(r => r.Account.Pillar == PensionPillar.PensionFund);
         Assert.Contains("+12.0%", row.ChangeText);
 
         var accounts = await _repository.GetPensionAccountsAsync();
@@ -154,12 +154,12 @@ public sealed class RetirementTests : IDisposable
         var vm = new MainViewModel(_repository);
         await vm.LoadAsync();
 
-        var row = Assert.Single(vm.Pillar3aRows);
+        var row = Assert.Single(vm.Retirement.Pillar3aRows);
         Assert.Equal(6_000m, row.Paid); // 12 monthly payments this year
         Assert.Equal(SwissPension.Pillar3aLimit(ThisYear, hasPensionFund: true), row.Limit);
         Assert.Equal(row.Limit - 6_000m, row.Left);
 
-        vm.AddPillar3aPaymentCommand.Execute(row);
+        vm.Retirement.AddPillar3aPaymentCommand.Execute(row);
         Assert.True(vm.IsEntryPanelOpen);
         Assert.Equal(row.Left, vm.NewAmount);
         Assert.Equal(person.Id, vm.NewPerson.Id);
@@ -173,20 +173,20 @@ public sealed class RetirementTests : IDisposable
         var vm = new MainViewModel(_repository);
         await vm.LoadAsync();
 
-        vm.NewStatementCommand.Execute(null);
-        vm.ApplyStatementDetails(new PensionStatementDetails(
+        vm.Retirement.NewStatementCommand.Execute(null);
+        vm.Retirement.ApplyStatementDetails(new PensionStatementDetails(
             PensionPillar.PensionFund, "Pensionskasse Basel-Stadt", new DateOnly(2026, 1, 1), 99_000, null, 400_000, 30_000, null));
-        Assert.Equal("Pensionskasse Basel-Stadt", vm.StatementAccount?.Account?.Name);
-        Assert.Equal(99_000m, vm.StatementBalance);
-        Assert.Equal(400_000m, vm.StatementProjectedCapital);
+        Assert.Equal("Pensionskasse Basel-Stadt", vm.Retirement.StatementAccount?.Account?.Name);
+        Assert.Equal(99_000m, vm.Retirement.StatementBalance);
+        Assert.Equal(400_000m, vm.Retirement.StatementProjectedCapital);
 
         // An unknown provider prepares a new account.
-        vm.NewStatementCommand.Execute(null);
-        vm.ApplyStatementDetails(new PensionStatementDetails(
+        vm.Retirement.NewStatementCommand.Execute(null);
+        vm.Retirement.ApplyStatementDetails(new PensionStatementDetails(
             PensionPillar.VestedBenefits, "Stiftung Auffangeinrichtung", null, 15_000, null, null, null, null));
-        Assert.True(vm.IsNewStatementAccount);
-        Assert.Equal("Stiftung Auffangeinrichtung", vm.NewPensionAccountName);
-        Assert.Equal((int)PensionPillar.VestedBenefits, vm.NewPensionPillarIndex);
+        Assert.True(vm.Retirement.IsNewStatementAccount);
+        Assert.Equal("Stiftung Auffangeinrichtung", vm.Retirement.NewPensionAccountName);
+        Assert.Equal((int)PensionPillar.VestedBenefits, vm.Retirement.NewPensionPillarIndex);
     }
 
     private static string Format(decimal value) => value.ToString("C0", System.Globalization.CultureInfo.CurrentCulture);

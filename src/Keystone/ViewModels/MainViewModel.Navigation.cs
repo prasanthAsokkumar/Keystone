@@ -136,16 +136,16 @@ public partial class MainViewModel
             case "entry": NewEntry(); break;
             case "document": PickDocumentsRequested?.Invoke(); break;
             case "task": FocusNewTaskRequested?.Invoke(); break;
-            case "appointment": NewAppointment(); break;
-            case "note": NewNoteCommand.Execute(null); break;
+            case "appointment": Appointments.NewAppointment(); break;
+            case "note": Notes.NewNoteCommand.Execute(null); break;
             case "insurance": NewInsurance(); break;
-            case "contract": DeadlinesTab = 0; NewContract(); break;
-            case "date": DeadlinesTab = 1; NewImportantDate(); break;
-            case "medicine": NewMedicine(); break;
+            case "contract": Deadlines.DeadlinesTab = 0; Deadlines.NewContract(); break;
+            case "date": Deadlines.DeadlinesTab = 1; Deadlines.NewImportantDate(); break;
+            case "medicine": Medicines.NewMedicine(); break;
             case "member": NewMember(); break;
             case "debt": NewDebt(); break;
-            case "asset": NewAsset(); break;
-            case "goal": PlanningTab = 0; NewGoal(); break;
+            case "asset": Assets.NewAsset(); break;
+            case "goal": Planning.PlanningTab = 0; Planning.NewGoal(); break;
         }
     }
 }

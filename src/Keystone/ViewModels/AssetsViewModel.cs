@@ -63,9 +63,11 @@ public sealed record AssetValueRow(AssetValue Entry, string ChangeText)
 /// The Assets page: investments, crypto, property, vehicles and other things of value, each with its value over
 /// time. They count in net worth (Planning) and in the Taxes page's assets on 31 December.
 /// </summary>
-public partial class MainViewModel
+/// <remarks>Its own view model; shared things (people, notices, net worth) come from the main one.</remarks>
+public sealed partial class AssetsViewModel(MainViewModel main) : ViewModelBase
 {
-    private readonly List<Asset> _assets = [];
+    /// <summary>Every asset, sold ones too.</summary>
+    internal List<Asset> All { get; } = [];
 
     public IReadOnlyList<string> AssetKindNames => Enum.GetValues<AssetKind>().Select(Asset.KindName).ToList();
 
@@ -91,53 +93,52 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial string NetWorthWithAssetsText { get; set; } = "";
 
-    private async Task LoadAssetsAsync()
+    internal async Task LoadAssetsAsync()
     {
-        _assets.Clear();
-        _assets.AddRange(await repository.GetAssetsAsync());
+        All.Clear();
+        All.AddRange(await main.repository.GetAssetsAsync());
         RefreshAssets();
     }
 
     /// <summary>What all assets were worth on a day (sold ones no longer count).</summary>
-    internal decimal AssetsOn(DateOnly date) => _assets.Sum(a => a.ValueOn(date));
+    internal decimal AssetsOn(DateOnly date) => All.Sum(a => a.ValueOn(date));
 
-    private void RefreshAssets()
+    internal void RefreshAssets()
     {
-        AssetRows = Sorted("assets", _assets
-                .Where(a => InView(a.PersonId))
-                .OrderBy(a => a.SoldOn is { } sold && sold <= Today)
-                .ThenByDescending(a => a.ValueOn(Today))
-                .Select(a => new AssetRow(a, a.PersonId is null ? Loc.T(PersonOption.SharedName) : PersonName(a.PersonId), Today)),
+        AssetRows = main.Sorted("assets", All
+                .Where(a => main.InView(a.PersonId))
+                .OrderBy(a => a.SoldOn is { } sold && sold <= MainViewModel.Today)
+                .ThenByDescending(a => a.ValueOn(MainViewModel.Today))
+                .Select(a => new AssetRow(a, a.PersonId is null ? Loc.T(PersonOption.SharedName) : main.PersonName(a.PersonId), MainViewModel.Today)),
             r => r.Asset.SortOrder,
             new SortKey<AssetRow>("name", r => r.Name),
             new SortKey<AssetRow>("kind", r => r.DetailText),
             new SortKey<AssetRow>("person", r => r.PersonName),
             new SortKey<AssetRow>("value", r => r.Value, DescendingFirst: true));
 
-        var now = AssetsOn(Today);
-        var yearAgo = AssetsOn(Today.AddYears(-1));
+        var now = AssetsOn(MainViewModel.Today);
+        var yearAgo = AssetsOn(MainViewModel.Today.AddYears(-1));
         AssetsTotalText = Format.Money(now);
-        AssetsChangeText = _assets.Count == 0 ? Loc.T("Add a securities account, crypto, property or a car")
+        AssetsChangeText = All.Count == 0 ? Loc.T("Add a securities account, crypto, property or a car")
             : Loc.F("{0} in the last 12 months", Format.SignedMoney(now - yearAgo));
         AssetsAreDown = now < yearAgo;
-        AssetsByKindText = string.Join(" · ", _assets.Where(a => a.ValueOn(Today) != 0)
-            .GroupBy(a => a.Kind).OrderByDescending(g => g.Sum(a => a.ValueOn(Today)))
-            .Select(g => $"{Asset.KindName(g.Key)} {Format.Money(g.Sum(a => a.ValueOn(Today)))}"));
-        NetWorthWithAssetsText = Format.Money(NetWorthOn(Today));
+        AssetsByKindText = string.Join(" · ", All.Where(a => a.ValueOn(MainViewModel.Today) != 0)
+            .GroupBy(a => a.Kind).OrderByDescending(g => g.Sum(a => a.ValueOn(MainViewModel.Today)))
+            .Select(g => $"{Asset.KindName(g.Key)} {Format.Money(g.Sum(a => a.ValueOn(MainViewModel.Today)))}"));
+        NetWorthWithAssetsText = Format.Money(main.Planning.NetWorthOn(MainViewModel.Today));
     }
 
     /// <summary>After an asset changed: the page, net worth and the tax year's assets.</summary>
     private void AssetsChanged()
     {
         RefreshAssets();
-        RefreshNetWorth();
-        RefreshTaxes();
+        main.Planning.RefreshNetWorth();
+        main.RefreshTaxes();
     }
 
     // ── The form ────────────────────────────────────────────────────────────
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsAssetPanelOpen { get; set; }
 
     [ObservableProperty]
@@ -194,9 +195,9 @@ public partial class MainViewModel
     partial void OnAssetKindIndexChanged(int value) => OnPropertyChanged(nameof(AssetIsProperty));
 
     [RelayCommand]
-    private void NewAsset()
+    internal void NewAsset()
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingAsset = null;
         AssetName = "";
         AssetKindIndex = 0;
@@ -221,7 +222,7 @@ public partial class MainViewModel
         AssetName = asset.Name;
         AssetKindIndex = (int)asset.Kind;
         AssetInstitution = asset.Institution;
-        AssetPerson = PersonOptions.FirstOrDefault(o => o.Id == asset.PersonId) ?? PersonOption.Shared;
+        AssetPerson = main.PersonOptions.FirstOrDefault(o => o.Id == asset.PersonId) ?? PersonOption.Shared;
         AssetNotes = asset.Notes;
         AssetSoldOn = asset.SoldOn?.ToDateTime(TimeOnly.MinValue);
         RefreshAssetValueRows(asset);
@@ -263,15 +264,15 @@ public partial class MainViewModel
             if (isNew)
             {
                 asset.Values = [];
-                await repository.SaveAsync(asset, isNew: true);
-                _assets.Add(asset);
+                await main.repository.SaveAsync(asset, isNew: true);
+                All.Add(asset);
             }
             else
             {
                 // Save the asset's own fields; its values are saved one by one below.
                 var values = asset.Values;
                 asset.Values = [];
-                await repository.SaveAsync(asset, isNew: false);
+                await main.repository.SaveAsync(asset, isNew: false);
                 asset.Values = values;
             }
 
@@ -283,7 +284,7 @@ public partial class MainViewModel
                 var entry = sameDay ?? new AssetValue { AssetId = asset.Id, Date = date };
                 entry.Value = amount;
                 entry.Note = AssetValueNote.Trim();
-                await repository.SaveAsync(entry, isNew: sameDay is null);
+                await main.repository.SaveAsync(entry, isNew: sameDay is null);
                 if (sameDay is null)
                     asset.Values.Add(entry);
             }
@@ -306,7 +307,7 @@ public partial class MainViewModel
             return;
         try
         {
-            await repository.DeleteAsync<AssetValue>(v => v.Id == row.Entry.Id);
+            await main.repository.DeleteAsync<AssetValue>(v => v.Id == row.Entry.Id);
         }
         catch (Exception ex)
         {
@@ -323,27 +324,27 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.DeleteAsync<Asset>(a => a.Id == asset.Id);
+            await main.repository.DeleteAsync<Asset>(a => a.Id == asset.Id);
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
             return;
         }
-        _assets.Remove(asset);
+        All.Remove(asset);
         if (EditingAsset == asset)
             IsAssetPanelOpen = false;
         AssetsChanged();
-        ShowNotice(Loc.F("Deleted “{0}”", asset.Name), async () =>
+        main.ShowNotice(Loc.F("Deleted “{0}”", asset.Name), async () =>
         {
             // Back with its values, under the same ids.
-            await repository.SaveAsync(asset, isNew: true);
-            _assets.Add(asset);
+            await main.repository.SaveAsync(asset, isNew: true);
+            All.Add(asset);
             AssetsChanged();
         });
     }
 
-    private void CloseAssetPanel()
+    internal void CloseAssetPanel()
     {
         IsAssetPanelOpen = false;
         EditingAsset = null;

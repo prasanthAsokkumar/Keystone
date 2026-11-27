@@ -8,18 +8,18 @@
     <Grid RowDefinitions="Auto,*" RowSpacing="16">
         <Border Classes="segments" HorizontalAlignment="Left" Width="300">
             <Grid ColumnDefinitions="*,*">
-                <RadioButton Classes="segment" GroupName="PlanningTabs" Content="{l:T 'Savings goals'}" IsChecked="{Binding IsGoalsTab}" />
-                <RadioButton Grid.Column="1" Classes="segment" GroupName="PlanningTabs" Content="{l:T 'What if'}" IsChecked="{Binding IsScenarioTab}" />
+                <RadioButton Classes="segment" GroupName="PlanningTabs" Content="{l:T 'Savings goals'}" IsChecked="{Binding Planning.IsGoalsTab}" />
+                <RadioButton Grid.Column="1" Classes="segment" GroupName="PlanningTabs" Content="{l:T 'What if'}" IsChecked="{Binding Planning.IsScenarioTab}" />
             </Grid>
         </Border>
 
         <!-- ═══ Savings goals ═══ -->
-        <Border Grid.Row="1" Classes="card" IsVisible="{Binding IsGoalsTab}">
+        <Border Grid.Row="1" Classes="card" IsVisible="{Binding Planning.IsGoalsTab}">
             <DockPanel>
                 <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8" Margin="0,0,0,12">
-                    <TextBlock Classes="secondary" FontSize="13" Text="{Binding EmergencyFundText}" VerticalAlignment="Center" TextWrapping="Wrap" />
-                    <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Add emergency fund'}" Command="{Binding NewEmergencyFundCommand}" />
-                    <Button Grid.Column="2" Classes="primary" Command="{Binding NewGoalCommand}">
+                    <TextBlock Classes="secondary" FontSize="13" Text="{Binding Planning.EmergencyFundText}" VerticalAlignment="Center" TextWrapping="Wrap" />
+                    <Button Grid.Column="1" Classes="secondary" Content="{l:T 'Add emergency fund'}" Command="{Binding Planning.NewEmergencyFundCommand}" />
+                    <Button Grid.Column="2" Classes="primary" Command="{Binding Planning.NewGoalCommand}">
                         <StackPanel Orientation="Horizontal" Spacing="8">
                             <PathIcon Data="{StaticResource IconPlus}" />
                             <TextBlock Text="{l:T 'Add goal'}" />
@@ -30,12 +30,12 @@
                     <TextBlock Classes="error" Text="{Binding ErrorMessage}" />
                 </Border>
                 <Panel>
-                    <TextBlock Classes="secondary" IsVisible="{Binding !HasGoalRows}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                    <TextBlock Classes="secondary" IsVisible="{Binding !Planning.HasGoalRows}" HorizontalAlignment="Center" VerticalAlignment="Center"
                                TextAlignment="Center" TextWrapping="Wrap" MaxWidth="420"
                                Text="{l:T 'No savings goals yet. Save for a holiday, a car or an emergency fund, and see what to put aside each month.'}" />
-                    <ScrollViewer IsVisible="{Binding HasGoalRows}">
+                    <ScrollViewer IsVisible="{Binding Planning.HasGoalRows}">
 <StackPanel>
-<StackPanel Orientation="Horizontal" Spacing="18" Margin="4,0,0,10" IsVisible="{Binding HasGoalRows}" VerticalAlignment="Top">
+<StackPanel Orientation="Horizontal" Spacing="18" Margin="4,0,0,10" IsVisible="{Binding Planning.HasGoalRows}" VerticalAlignment="Top">
                             <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
                             <controls:SortHeader Label="{l:T 'Name'}" List="goals" Key="name" Sorts="{Binding ListSorts}" />
                             <controls:SortHeader Label="{l:T 'Target'}" List="goals" Key="target" Sorts="{Binding ListSorts}" />
@@ -43,7 +43,7 @@
                             <controls:SortHeader Label="{l:T 'By'}" List="goals" Key="date" Sorts="{Binding ListSorts}" />
                         </StackPanel>
 
-                        <ItemsControl ItemsSource="{Binding GoalRows}" Margin="0,0,12,0">
+                        <ItemsControl ItemsSource="{Binding Planning.GoalRows}" Margin="0,0,12,0">
                             <ItemsControl.ItemsPanel>
                                 <ItemsPanelTemplate>
                                     <StackPanel Spacing="12" />
@@ -61,12 +61,12 @@
                                                 <TextBlock Grid.Column="1" Text="{Binding ProgressText}" FontWeight="SemiBold" VerticalAlignment="Center" />
                                                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                                                     <Button Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
-                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).EditGoalCommand}"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).Planning.EditGoalCommand}"
                                                             CommandParameter="{Binding Goal}">
                                                         <PathIcon Data="{StaticResource IconEdit}" />
                                                     </Button>
                                                     <Button Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
-                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).DeleteGoalCommand}"
+                                                            Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).Planning.DeleteGoalCommand}"
                                                             CommandParameter="{Binding Goal}">
                                                         <PathIcon Data="{StaticResource IconDelete}" />
                                                     </Button>
@@ -77,7 +77,7 @@
                                                 <TextBlock Classes="secondary" FontSize="13" Text="{Binding PlanText}" Classes.positive="{Binding IsReached}" />
                                                 <Button Grid.Column="1" Classes="link" FontSize="12" Padding="0" IsVisible="{Binding CanPlanTransfer}"
                                                         Content="{l:T 'Add a monthly transfer'}"
-                                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).PlanGoalTransferCommand}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).Planning.PlanGoalTransferCommand}"
                                                         CommandParameter="{Binding}" />
                                             </Grid>
                                         </StackPanel>
@@ -92,7 +92,7 @@
         </Border>
 
         <!-- ═══ What if ═══ -->
-        <Grid Grid.Row="1" ColumnDefinitions="380,*" ColumnSpacing="16" IsVisible="{Binding IsScenarioTab}">
+        <Grid Grid.Row="1" ColumnDefinitions="380,*" ColumnSpacing="16" IsVisible="{Binding Planning.IsScenarioTab}">
             <Border Classes="card">
                 <ScrollViewer>
                     <StackPanel Spacing="14" Margin="0,0,8,0">
@@ -103,47 +103,47 @@
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'What changes'}" />
-                            <ComboBox ItemsSource="{Binding ScenarioKindNames}" SelectedIndex="{Binding ScenarioKindIndex}" />
+                            <ComboBox ItemsSource="{Binding Planning.ScenarioKindNames}" SelectedIndex="{Binding Planning.ScenarioKindIndex}" />
                         </StackPanel>
-                        <StackPanel Spacing="4" IsVisible="{Binding ScenarioNeedsEntry}">
+                        <StackPanel Spacing="4" IsVisible="{Binding Planning.ScenarioNeedsEntry}">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'Entry'}" />
-                            <ComboBox ItemsSource="{Binding ScenarioEntries}" SelectedItem="{Binding ScenarioEntry}"
+                            <ComboBox ItemsSource="{Binding Planning.ScenarioEntries}" SelectedItem="{Binding Planning.ScenarioEntry}"
                                       PlaceholderText="{l:T 'Choose a repeating entry'}" />
                         </StackPanel>
-                        <StackPanel Spacing="4" IsVisible="{Binding ScenarioNeedsPercent}">
+                        <StackPanel Spacing="4" IsVisible="{Binding Planning.ScenarioNeedsPercent}">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'New share (%)'}" />
-                            <NumericUpDown Value="{Binding ScenarioPercent}" Minimum="0" Maximum="1000" Increment="10" FormatString="0" />
+                            <NumericUpDown Value="{Binding Planning.ScenarioPercent}" Minimum="0" Maximum="1000" Increment="10" FormatString="0" />
                         </StackPanel>
-                        <StackPanel Spacing="10" IsVisible="{Binding ScenarioNeedsAmount}">
+                        <StackPanel Spacing="10" IsVisible="{Binding Planning.ScenarioNeedsAmount}">
                             <StackPanel Spacing="4">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'What'}" />
-                                <TextBox Text="{Binding ScenarioDescription}" PlaceholderText="{l:T 'e.g. Daycare, new car'}" />
+                                <TextBox Text="{Binding Planning.ScenarioDescription}" PlaceholderText="{l:T 'e.g. Daycare, new car'}" />
                             </StackPanel>
                             <Grid ColumnDefinitions="*,Auto" ColumnSpacing="12">
-                                <NumericUpDown Value="{Binding ScenarioAmount}" Minimum="0" FormatString="N2" PlaceholderText="0.00" ShowButtonSpinner="False" />
-                                <CheckBox Grid.Column="1" IsChecked="{Binding ScenarioIsIncome}" Content="{l:T 'Income'}" />
+                                <NumericUpDown Value="{Binding Planning.ScenarioAmount}" Minimum="0" FormatString="N2" PlaceholderText="0.00" ShowButtonSpinner="False" />
+                                <CheckBox Grid.Column="1" IsChecked="{Binding Planning.ScenarioIsIncome}" Content="{l:T 'Income'}" />
                             </Grid>
                         </StackPanel>
                         <StackPanel Spacing="4">
                             <TextBlock Classes="fieldLabel" Text="{l:T 'From'}" />
-                            <CalendarDatePicker SelectedDate="{Binding ScenarioFrom}" />
+                            <CalendarDatePicker SelectedDate="{Binding Planning.ScenarioFrom}" />
                         </StackPanel>
-                        <Button Classes="primary" HorizontalAlignment="Stretch" Content="{l:T 'Add change'}" Command="{Binding AddScenarioChangeCommand}" />
-                        <TextBlock Classes="error" Text="{Binding ScenarioError}" IsVisible="{Binding HasScenarioError}" />
+                        <Button Classes="primary" HorizontalAlignment="Stretch" Content="{l:T 'Add change'}" Command="{Binding Planning.AddScenarioChangeCommand}" />
+                        <TextBlock Classes="error" Text="{Binding Planning.ScenarioError}" IsVisible="{Binding Planning.HasScenarioError}" />
 
-                        <StackPanel Spacing="6" IsVisible="{Binding HasScenarioChanges}">
+                        <StackPanel Spacing="6" IsVisible="{Binding Planning.HasScenarioChanges}">
                             <Grid ColumnDefinitions="*,Auto">
                                 <TextBlock Classes="fieldLabel" Text="{l:T 'Changes'}" VerticalAlignment="Center" />
                                 <Button Grid.Column="1" Classes="link" FontSize="12" Padding="0" Content="{l:T 'Clear all'}"
-                                        Command="{Binding ClearScenarioCommand}" />
+                                        Command="{Binding Planning.ClearScenarioCommand}" />
                             </Grid>
-                            <ItemsControl ItemsSource="{Binding ScenarioChangeRows}">
+                            <ItemsControl ItemsSource="{Binding Planning.ScenarioChangeRows}">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate x:DataType="vm:ScenarioChangeRow">
                                         <Grid ColumnDefinitions="*,Auto" Margin="0,2">
                                             <TextBlock Text="{Binding Text}" FontSize="13" TextWrapping="Wrap" VerticalAlignment="Center" />
                                             <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Remove'}"
-                                                    Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).RemoveScenarioChangeCommand}"
+                                                    Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).Planning.RemoveScenarioChangeCommand}"
                                                     CommandParameter="{Binding}">
                                                 <PathIcon Data="{StaticResource IconClose}" />
                                             </Button>
@@ -164,7 +164,7 @@
                             <TextBlock Grid.Column="1" Classes="columnHeader" Text="{l:T 'Now'}" TextAlignment="Right" />
                             <TextBlock Grid.Column="2" Classes="columnHeader" Text="{l:T 'With the changes'}" TextAlignment="Right" />
                         </Grid>
-                        <ItemsControl ItemsSource="{Binding ScenarioComparison}">
+                        <ItemsControl ItemsSource="{Binding Planning.ScenarioComparison}">
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate x:DataType="vm:ScenarioCompareRow">
                                     <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="0,8">
@@ -196,7 +196,7 @@
                             </StackPanel>
                         </StackPanel>
                         <controls:RunwayChart History="{Binding Summary.History}" Projection="{Binding Summary.Projection}"
-                                              Comparison="{Binding ScenarioSummary.Projection}" Foreground="{DynamicResource TextMuted}" />
+                                              Comparison="{Binding Planning.ScenarioSummary.Projection}" Foreground="{DynamicResource TextMuted}" />
                     </DockPanel>
                 </Border>
             </Grid>

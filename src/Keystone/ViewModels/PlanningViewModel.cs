@@ -71,7 +71,8 @@ public sealed record RetirementPersonRow(PersonRetirement Plan, Person? Person)
 }
 
 /// <summary>The Planning page: savings goals, what-if scenarios, the retirement gap and net worth.</summary>
-public partial class MainViewModel
+/// <remarks>Its own view model; shared things (entries, accounts, the runway) come from the main one.</remarks>
+public sealed partial class PlanningViewModel(MainViewModel main) : ViewModelBase
 {
     /// <summary>0: goals, 1: what if. (The retirement plan and net worth have their own pages.)</summary>
     [ObservableProperty]
@@ -82,11 +83,11 @@ public partial class MainViewModel
 
     public bool IsScenarioTab { get => PlanningTab == 1; set { if (value) PlanningTab = 1; } }
 
-    private void RefreshPlanning()
+    internal void RefreshPlanning()
     {
-        if (_isLoading)
+        if (main._isLoading)
             return;
-        if (BirthYearRows.Count != People.Count)
+        if (BirthYearRows.Count != main.People.Count)
             RefreshBirthYearRows();
         RefreshGoals();
         RefreshScenario();
@@ -96,7 +97,8 @@ public partial class MainViewModel
 
     // ── Savings goals ───────────────────────────────────────────────────────
 
-    private readonly List<SavingsGoal> _goals = [];
+    /// <summary>Every savings goal.</summary>
+    internal List<SavingsGoal> Goals { get; } = [];
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasGoalRows))]
@@ -104,25 +106,25 @@ public partial class MainViewModel
 
     public bool HasGoalRows => GoalRows.Count > 0;
 
-    public string EmergencyFundText => Summary.LivingCostsPerMonth > 0
-        ? Loc.F("Emergency fund: 3 months of living costs is {0}", Format.Money(Math.Ceiling(Summary.LivingCostsPerMonth * 3 / 100) * 100))
+    public string EmergencyFundText => main.Summary.LivingCostsPerMonth > 0
+        ? Loc.F("Emergency fund: 3 months of living costs is {0}", Format.Money(Math.Ceiling(main.Summary.LivingCostsPerMonth * 3 / 100) * 100))
         : "";
 
-    private async Task LoadGoalsAsync()
+    internal async Task LoadGoalsAsync()
     {
-        _goals.Clear();
-        _goals.AddRange(await repository.GetAllAsync<SavingsGoal>());
+        Goals.Clear();
+        Goals.AddRange(await main.repository.GetAllAsync<SavingsGoal>());
     }
 
     private decimal GoalSaved(SavingsGoal goal) =>
-        goal.AccountId is { } id && BankAccounts.FirstOrDefault(a => a.Id == id) is { } account
-            ? AccountBalance(account, Today)
+        goal.AccountId is { } id && main.BankAccounts.FirstOrDefault(a => a.Id == id) is { } account
+            ? main.AccountBalance(account, MainViewModel.Today)
             : goal.Saved;
 
-    private void RefreshGoals()
+    internal void RefreshGoals()
     {
-        GoalRows = Sorted("goals", _goals.OrderBy(g => g.TargetDate ?? DateOnly.MaxValue).ThenBy(g => g.CreatedAt)
-            .Select(g => new GoalRow(g, GoalSaved(g), BankAccounts.FirstOrDefault(a => a.Id == g.AccountId)?.Name ?? "", Today)),
+        GoalRows = main.Sorted("goals", Goals.OrderBy(g => g.TargetDate ?? DateOnly.MaxValue).ThenBy(g => g.CreatedAt)
+            .Select(g => new GoalRow(g, GoalSaved(g), main.BankAccounts.FirstOrDefault(a => a.Id == g.AccountId)?.Name ?? "", MainViewModel.Today)),
             r => r.Goal.SortOrder,
             new SortKey<GoalRow>("name", r => r.Goal.Name),
             new SortKey<GoalRow>("target", r => r.Goal.Target, DescendingFirst: true),
@@ -132,7 +134,6 @@ public partial class MainViewModel
     }
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsGoalPanelOpen { get; set; }
 
     [ObservableProperty]
@@ -156,7 +157,7 @@ public partial class MainViewModel
     public partial GoalAccountOption? GoalAccount { get; set; }
 
     public IReadOnlyList<GoalAccountOption> GoalAccountOptions =>
-        [new GoalAccountOption(null), .. BankAccounts.Select(a => new GoalAccountOption(a))];
+        [new GoalAccountOption(null), .. main.BankAccounts.Select(a => new GoalAccountOption(a))];
 
     public bool GoalTracksByHand => GoalAccount?.Account is null;
 
@@ -170,19 +171,19 @@ public partial class MainViewModel
     public bool HasGoalError => !string.IsNullOrEmpty(GoalError);
 
     [RelayCommand]
-    private void NewGoal() => OpenGoalPanel(null, "", null);
+    internal void NewGoal() => OpenGoalPanel(null, "", null);
 
     /// <summary>A goal of three months' living costs, the usual advice for an emergency fund.</summary>
     [RelayCommand]
     private void NewEmergencyFund() =>
-        OpenGoalPanel(null, Loc.T("Emergency fund"), Math.Ceiling(Summary.LivingCostsPerMonth * 3 / 100) * 100);
+        OpenGoalPanel(null, Loc.T("Emergency fund"), Math.Ceiling(main.Summary.LivingCostsPerMonth * 3 / 100) * 100);
 
     [RelayCommand]
     private void EditGoal(SavingsGoal goal) => OpenGoalPanel(goal, goal.Name, goal.Target);
 
     private void OpenGoalPanel(SavingsGoal? goal, string name, decimal? target)
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingGoal = goal;
         GoalName = name;
         GoalTarget = target;
@@ -220,7 +221,7 @@ public partial class MainViewModel
         };
         try
         {
-            await repository.SaveAsync(goal, existing is null);
+            await main.repository.SaveAsync(goal, existing is null);
         }
         catch (Exception ex)
         {
@@ -229,8 +230,8 @@ public partial class MainViewModel
         }
 
         if (existing is not null)
-            _goals.Remove(existing);
-        _goals.Add(goal);
+            Goals.Remove(existing);
+        Goals.Add(goal);
         ClosePlanningPanels();
         RefreshGoals();
     }
@@ -238,9 +239,9 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task DeleteGoalAsync(SavingsGoal goal)
     {
-        if (await DeleteRecordAsync<SavingsGoal>(g => g.Id == goal.Id))
+        if (await main.Deadlines.DeleteRecordAsync<SavingsGoal>(g => g.Id == goal.Id))
         {
-            _goals.Remove(goal);
+            Goals.Remove(goal);
             RefreshGoals();
         }
     }
@@ -249,17 +250,17 @@ public partial class MainViewModel
     [RelayCommand]
     private async Task PlanGoalTransferAsync(GoalRow row)
     {
-        if (row.MonthlyNeeded is not { } monthly || row.Goal.AccountId is not { } to || PrimaryAccount is not { } from || from.Id == to)
+        if (row.MonthlyNeeded is not { } monthly || row.Goal.AccountId is not { } to || main.PrimaryAccount is not { } from || from.Id == to)
         {
-            ErrorMessage = Loc.T("Choose a savings account other than the main account for this goal.");
+            main.ErrorMessage = Loc.T("Choose a savings account other than the main account for this goal.");
             return;
         }
 
         try
         {
-            var entry = await repository.AddTransactionAsync(new Transaction
+            var entry = await main.repository.AddTransactionAsync(new Transaction
             {
-                Date = new DateOnly(Today.Year, Today.Month, 1).AddMonths(1),
+                Date = new DateOnly(MainViewModel.Today.Year, MainViewModel.Today.Month, 1).AddMonths(1),
                 EndDate = row.Goal.TargetDate,
                 Description = Loc.F("Saving for {0}", row.Goal.Name),
                 Amount = monthly,
@@ -268,14 +269,14 @@ public partial class MainViewModel
                 AccountId = from.Id,
                 ToAccountId = to,
             });
-            InsertSorted(entry);
+            main.InsertSorted(entry);
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
             return;
         }
-        Recalculate();
+        main.Recalculate();
     }
 
     // ── What if ─────────────────────────────────────────────────────────────
@@ -283,7 +284,7 @@ public partial class MainViewModel
     private List<ScenarioChange> _scenario = [];
 
     public IReadOnlyList<string> ScenarioKindNames =>
-        Translate("Change an entry to a share", "Stop an entry", "Add a monthly amount", "Add a one-time amount");
+        MainViewModel.Translate("Change an entry to a share", "Stop an entry", "Add a monthly amount", "Add a one-time amount");
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(ScenarioNeedsEntry), nameof(ScenarioNeedsPercent), nameof(ScenarioNeedsAmount))]
@@ -296,7 +297,7 @@ public partial class MainViewModel
     public bool ScenarioNeedsAmount => ScenarioKindIndex is 2 or 3;
 
     /// <summary>Repeating entries that can be changed or stopped.</summary>
-    public IReadOnlyList<ScenarioEntryOption> ScenarioEntries => Transactions
+    public IReadOnlyList<ScenarioEntryOption> ScenarioEntries => main.Transactions
         .Where(t => t.IsRecurring && t.CanStop && !t.IsTransfer)
         .OrderByDescending(t => t.IsIncome).ThenByDescending(t => t.SignedMonthlyAmount < 0 ? -t.SignedMonthlyAmount : t.SignedMonthlyAmount)
         .Select(t => new ScenarioEntryOption(t))
@@ -339,7 +340,7 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial IReadOnlyList<ScenarioCompareRow> ScenarioComparison { get; set; } = [];
 
-    private void LoadScenario(string json) => _scenario = Scenario.Load(json);
+    internal void LoadScenario(string json) => _scenario = Scenario.Load(json);
 
     [RelayCommand]
     private async Task AddScenarioChangeAsync()
@@ -397,7 +398,7 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.SetScenarioAsync(Scenario.Save(_scenario));
+            await main.repository.SetScenarioAsync(Scenario.Save(_scenario));
         }
         catch (Exception ex)
         {
@@ -408,28 +409,28 @@ public partial class MainViewModel
     private void RefreshScenario()
     {
         // Changes to entries that no longer exist are dropped.
-        _scenario.RemoveAll(c => c.EntryId is { } id && Transactions.All(t => t.Id != id));
-        ScenarioChangeRows = _scenario.Select(c => new ScenarioChangeRow(c, Scenario.Describe(c, Transactions.ToList()))).ToList();
+        _scenario.RemoveAll(c => c.EntryId is { } id && main.Transactions.All(t => t.Id != id));
+        ScenarioChangeRows = _scenario.Select(c => new ScenarioChangeRow(c, Scenario.Describe(c, main.Transactions.ToList()))).ToList();
         OnPropertyChanged(nameof(ScenarioEntries));
         if (ScenarioEntry is not null && ScenarioEntries.All(e => e.Transaction != ScenarioEntry.Transaction))
             ScenarioEntry = null;
 
         ScenarioSummary = _scenario.Count == 0
-            ? Summary
-            : RunwayCalculator.Calculate(TotalOpeningBalance, Scenario.Apply(_entries, _scenario), Today,
-                financialYearStartMonth: FinancialYearStartIndex + 1);
+            ? main.Summary
+            : RunwayCalculator.Calculate(main.TotalOpeningBalance, Scenario.Apply(main._entries, _scenario), MainViewModel.Today,
+                financialYearStartMonth: main.FinancialYearStartIndex + 1);
 
         string Runway(RunwaySummary s) => s.RunwayMonths is { } months ? Loc.F("{0:0.#} months", months) : Loc.T("No limit");
-        decimal InAYear(RunwaySummary s) => s.Projection.FirstOrDefault(p => p.Date >= Today.AddYears(1)).Balance is var b && b != 0
+        decimal InAYear(RunwaySummary s) => s.Projection.FirstOrDefault(p => p.Date >= MainViewModel.Today.AddYears(1)).Balance is var b && b != 0
             ? b
             : s.Projection.Count > 0 ? s.Projection[^1].Balance : s.CurrentBalance;
         ScenarioComparison =
         [
-            new ScenarioCompareRow(Loc.T("Your runway"), Runway(Summary), Runway(ScenarioSummary)),
-            new ScenarioCompareRow(Loc.T("Every day"), Format.SignedMoney(Summary.NetPerDay), Format.SignedMoney(ScenarioSummary.NetPerDay)),
-            new ScenarioCompareRow(Loc.F("Saving in {0}", Summary.YearEnd.Year), Format.SignedMoney(Summary.YearSavings),
+            new ScenarioCompareRow(Loc.T("Your runway"), Runway(main.Summary), Runway(ScenarioSummary)),
+            new ScenarioCompareRow(Loc.T("Every day"), Format.SignedMoney(main.Summary.NetPerDay), Format.SignedMoney(ScenarioSummary.NetPerDay)),
+            new ScenarioCompareRow(Loc.F("Saving in {0}", main.Summary.YearEnd.Year), Format.SignedMoney(main.Summary.YearSavings),
                 Format.SignedMoney(ScenarioSummary.YearSavings)),
-            new ScenarioCompareRow(Loc.T("Cash in a year"), Format.Money(InAYear(Summary)), Format.Money(InAYear(ScenarioSummary))),
+            new ScenarioCompareRow(Loc.T("Cash in a year"), Format.Money(InAYear(main.Summary)), Format.Money(InAYear(ScenarioSummary))),
         ];
     }
 
@@ -440,7 +441,7 @@ public partial class MainViewModel
 
     partial void OnRetirementNeedPercentChanged(decimal? value)
     {
-        if (_isLoading)
+        if (main._isLoading)
             return;
         _ = SaveRetirementNeedAsync();
         RefreshRetirementGap();
@@ -450,11 +451,11 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.SetRetirementNeedAsync((int)Math.Clamp(RetirementNeedPercent ?? 80, 10, 150));
+            await main.repository.SetRetirementNeedAsync((int)Math.Clamp(RetirementNeedPercent ?? 80, 10, 150));
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
         }
     }
 
@@ -483,16 +484,16 @@ public partial class MainViewModel
 
     public double RetirementCoveredPercent => RetirementPlan is { } plan ? (double)plan.CoveredShare * 100 : 0;
 
-    public bool HasRetirementData => _pensionAccounts.Any(a => a.Statements.Count > 0);
+    public bool HasRetirementData => main.Retirement.All.Any(a => a.Statements.Count > 0);
 
     private void RefreshRetirementGap()
     {
         // Shared entries have no person, which a dictionary can't use as a key; a lookup can.
-        var pillar3a = Pillar3aRowsFor(PersonOption.Everyone, Today.Year);
-        RetirementPlan = RetirementPlanner.Plan(Summary.LivingCostsPerMonth, (int)(RetirementNeedPercent ?? 80), People, _pensionAccounts,
-            id => pillar3a.Where(r => r.PersonId == id).Sum(r => r.Paid), Today.Year);
+        var pillar3a = main.Retirement.Pillar3aRowsFor(PersonOption.Everyone, MainViewModel.Today.Year);
+        RetirementPlan = RetirementPlanner.Plan(main.Summary.LivingCostsPerMonth, (int)(RetirementNeedPercent ?? 80), main.People, main.Retirement.All,
+            id => pillar3a.Where(r => r.PersonId == id).Sum(r => r.Paid), MainViewModel.Today.Year);
         RetirementPeople = RetirementPlan.People
-            .Select(p => new RetirementPersonRow(p, People.FirstOrDefault(x => x.Id == p.PersonId)))
+            .Select(p => new RetirementPersonRow(p, main.People.FirstOrDefault(x => x.Id == p.PersonId)))
             .ToList();
         OnPropertyChanged(nameof(RetirementNeedText));
         OnPropertyChanged(nameof(RetirementIncomeText));
@@ -507,8 +508,8 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial IReadOnlyList<BirthYearRow> BirthYearRows { get; set; } = [];
 
-    private void RefreshBirthYearRows() =>
-        BirthYearRows = People.Select(p => new BirthYearRow(p, year => _ = SetBirthYearAsync(p, year))).ToList();
+    internal void RefreshBirthYearRows() =>
+        BirthYearRows = main.People.Select(p => new BirthYearRow(p, year => _ = SetBirthYearAsync(p, year))).ToList();
 
     /// <summary>Sets a person's year of birth, which the retirement plan counts from.</summary>
     public async Task SetBirthYearAsync(Person person, int? year)
@@ -517,12 +518,12 @@ public partial class MainViewModel
         person.BirthYear = year is >= 1900 and <= 2100 ? year : null;
         try
         {
-            await repository.UpdatePersonAsync(person);
+            await main.repository.UpdatePersonAsync(person);
         }
         catch (Exception ex)
         {
             person.BirthYear = previous;
-            ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
             return;
         }
         RefreshRetirementGap();
@@ -548,48 +549,48 @@ public partial class MainViewModel
     public partial IReadOnlyList<TaxLine> NetWorthParts { get; set; } = [];
 
     /// <summary>Cash in all accounts, retirement savings (as of each account's latest letter), other assets, minus debts.</summary>
-    public decimal NetWorthOn(DateOnly date) => CashOn(date) + RetirementSavingsOn(date) + AssetsOn(date) - DebtsOn(date);
+    public decimal NetWorthOn(DateOnly date) => CashOn(date) + RetirementSavingsOn(date) + main.Assets.AssetsOn(date) - DebtsOn(date);
 
-    private decimal CashOn(DateOnly date) => BankAccounts.Sum(a => AccountBalance(a, date));
+    private decimal CashOn(DateOnly date) => main.BankAccounts.Sum(a => main.AccountBalance(a, date));
 
-    private decimal RetirementSavingsOn(DateOnly date) => _pensionAccounts
+    private decimal RetirementSavingsOn(DateOnly date) => main.Retirement.All
         .Where(a => PensionAccount.HasSavings(a.Pillar))
         .Sum(a => a.Statements.LastOrDefault(s => s.Date <= date)?.Balance ?? 0);
 
-    private decimal DebtsOn(DateOnly date) => DebtPlans.Sum(p => p.Debt.StartDate <= date ? p.OutstandingOn(date) : 0);
+    private decimal DebtsOn(DateOnly date) => main.DebtPlans.Sum(p => p.Debt.StartDate <= date ? p.OutstandingOn(date) : 0);
 
-    private void RefreshNetWorth()
+    internal void RefreshNetWorth()
     {
-        var first = new DateOnly(Today.Year, Today.Month, 1).AddMonths(-NetWorthMonths + 1);
+        var first = new DateOnly(MainViewModel.Today.Year, MainViewModel.Today.Month, 1).AddMonths(-NetWorthMonths + 1);
         var points = new List<BalancePoint>();
-        for (var month = first; month <= Today; month = month.AddMonths(1))
+        for (var month = first; month <= MainViewModel.Today; month = month.AddMonths(1))
         {
             var end = month.AddMonths(1).AddDays(-1);
-            var date = end < Today ? end : Today;
+            var date = end < MainViewModel.Today ? end : MainViewModel.Today;
             points.Add(new BalancePoint(date, Math.Round(NetWorthOn(date), 2)));
         }
         NetWorthHistory = points;
 
-        var now = NetWorthOn(Today);
-        var yearAgo = NetWorthOn(Today.AddYears(-1));
+        var now = NetWorthOn(MainViewModel.Today);
+        var yearAgo = NetWorthOn(MainViewModel.Today.AddYears(-1));
         NetWorthTodayText = Format.Money(now);
         NetWorthChangeText = Loc.F("{0} in the last 12 months", Format.SignedMoney(now - yearAgo));
         IsNetWorthDown = now < yearAgo;
         NetWorthParts =
         [
-            new TaxLine(Loc.T("Cash in accounts"), Loc.Plural(BankAccounts.Count, "{0} account", "{0} accounts"), Format.Money(CashOn(Today))),
-            new TaxLine(Loc.T("Retirement savings"), Loc.T("Pension fund, vested benefits, pillar 3a and 3b"), Format.Money(RetirementSavingsOn(Today))),
-            new TaxLine(Loc.T("Investments and other assets"), Loc.T("Securities, crypto, property, vehicles…"), Format.Money(AssetsOn(Today))),
-            new TaxLine(Loc.T("Debts"), "", Format.SignedMoney(-DebtsOn(Today))),
+            new TaxLine(Loc.T("Cash in accounts"), Loc.Plural(main.BankAccounts.Count, "{0} account", "{0} accounts"), Format.Money(CashOn(MainViewModel.Today))),
+            new TaxLine(Loc.T("Retirement savings"), Loc.T("Pension fund, vested benefits, pillar 3a and 3b"), Format.Money(RetirementSavingsOn(MainViewModel.Today))),
+            new TaxLine(Loc.T("Investments and other assets"), Loc.T("Securities, crypto, property, vehicles…"), Format.Money(main.Assets.AssetsOn(MainViewModel.Today))),
+            new TaxLine(Loc.T("Debts"), "", Format.SignedMoney(-DebtsOn(MainViewModel.Today))),
         ];
     }
 
-    private void ClosePlanningPanels()
+    internal void ClosePlanningPanels()
     {
         IsGoalPanelOpen = false;
         EditingGoal = null;
-        CloseAssetPanel();
-        CloseHouseholdPanels();
+        main.Assets.CloseAssetPanel();
+        main.CloseHouseholdPanels();
     }
 }
 

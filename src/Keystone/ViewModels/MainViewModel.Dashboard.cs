@@ -160,17 +160,17 @@ public partial class MainViewModel
                 string.Join(", ", dueSoon.Select(d => d.Sender == "" ? d.Title : d.Sender).Distinct().Take(3)), false, ShowOpenBills)));
 
         // Tasks: overdue or due today.
-        var tasks = _tasks.Where(t => !t.IsDone && t.DueDate <= today).ToList();
+        var tasks = Tasks.All.Where(t => !t.IsDone && t.DueDate <= today).ToList();
         if (tasks.Count > 0)
         {
             var late = tasks.Count(t => t.DueDate < today);
             rows.Add((late > 0 ? 1 : 4, new AttentionRow(AttentionKind.Task,
                 Loc.Plural(tasks.Count, "{0} task to do today", "{0} tasks to do today") + (late > 0 ? Loc.F(" · {0} overdue", late) : ""),
-                string.Join(", ", tasks.OrderBy(t => t.DueDate).Select(t => t.Title).Take(3)), late > 0, ShowTasksDue)));
+                string.Join(", ", tasks.OrderBy(t => t.DueDate).Select(t => t.Title).Take(3)), late > 0, Tasks.ShowTasksDue)));
         }
 
         // Appointments today.
-        foreach (var a in _appointments.Where(a => !a.HasPassed(now) && DateOnly.FromDateTime(a.Start) == today).OrderBy(a => a.Start))
+        foreach (var a in Appointments.All.Where(a => !a.HasPassed(now) && DateOnly.FromDateTime(a.Start) == today).OrderBy(a => a.Start))
             rows.Add((2, new AttentionRow(AttentionKind.Appointment,
                 a.IsAllDay ? Loc.F("Today: {0}", a.Title) : Loc.F("Today {0}: {1}", a.Start.ToString("HH:mm", CultureInfo.CurrentCulture), a.Title),
                 string.Join(" · ", new[] { a.Location, Person(a.PersonId) }.Where(s => s != "")), false, () => CurrentPage = AppPage.Appointments)));
@@ -182,32 +182,32 @@ public partial class MainViewModel
                     Loc.F("Cancel {0} by {1}", p.Insurer, Format.Date(d.CancelBy)),
                     $"{InsurancePolicy.KindName(p.Kind)} · {DaysLeftText(d.CancelBy)}", d.CancelBy.DayNumber - today.DayNumber <= 14,
                     () => CurrentPage = AppPage.Insurance)));
-        foreach (var c in _contracts.Where(c => !c.HasEnded(today)))
+        foreach (var c in Deadlines.Contracts.Where(c => !c.HasEnded(today)))
             if (c.NextDeadline(today) is { } d && d.CancelBy.DayNumber - today.DayNumber <= InsuranceDeadlineWarningDays)
                 rows.Add((5, new AttentionRow(AttentionKind.Deadline,
                     Loc.F("Cancel {0} by {1}", c.Provider, Format.Date(d.CancelBy)),
                     $"{Contract.KindName(c.Kind)} · {DaysLeftText(d.CancelBy)}", d.CancelBy.DayNumber - today.DayNumber <= 14,
-                    () => { CurrentPage = AppPage.Contracts; DeadlinesTab = 0; })));
+                    () => { CurrentPage = AppPage.Contracts; Deadlines.DeadlinesTab = 0; })));
 
         // Important dates (passport, MFK…) inside their own lead time.
-        foreach (var date in _dates.Where(d => !d.HasPassed(today)))
+        foreach (var date in Deadlines.Dates.Where(d => !d.HasPassed(today)))
         {
             var next = date.NextDate(today);
             if (next.DayNumber - today.DayNumber <= date.RemindDaysBefore)
                 rows.Add((6, new AttentionRow(AttentionKind.Date, Loc.F("{0} on {1}", date.Title, Format.Date(next)),
                     string.Join(" · ", new[] { Person(date.PersonId), DaysLeftText(next) }.Where(s => s != "")), next.DayNumber - today.DayNumber <= 7,
-                    () => { CurrentPage = AppPage.Contracts; DeadlinesTab = 1; })));
+                    () => { CurrentPage = AppPage.Contracts; Deadlines.DeadlinesTab = 1; })));
         }
 
         // Warranties ending within a month: last chance to claim.
-        foreach (var w in _warranties.Where(w => !w.HasExpired(today) && w.ExpiresOn.DayNumber - today.DayNumber <= 30))
+        foreach (var w in Deadlines.Warranties.Where(w => !w.HasExpired(today) && w.ExpiresOn.DayNumber - today.DayNumber <= 30))
             rows.Add((7, new AttentionRow(AttentionKind.Warranty, Loc.F("Warranty for {0} ends {1}", w.Item, Format.Date(w.ExpiresOn)),
-                DaysLeftText(w.ExpiresOn), false, () => { CurrentPage = AppPage.Contracts; DeadlinesTab = 2; })));
+                DaysLeftText(w.ExpiresOn), false, () => { CurrentPage = AppPage.Contracts; Deadlines.DeadlinesTab = 2; })));
 
         // Someone off sick: what's still to do (tell work, the certificate).
-        foreach (var leave in _sickLeaves.Where(l => l.IsOngoing(today) && l.PersonId is not null))
+        foreach (var leave in Work.SickLeaves.Where(l => l.IsOngoing(today) && l.PersonId is not null))
         {
-            var day = CertificateDayOf(leave);
+            var day = Work.CertificateDayOf(leave);
             var todo = new[]
             {
                 leave.Informed ? "" : Loc.T("tell work"),
@@ -220,8 +220,8 @@ public partial class MainViewModel
         }
 
         // Medicines running out or prescriptions ending.
-        foreach (var m in _medicines.Where(m => m.PersonId is not null))
-            if (MedicineAlert(m) is { } alert)
+        foreach (var m in Medicines.All.Where(m => m.PersonId is not null))
+            if (Medicines.MedicineAlert(m) is { } alert)
                 rows.Add((4, new AttentionRow(AttentionKind.Medicine, $"{m.Name} {m.Strength}".Trim() + " · " + alert,
                     PersonName(m.PersonId), m.RunsOutOn is { } runsOut && runsOut.DayNumber - today.DayNumber <= 2,
                     () => ShowMember(m.PersonId))));
@@ -254,7 +254,7 @@ public partial class MainViewModel
             list.Add(new ComingUpRow(o.Date, AttentionKind.Payment, t.Description, detail, Format.SignedMoney(o.SignedAmount), t.IsIncome));
         }
 
-        foreach (var a in _appointments.Where(a => !a.HasPassed(now) && DateOnly.FromDateTime(a.Start) > today && DateOnly.FromDateTime(a.Start) <= until))
+        foreach (var a in Appointments.All.Where(a => !a.HasPassed(now) && DateOnly.FromDateTime(a.Start) > today && DateOnly.FromDateTime(a.Start) <= until))
             list.Add(new ComingUpRow(DateOnly.FromDateTime(a.Start), AttentionKind.Appointment, a.Title,
                 string.Join(" · ", new[] { a.Location, Person(a.PersonId) }.Where(s => s != "")), "", false,
                 a.IsAllDay ? Loc.T("All day") : a.Start.ToString("HH:mm", CultureInfo.CurrentCulture)));
@@ -268,10 +268,10 @@ public partial class MainViewModel
         foreach (var p in _policies.Where(p => !p.HasEnded(today)))
             if (p.NextDeadline(today) is { } d && d.CancelBy > today && d.CancelBy <= until)
                 list.Add(new ComingUpRow(d.CancelBy, AttentionKind.Deadline, Loc.F("Last day to cancel {0}", p.Insurer), InsurancePolicy.KindName(p.Kind), "", false));
-        foreach (var c in _contracts.Where(c => !c.HasEnded(today)))
+        foreach (var c in Deadlines.Contracts.Where(c => !c.HasEnded(today)))
             if (c.NextDeadline(today) is { } d && d.CancelBy > today && d.CancelBy <= until)
                 list.Add(new ComingUpRow(d.CancelBy, AttentionKind.Deadline, Loc.F("Last day to cancel {0}", c.Provider), Contract.KindName(c.Kind), "", false));
-        foreach (var date in _dates.Where(d => !d.HasPassed(today)))
+        foreach (var date in Deadlines.Dates.Where(d => !d.HasPassed(today)))
             if (date.NextDate(today) is var next && next > today && next <= until)
                 list.Add(new ComingUpRow(next, AttentionKind.Date, date.Title, Person(date.PersonId), "", false));
 

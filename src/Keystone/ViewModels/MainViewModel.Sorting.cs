@@ -84,16 +84,16 @@ public partial class MainViewModel
         {
             case "transactions": RefreshEntryRows(); break;
             case "documents": RefreshDocumentRows(); break;
-            case "tasks": RefreshTaskRows(); break;
-            case "appointments": RefreshAppointmentRows(); break;
-            case "contracts": RefreshContracts(); break;
-            case "dates": RefreshImportantDates(); break;
-            case "warranties": RefreshWarranties(); break;
-            case "goals": RefreshGoals(); break;
-            case "pensionAccounts": RefreshRetirement(); break;
+            case "tasks": Tasks.RefreshTaskRows(); break;
+            case "appointments": Appointments.RefreshAppointmentRows(); break;
+            case "contracts": Deadlines.RefreshContracts(); break;
+            case "dates": Deadlines.RefreshImportantDates(); break;
+            case "warranties": Deadlines.RefreshWarranties(); break;
+            case "goals": Planning.RefreshGoals(); break;
+            case "pensionAccounts": Retirement.RefreshRetirement(); break;
             case "policies": RefreshInsurance(); break;
             case "debts": SortDebts(); break;
-            case "assets": RefreshAssets(); break;
+            case "assets": Assets.RefreshAssets(); break;
             case "medicines" or "sickLeaves": RefreshHousehold(); break;
             default: RefreshOwnPageLists(); break; // premiums, insurance papers, tax payments, tax papers
         }

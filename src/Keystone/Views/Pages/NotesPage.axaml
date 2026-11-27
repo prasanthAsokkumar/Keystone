@@ -1,0 +1,102 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.NotesPage"
+             x:DataType="vm:NotesViewModel">
+    <!-- Notes with projects and pins, saved as you type. -->
+    <Grid ColumnDefinitions="340,*" ColumnSpacing="16">
+        <Border Classes="card" Padding="8">
+            <DockPanel>
+                <StackPanel DockPanel.Dock="Top" Spacing="8" Margin="8,8,8,10">
+                    <TextBox Text="{Binding NoteSearch}" PlaceholderText="{l:T 'Search notes'}">
+                        <TextBox.InnerLeftContent>
+                            <PathIcon Data="{StaticResource IconSearch}" Width="16" Height="16"
+                                      Margin="10,0,0,0" Foreground="{DynamicResource TextMuted}" />
+                        </TextBox.InnerLeftContent>
+                    </TextBox>
+                    <ComboBox ItemsSource="{Binding NoteProjectFilters}" SelectedItem="{Binding NoteProjectFilter}" />
+                </StackPanel>
+                <Panel>
+                    <TextBlock Classes="secondary" Text="{Binding NotesEmptyText}" IsVisible="{Binding !HasNoteItems}"
+                               HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                               TextWrapping="Wrap" MaxWidth="260" />
+                    <ListBox Classes="notes" ItemsSource="{Binding NoteItems}" SelectedItem="{Binding SelectedNoteItem}"
+                             IsVisible="{Binding HasNoteItems}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate x:DataType="vm:NoteItem">
+                                <StackPanel Spacing="3">
+                                    <Grid ColumnDefinitions="*,Auto" ColumnSpacing="8">
+                                        <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"
+                                                   Classes.muted="{Binding IsUntitled}" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4">
+                                            <PathIcon Data="{StaticResource IconPin}" Width="12" Height="12"
+                                                      Foreground="{DynamicResource Brand}" IsVisible="{Binding IsPinned}" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding UpdatedText}" />
+                                        </StackPanel>
+                                    </Grid>
+                                    <TextBlock Classes="secondary" FontSize="13" Text="{Binding Preview}" TextWrapping="Wrap"
+                                               MaxLines="2" TextTrimming="CharacterEllipsis" IsVisible="{Binding HasPreview}" />
+                                    <Border Classes="pill brand" HorizontalAlignment="Left" Margin="0,3,0,0"
+                                            IsVisible="{Binding HasProject}">
+                                        <TextBlock Text="{Binding Project}" TextTrimming="CharacterEllipsis" />
+                                    </Border>
+                                </StackPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </Panel>
+            </DockPanel>
+        </Border>
+
+        <Border Grid.Column="1" Classes="card" Padding="28,22">
+            <Panel>
+                <StackPanel IsVisible="{Binding !IsEditingNote}" HorizontalAlignment="Center" VerticalAlignment="Center"
+                            Spacing="12">
+                    <PathIcon Data="{StaticResource IconNote}" Width="36" Height="36" HorizontalAlignment="Center"
+                              Foreground="{DynamicResource TextMuted}" />
+                    <TextBlock Classes="secondary" Text="{l:T 'Pick a note on the left, or start a new one.'}"
+                               HorizontalAlignment="Center" />
+                    <Button Classes="secondary" HorizontalAlignment="Center" Command="{Binding NewNoteCommand}">
+                        <StackPanel Orientation="Horizontal" Spacing="8">
+                            <PathIcon Data="{StaticResource IconPlus}" />
+                            <TextBlock Text="{l:T 'New note'}" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <DockPanel IsVisible="{Binding IsEditingNote}">
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" ColumnSpacing="12">
+                        <TextBox x:Name="NoteTitleBox" Classes="bare" Text="{Binding NoteTitle}"
+                                 PlaceholderText="{l:T 'Title'}" FontSize="22" FontWeight="Bold" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="4" VerticalAlignment="Top">
+                            <Button Classes="icon" Classes.active="{Binding NoteIsPinned}"
+                                    Command="{Binding ToggleNotePinCommand}" ToolTip.Tip="{l:T 'Pin to the top'}">
+                                <PathIcon Data="{StaticResource IconPin}" />
+                            </Button>
+                            <Button Classes="icon danger" Command="{Binding DeleteNoteCommand}"
+                                    ToolTip.Tip="{l:T 'Delete note'}">
+                                <PathIcon Data="{StaticResource IconDelete}" />
+                            </Button>
+                        </StackPanel>
+                    </Grid>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="240,*" ColumnSpacing="12" Margin="0,10,0,14">
+                        <AutoCompleteBox Text="{Binding NoteProject}" ItemsSource="{Binding NoteProjects}"
+                                         FilterMode="ContainsOrdinal" MinimumPrefixLength="0"
+                                         PlaceholderText="{l:T 'Project (optional)'}" />
+                        <TextBlock Grid.Column="1" Classes="muted" FontSize="13" Text="{Binding NoteSaveStatus}"
+                                   Classes.negative="{Binding HasNoteSaveError}" HorizontalAlignment="Right"
+                                   VerticalAlignment="Center" TextTrimming="CharacterEllipsis" />
+                    </Grid>
+                    <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
+                            Margin="0,0,0,14" />
+                    <TextBox Classes="bare" Text="{Binding NoteBody}" AcceptsReturn="True" TextWrapping="Wrap"
+                             VerticalContentAlignment="Top" FontSize="15" LineHeight="23"
+                             PlaceholderText="{l:T 'Write down your thoughts, ideas, plans…'}" />
+                </DockPanel>
+            </Panel>
+        </Border>
+    </Grid>
+</UserControl>

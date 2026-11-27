@@ -1,0 +1,110 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.DocumentsPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Filed bills, letters and other papers. -->
+    <Border Classes="card" Padding="8">
+        <DockPanel>
+            <WrapPanel DockPanel.Dock="Top" ItemSpacing="8" LineSpacing="8" Margin="12,12,12,8">
+                <TextBox Text="{Binding DocumentSearch}" PlaceholderText="{l:T 'Search title, sender, notes'}" Width="240">
+                    <TextBox.InnerLeftContent>
+                        <PathIcon Data="{StaticResource IconSearch}" Width="16" Height="16"
+                                  Margin="10,0,0,0" Foreground="{DynamicResource TextMuted}" />
+                    </TextBox.InnerLeftContent>
+                </TextBox>
+                <ComboBox ItemsSource="{Binding PersonFilters}" SelectedItem="{Binding DocumentPersonFilter}" Width="140" />
+                <ComboBox ItemsSource="{Binding DocumentKindFilters}" SelectedIndex="{Binding DocumentKindFilterIndex}"
+                          Width="130" />
+                <ComboBox ItemsSource="{Binding DocumentStatusFilters}"
+                          SelectedIndex="{Binding DocumentStatusFilterIndex}" Width="130" />
+                <ComboBox ItemsSource="{Binding DocumentTopicFilters}"
+                          SelectedIndex="{Binding DocumentTopicFilterIndex}" Width="130" />
+            </WrapPanel>
+
+            <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
+                    Padding="16,12,16,6" Margin="0,4,0,0">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="error" Text="{Binding ErrorMessage}" IsVisible="{Binding HasError}" />
+                    <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
+                               Text="{Binding DocumentsFolderNote}" />
+                </StackPanel>
+            </Border>
+
+            <Border DockPanel.Dock="Top" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,0,0,1"
+                    Padding="28,10,28,10" Margin="0,4,0,4">
+                <Grid ColumnDefinitions="*,130,110,190,142" ColumnSpacing="16">
+                    <controls:SortHeader Label="{l:T 'Document'}" List="documents" Key="title" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="1" Label="{l:T 'Person'}" List="documents" Key="person" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="2" Label="{l:T 'Date'}" List="documents" Key="date" Sorts="{Binding ListSorts}" />
+                    <controls:SortHeader Grid.Column="3" Label="{l:T 'To pay'}" List="documents" Key="amount" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
+                </Grid>
+            </Border>
+
+            <Panel>
+                <TextBlock Classes="secondary" Text="{Binding DocumentsEmptyText}" IsVisible="{Binding !HasDocumentRows}"
+                           HorizontalAlignment="Center" VerticalAlignment="Center" TextAlignment="Center"
+                           TextWrapping="Wrap" MaxWidth="360" />
+                <ListBox Classes="table" ItemsSource="{Binding DocumentRows}" IsVisible="{Binding HasDocumentRows}"
+                         Margin="12,0">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate x:DataType="vm:DocumentRow">
+                            <Grid ColumnDefinitions="*,130,110,190,142" ColumnSpacing="16" Background="Transparent"
+                                  DoubleTapped="DocumentRow_DoubleTapped" controls:Drag.Item="{Binding}">
+                                <StackPanel VerticalAlignment="Center" MinWidth="140" ToolTip.Tip="{Binding Title}">
+                                    <TextBlock Text="{Binding Title}" FontWeight="Medium" TextTrimming="CharacterEllipsis" />
+                                    <StackPanel Orientation="Horizontal" Spacing="8">
+                                        <TextBlock Classes="muted" Text="{Binding DetailText}" TextTrimming="CharacterEllipsis" />
+                                        <TextBlock Classes="negative" FontSize="12" Text="{l:T 'File not found'}"
+                                                   IsVisible="{Binding IsMissing}" />
+                                    </StackPanel>
+                                </StackPanel>
+                                <Border Grid.Column="1" Classes="pill" Classes.brand="{Binding !IsShared}">
+                                    <TextBlock Text="{Binding PersonName}" TextTrimming="CharacterEllipsis" />
+                                </Border>
+                                <TextBlock Grid.Column="2" Classes="secondary" FontSize="13" Text="{Binding DateText}"
+                                           VerticalAlignment="Center" />
+                                <StackPanel Grid.Column="3" VerticalAlignment="Center" Background="Transparent"
+                                            ToolTip.Tip="{Binding InstalmentTip}">
+                                    <TextBlock Text="{Binding AmountText}" FontWeight="SemiBold" TextAlignment="Right"
+                                               IsVisible="{Binding HasAmount}" />
+                                    <TextBlock FontSize="12" Text="{Binding StatusText}" TextAlignment="Right"
+                                               IsVisible="{Binding HasStatus}" Classes="muted"
+                                               Classes.negative="{Binding IsOverdue}" Classes.positive="{Binding IsPaid}" />
+                                </StackPanel>
+                                <Grid Grid.Column="4" ColumnDefinitions="34,34,34,34" HorizontalAlignment="Right"
+                                      VerticalAlignment="Center">
+                                    <Button Classes="icon" ToolTip.Tip="{l:T 'Open'}"
+                                            Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).OpenDocumentCommand}"
+                                            CommandParameter="{Binding Document}">
+                                        <PathIcon Data="{StaticResource IconOpen}" />
+                                    </Button>
+                                    <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{Binding MarkPaidTip}"
+                                            IsVisible="{Binding CanMarkPaid}"
+                                            Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).MarkDocumentPaidCommand}"
+                                            CommandParameter="{Binding Document}">
+                                        <PathIcon Data="{StaticResource IconCheck}" />
+                                    </Button>
+                                    <Button Grid.Column="2" Classes="icon" ToolTip.Tip="{l:T 'Edit'}"
+                                            Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).EditDocumentCommand}"
+                                            CommandParameter="{Binding Document}">
+                                        <PathIcon Data="{StaticResource IconEdit}" />
+                                    </Button>
+                                    <Button Grid.Column="3" Classes="icon danger"
+                                            ToolTip.Tip="{l:T 'Delete (moves the file to the Deleted folder)'}"
+                                            Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).DeleteDocumentCommand}"
+                                            CommandParameter="{Binding Document}">
+                                        <PathIcon Data="{StaticResource IconDelete}" />
+                                    </Button>
+                                </Grid>
+                            </Grid>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </Panel>
+        </DockPanel>
+    </Border>
+</UserControl>

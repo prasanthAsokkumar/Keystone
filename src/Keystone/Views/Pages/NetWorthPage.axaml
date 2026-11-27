@@ -11,16 +11,16 @@
             <DockPanel>
                 <StackPanel DockPanel.Dock="Top" Spacing="2" Margin="0,0,0,10">
                     <TextBlock Classes="label" Text="{l:T 'Net worth'}" />
-                    <TextBlock Classes="value" Text="{Binding NetWorthTodayText}" />
-                    <TextBlock FontSize="13" Text="{Binding NetWorthChangeText}" Classes="positive" Classes.negative="{Binding IsNetWorthDown}" />
+                    <TextBlock Classes="value" Text="{Binding Planning.NetWorthTodayText}" />
+                    <TextBlock FontSize="13" Text="{Binding Planning.NetWorthChangeText}" Classes="positive" Classes.negative="{Binding Planning.IsNetWorthDown}" />
                 </StackPanel>
-                <controls:RunwayChart History="{Binding NetWorthHistory}" Foreground="{DynamicResource TextMuted}" />
+                <controls:RunwayChart History="{Binding Planning.NetWorthHistory}" Foreground="{DynamicResource TextMuted}" />
             </DockPanel>
         </Border>
         <Border Grid.Column="1" Classes="card" VerticalAlignment="Top">
             <StackPanel Spacing="4">
                 <TextBlock Classes="sectionTitle" Text="{l:T 'Made up of'}" Margin="0,0,0,6" />
-                <ItemsControl ItemsSource="{Binding NetWorthParts}">
+                <ItemsControl ItemsSource="{Binding Planning.NetWorthParts}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:TaxLine">
                             <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="0,10">

@@ -70,7 +70,7 @@ public partial class MainViewModel
     public bool HasAccountRows => AccountRows.Count > 0;
 
     /// <summary>The household's cash before any entry: every account's opening balance.</summary>
-    private decimal TotalOpeningBalance => BankAccounts.Sum(a => a.OpeningBalance);
+    internal decimal TotalOpeningBalance => BankAccounts.Sum(a => a.OpeningBalance);
 
     public decimal TotalOverdraft => BankAccounts.Sum(a => a.OverdraftLimit);
 

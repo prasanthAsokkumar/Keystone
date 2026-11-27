@@ -100,7 +100,7 @@ public static class Drag
             return;
 
         _pressed = null;
-        if (GetItem(control) is not { } item || ViewModel(control) is not { } vm || vm.IsLocked)
+        if (GetItem(control) is not { } item || ViewModel(control) is not { } vm || vm.Lock.IsLocked)
             return;
         var data = new DataTransfer();
         var dragged = new DataTransferItem();

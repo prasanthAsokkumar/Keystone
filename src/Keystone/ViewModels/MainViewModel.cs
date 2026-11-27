@@ -52,20 +52,90 @@ public enum DebtRepayment
 
 public partial class MainViewModel : ViewModelBase
 {
-    private readonly KeystoneRepository repository;
+    internal readonly KeystoneRepository repository;
 
     public MainViewModel(KeystoneRepository repository)
     {
         this.repository = repository;
+        Notes = Area(new NotesViewModel(repository, () => CurrentPage = AppPage.Notes, error => ErrorMessage = error));
+        Backup = Area(new BackupViewModel(repository, () => DocumentsFolder, async () =>
+        {
+            CloseOtherPanels();
+            await LoadAsync();
+        }));
+        Medicines = Area(new MedicinesViewModel(this));
+        Work = Area(new WorkViewModel(this));
+        Deadlines = Area(new DeadlinesViewModel(this));
+        Planning = Area(new PlanningViewModel(this));
+        Retirement = Area(new RetirementViewModel(this));
+        Tasks = Area(new TasksViewModel(this));
+        Appointments = Area(new AppointmentsViewModel(this));
+        Assets = Area(new AssetsViewModel(this));
+        // Coming back to the window: scans may have arrived and appointments changed meanwhile.
+        Lock = Area(new AppLockViewModel(repository, () => _isLoading, error => ErrorMessage = error, ScheduleReminders, () =>
+        {
+            CheckInbox();
+            Appointments.ScheduleCalendarSync();
+        }));
         Loc.Instance.LanguageChanged += OnLanguageChanged;
     }
 
-    private static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+    /// <summary>The Notes page, which keeps its own state.</summary>
+    public NotesViewModel Notes { get; }
 
-    private bool _isLoading;
+    /// <summary>The app lock (Touch ID).</summary>
+    public AppLockViewModel Lock { get; }
+
+    /// <summary>Daily backups and restoring one.</summary>
+    public BackupViewModel Backup { get; }
+
+    /// <summary>Household members' medicines.</summary>
+    public MedicinesViewModel Medicines { get; }
+
+    /// <summary>Household members' jobs and times off sick.</summary>
+    public WorkViewModel Work { get; }
+
+    /// <summary>Securities, property, vehicles and other assets with their values over time.</summary>
+    public AssetsViewModel Assets { get; }
+
+    /// <summary>Appointments and the two-way sync with the Calendar app.</summary>
+    public AppointmentsViewModel Appointments { get; }
+
+    /// <summary>Tasks with due dates and repeats.</summary>
+    public TasksViewModel Tasks { get; }
+
+    /// <summary>Retirement accounts (AHV, pension fund, 3a, 3b) and their yearly statements.</summary>
+    public RetirementViewModel Retirement { get; }
+
+    /// <summary>Savings goals, what-if scenarios, the retirement gap and net worth.</summary>
+    public PlanningViewModel Planning { get; }
+
+    /// <summary>Contracts, important dates and warranties (Contracts &amp; dates).</summary>
+    public DeadlinesViewModel Deadlines { get; }
+
+    /// <summary>The areas with their own view model, e.g. to follow a change of language.</summary>
+    private readonly List<ViewModelBase> _areas = [];
+
+    private T Area<T>(T area) where T : ViewModelBase
+    {
+        _areas.Add(area);
+        area.PropertyChanged += ChildPropertyChanged;
+        return area;
+    }
+
+    /// <summary>A side panel of an area's own view model opened or closed: the backdrop follows.</summary>
+    private void ChildPropertyChanged(object? sender, System.ComponentModel.PropertyChangedEventArgs e)
+    {
+        if (e.PropertyName?.EndsWith("PanelOpen", StringComparison.Ordinal) == true)
+            OnPropertyChanged(nameof(IsPanelOpen));
+    }
+
+    internal static DateOnly Today => DateOnly.FromDateTime(DateTime.Today);
+
+    internal bool _isLoading;
 
     /// <summary>User entries plus generated debt payments; what all calculations run on.</summary>
-    private List<Transaction> _entries = [];
+    internal List<Transaction> _entries = [];
 
     public ObservableCollection<Transaction> Transactions { get; } = [];
 
@@ -180,12 +250,12 @@ public partial class MainViewModel : ViewModelBase
     [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsImportPanelOpen { get; set; }
 
-    public bool IsPanelOpen => IsEntryPanelOpen || IsDebtPanelOpen || IsImportPanelOpen || IsDocumentPanelOpen || IsTaskPanelOpen ||
-                               IsStatementPanelOpen || IsPensionAccountPanelOpen || IsBulkPanelOpen ||
-                               IsInsurancePanelOpen || IsAccountPanelOpen || IsContractPanelOpen ||
-                               IsImportantDatePanelOpen || IsWarrantyPanelOpen || IsGoalPanelOpen || IsAppointmentPanelOpen ||
-                               IsAssetPanelOpen || IsPersonPanelOpen || IsMedicinePanelOpen || IsEmploymentPanelOpen ||
-                               IsSickLeavePanelOpen;
+    public bool IsPanelOpen => IsEntryPanelOpen || IsDebtPanelOpen || IsImportPanelOpen || IsDocumentPanelOpen || Tasks.IsTaskPanelOpen ||
+                               Retirement.IsStatementPanelOpen || Retirement.IsPensionAccountPanelOpen || IsBulkPanelOpen ||
+                               IsInsurancePanelOpen || IsAccountPanelOpen || Deadlines.IsContractPanelOpen ||
+                               Deadlines.IsImportantDatePanelOpen || Deadlines.IsWarrantyPanelOpen || Planning.IsGoalPanelOpen || Appointments.IsAppointmentPanelOpen ||
+                               Assets.IsAssetPanelOpen || IsPersonPanelOpen || Medicines.IsMedicinePanelOpen || Work.IsEmploymentPanelOpen ||
+                               Work.IsSickLeavePanelOpen;
 
     /// <summary>
     /// A dropped file is filed as a document on the Documents page, or when import is off;
@@ -203,7 +273,7 @@ public partial class MainViewModel : ViewModelBase
         ? Loc.F("Saved to {0}", DocumentsFolder)
         : Loc.F("{0}. Read on this Mac by your local model.", DocumentReader.SupportedFilesText);
 
-    private void CloseOtherPanels()
+    internal void CloseOtherPanels()
     {
         FollowUpHint = "";
         if (EditingTransaction is not null)
@@ -213,19 +283,19 @@ public partial class MainViewModel : ViewModelBase
         CloseImport();
         if (IsDocumentPanelOpen)
             CloseDocumentPanel();
-        CloseTaskPanel();
-        CloseAppointmentPanel();
-        CloseRetirementPanels();
+        Tasks.CloseTaskPanel();
+        Appointments.CloseAppointmentPanel();
+        Retirement.CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
-        CloseDeadlinePanels();
-        ClosePlanningPanels();
+        Deadlines.CloseDeadlinePanels();
+        Planning.ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
     }
 
     [RelayCommand]
-    private void NewEntry()
+    internal void NewEntry()
     {
         ErrorMessage = null;
         if (EditingTransaction is not null)
@@ -233,13 +303,13 @@ public partial class MainViewModel : ViewModelBase
         IsDebtPanelOpen = false;
         IsImportPanelOpen = false;
         CloseDocumentPanel();
-        CloseTaskPanel();
-        CloseAppointmentPanel();
-        CloseRetirementPanels();
+        Tasks.CloseTaskPanel();
+        Appointments.CloseAppointmentPanel();
+        Retirement.CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
-        CloseDeadlinePanels();
-        ClosePlanningPanels();
+        Deadlines.CloseDeadlinePanels();
+        Planning.ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
         // On the Transactions page, a new entry is of the open tab's kind.
@@ -268,13 +338,13 @@ public partial class MainViewModel : ViewModelBase
         IsEntryPanelOpen = false;
         IsImportPanelOpen = false;
         CloseDocumentPanel();
-        CloseTaskPanel();
-        CloseAppointmentPanel();
-        CloseRetirementPanels();
+        Tasks.CloseTaskPanel();
+        Appointments.CloseAppointmentPanel();
+        Retirement.CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
-        CloseDeadlinePanels();
-        ClosePlanningPanels();
+        Deadlines.CloseDeadlinePanels();
+        Planning.ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
         IsDebtPanelOpen = true;
@@ -294,13 +364,13 @@ public partial class MainViewModel : ViewModelBase
         IsDebtPanelOpen = false;
         CloseImport();
         CloseDocumentPanel();
-        CloseTaskPanel();
-        CloseAppointmentPanel();
-        CloseRetirementPanels();
+        Tasks.CloseTaskPanel();
+        Appointments.CloseAppointmentPanel();
+        Retirement.CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
-        CloseDeadlinePanels();
-        ClosePlanningPanels();
+        Deadlines.CloseDeadlinePanels();
+        Planning.ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
     }
@@ -631,7 +701,7 @@ public partial class MainViewModel : ViewModelBase
 
     private static string AllCategories => Loc.T("All categories");
 
-    private static IReadOnlyList<string> Translate(params string[] keys) => keys.Select(Loc.T).ToList();
+    internal static IReadOnlyList<string> Translate(params string[] keys) => keys.Select(Loc.T).ToList();
 
     [ObservableProperty]
     public partial string SearchText { get; set; } = "";
@@ -836,7 +906,7 @@ public partial class MainViewModel : ViewModelBase
         People.Insert(index, person);
         NewPersonName = "";
         RefreshPersonOptions();
-        RefreshBirthYearRows();
+        Planning.RefreshBirthYearRows();
         RefreshHousehold();
     }
 
@@ -859,42 +929,42 @@ public partial class MainViewModel : ViewModelBase
             transaction.PersonId = null;
         foreach (var document in Documents.Where(d => d.PersonId == person.Id))
             document.PersonId = null;
-        foreach (var task in _tasks.Where(t => t.PersonId == person.Id))
+        foreach (var task in Tasks.All.Where(t => t.PersonId == person.Id))
             task.PersonId = null;
-        foreach (var account in _pensionAccounts.Where(a => a.PersonId == person.Id))
+        foreach (var account in Retirement.All.Where(a => a.PersonId == person.Id))
             account.PersonId = null;
         foreach (var policy in _policies.Where(p => p.PersonId == person.Id))
             policy.PersonId = null;
-        foreach (var contract in _contracts.Where(c => c.PersonId == person.Id))
+        foreach (var contract in Deadlines.Contracts.Where(c => c.PersonId == person.Id))
             contract.PersonId = null;
-        foreach (var date in _dates.Where(d => d.PersonId == person.Id))
+        foreach (var date in Deadlines.Dates.Where(d => d.PersonId == person.Id))
             date.PersonId = null;
-        foreach (var warranty in _warranties.Where(w => w.PersonId == person.Id))
+        foreach (var warranty in Deadlines.Warranties.Where(w => w.PersonId == person.Id))
             warranty.PersonId = null;
         // Medicines, jobs and sick days are the person's own: they go with them.
-        _medicines.RemoveAll(m => m.PersonId == person.Id);
-        _employments.RemoveAll(j => j.PersonId == person.Id);
-        _sickLeaves.RemoveAll(l => l.PersonId == person.Id);
+        Medicines.All.RemoveAll(m => m.PersonId == person.Id);
+        Work.Jobs.RemoveAll(j => j.PersonId == person.Id);
+        Work.SickLeaves.RemoveAll(l => l.PersonId == person.Id);
         People.Remove(person);
         RefreshPersonOptions();
         RefreshEntryRows();
         RefreshDocumentRows();
-        RefreshTaskRows();
-        RefreshRetirement();
+        Tasks.RefreshTaskRows();
+        Retirement.RefreshRetirement();
         RefreshInsurance();
         RefreshTaxes();
-        RefreshDeadlines();
-        RefreshBirthYearRows();
-        RefreshPlanning();
+        Deadlines.RefreshDeadlines();
+        Planning.RefreshBirthYearRows();
+        Planning.RefreshPlanning();
         RefreshHousehold();
         RefreshDashboard();
         ScheduleReminders();
     }
 
-    private IReadOnlyList<string> HouseholdNames => People.Select(p => p.Name).ToList();
+    internal IReadOnlyList<string> HouseholdNames => People.Select(p => p.Name).ToList();
 
     /// <summary>The household member a name read from a document refers to, if it clearly is one.</summary>
-    private PersonOption? MatchPersonOption(string name) =>
+    internal PersonOption? MatchPersonOption(string name) =>
         PersonMatcher.Match(name, People) is { } person ? PersonOptions.FirstOrDefault(o => o.Id == person.Id) : null;
 
     private void RefreshPersonOptions()
@@ -906,26 +976,26 @@ public partial class MainViewModel : ViewModelBase
         var documentPersonId = DocumentPerson?.Id;
         var documentFilterId = DocumentPersonFilter?.IsEveryone == true ? (int?)null : DocumentPersonFilter?.Id;
         var documentFilterIsEveryone = DocumentPersonFilter is null or { IsEveryone: true };
-        var newTaskPersonId = NewTaskPerson?.Id;
-        var appointmentPersonId = AppointmentPerson?.Id;
-        var appointmentFilterId = AppointmentPersonFilter?.IsEveryone == true ? (int?)null : AppointmentPersonFilter?.Id;
-        var appointmentFilterIsEveryone = AppointmentPersonFilter is null or { IsEveryone: true };
-        var taskPersonId = TaskPerson?.Id;
-        var taskFilterId = TaskPersonFilter?.IsEveryone == true ? (int?)null : TaskPersonFilter?.Id;
-        var taskFilterIsEveryone = TaskPersonFilter is null or { IsEveryone: true };
+        var newTaskPersonId = Tasks.NewTaskPerson?.Id;
+        var appointmentPersonId = Appointments.AppointmentPerson?.Id;
+        var appointmentFilterId = Appointments.AppointmentPersonFilter?.IsEveryone == true ? (int?)null : Appointments.AppointmentPersonFilter?.Id;
+        var appointmentFilterIsEveryone = Appointments.AppointmentPersonFilter is null or { IsEveryone: true };
+        var taskPersonId = Tasks.TaskPerson?.Id;
+        var taskFilterId = Tasks.TaskPersonFilter?.IsEveryone == true ? (int?)null : Tasks.TaskPersonFilter?.Id;
+        var taskFilterIsEveryone = Tasks.TaskPersonFilter is null or { IsEveryone: true };
         var insuranceFilterId = InsurancePersonFilter?.IsEveryone == true ? (int?)null : InsurancePersonFilter?.Id;
         var insuranceFilterIsEveryone = InsurancePersonFilter is null or { IsEveryone: true };
         var taxFilterId = TaxPersonFilter?.IsEveryone == true ? (int?)null : TaxPersonFilter?.Id;
         var taxFilterIsEveryone = TaxPersonFilter is null or { IsEveryone: true };
         var policyPersonId = PolicyPerson?.Id;
-        var contractPersonId = ContractPerson?.Id;
-        var datePersonId = ImportantDatePerson?.Id;
-        var warrantyPersonId = WarrantyPerson?.Id;
-        var retirementFilterId = RetirementPersonFilter?.IsEveryone == true ? (int?)null : RetirementPersonFilter?.Id;
-        var retirementFilterIsEveryone = RetirementPersonFilter is null or { IsEveryone: true };
-        var newPensionPersonId = NewPensionPerson?.Id;
+        var contractPersonId = Deadlines.ContractPerson?.Id;
+        var datePersonId = Deadlines.ImportantDatePerson?.Id;
+        var warrantyPersonId = Deadlines.WarrantyPerson?.Id;
+        var retirementFilterId = Retirement.RetirementPersonFilter?.IsEveryone == true ? (int?)null : Retirement.RetirementPersonFilter?.Id;
+        var retirementFilterIsEveryone = Retirement.RetirementPersonFilter is null or { IsEveryone: true };
+        var newPensionPersonId = Retirement.NewPensionPerson?.Id;
         var viewPersonId = ViewPerson?.IsEveryone == false ? ViewPerson.Id : null;
-        var pensionAccountPersonId = PensionAccountPerson?.Id;
+        var pensionAccountPersonId = Retirement.PensionAccountPerson?.Id;
 
         PersonOptions = [PersonOption.Shared, .. members];
         PersonFilters = [PersonOption.Everyone, PersonOption.Shared, .. members];
@@ -939,23 +1009,23 @@ public partial class MainViewModel : ViewModelBase
         PersonFilter = filterIsEveryone
             ? PersonOption.Everyone
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == filterId) ?? PersonOption.Everyone;
-        NewTaskPerson = PersonOptions.FirstOrDefault(o => o.Id == newTaskPersonId) ?? PersonOption.Shared;
-        TaskPerson = PersonOptions.FirstOrDefault(o => o.Id == taskPersonId) ?? PersonOption.Shared;
-        AppointmentPerson = PersonOptions.FirstOrDefault(o => o.Id == appointmentPersonId) ?? PersonOption.Shared;
-        AppointmentPersonFilter = appointmentFilterIsEveryone
+        Tasks.NewTaskPerson = PersonOptions.FirstOrDefault(o => o.Id == newTaskPersonId) ?? PersonOption.Shared;
+        Tasks.TaskPerson = PersonOptions.FirstOrDefault(o => o.Id == taskPersonId) ?? PersonOption.Shared;
+        Appointments.AppointmentPerson = PersonOptions.FirstOrDefault(o => o.Id == appointmentPersonId) ?? PersonOption.Shared;
+        Appointments.AppointmentPersonFilter = appointmentFilterIsEveryone
             ? PersonOption.Everyone
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == appointmentFilterId) ?? PersonOption.Everyone;
-        TaskPersonFilter = taskFilterIsEveryone
+        Tasks.TaskPersonFilter = taskFilterIsEveryone
             ? PersonOption.Everyone
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == taskFilterId) ?? PersonOption.Everyone;
-        RetirementPersonFilter = retirementFilterIsEveryone
+        Retirement.RetirementPersonFilter = retirementFilterIsEveryone
             ? PersonOption.Everyone
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == retirementFilterId) ?? PersonOption.Everyone;
-        NewPensionPerson = PersonOptions.FirstOrDefault(o => o.Id == newPensionPersonId) ?? PersonOption.Shared;
+        Retirement.NewPensionPerson = PersonOptions.FirstOrDefault(o => o.Id == newPensionPersonId) ?? PersonOption.Shared;
         PolicyPerson = PersonOptions.FirstOrDefault(o => o.Id == policyPersonId) ?? PersonOption.Shared;
-        ContractPerson = PersonOptions.FirstOrDefault(o => o.Id == contractPersonId) ?? PersonOption.Shared;
-        ImportantDatePerson = PersonOptions.FirstOrDefault(o => o.Id == datePersonId) ?? PersonOption.Shared;
-        WarrantyPerson = PersonOptions.FirstOrDefault(o => o.Id == warrantyPersonId) ?? PersonOption.Shared;
+        Deadlines.ContractPerson = PersonOptions.FirstOrDefault(o => o.Id == contractPersonId) ?? PersonOption.Shared;
+        Deadlines.ImportantDatePerson = PersonOptions.FirstOrDefault(o => o.Id == datePersonId) ?? PersonOption.Shared;
+        Deadlines.WarrantyPerson = PersonOptions.FirstOrDefault(o => o.Id == warrantyPersonId) ?? PersonOption.Shared;
         ViewPersonOptions = [PersonOption.Everyone, .. members];
         ViewPerson = ViewPersonOptions.FirstOrDefault(o => !o.IsEveryone && o.Id == viewPersonId) ?? PersonOption.Everyone;
         InsurancePersonFilter = insuranceFilterIsEveryone
@@ -966,7 +1036,7 @@ public partial class MainViewModel : ViewModelBase
             : PersonFilters.FirstOrDefault(o => !o.IsEveryone && o.Id == taxFilterId) ?? PersonOption.Everyone;
         foreach (var item in BulkItems)
             item.Person = PersonOptions.FirstOrDefault(o => o.Id == item.Person.Id) ?? PersonOption.Shared;
-        PensionAccountPerson = PersonOptions.FirstOrDefault(o => o.Id == pensionAccountPersonId) ?? PersonOption.Shared;
+        Retirement.PensionAccountPerson = PersonOptions.FirstOrDefault(o => o.Id == pensionAccountPersonId) ?? PersonOption.Shared;
     }
 
     // ── New entry form ──────────────────────────────────────────────────────
@@ -1057,10 +1127,10 @@ public partial class MainViewModel : ViewModelBase
             LoadTaxSettings(settings.TaxAssessments, settings.TaxRate);
             _checkedPapers = settings.CheckedPapers.Split(',', StringSplitOptions.RemoveEmptyEntries)
                 .Select(id => int.TryParse(id, out var n) ? n : 0).Where(n => n > 0).ToHashSet();
-            ApplyLockSettings(settings.LockEnabled, settings.LockAfterMinutes);
+            Lock.Apply(settings.LockEnabled, settings.LockAfterMinutes);
             ApplyReminderSettings(settings.RemindersEnabled, settings.ReminderHour);
-            LoadScenario(settings.ScenarioJson);
-            RetirementNeedPercent = settings.RetirementNeedPercent;
+            Planning.LoadScenario(settings.ScenarioJson);
+            Planning.RetirementNeedPercent = settings.RetirementNeedPercent;
             StartingBalance = settings.StartingBalance;
             FinancialYearStartIndex = settings.FinancialYearStartMonth - 1;
             SelectedLanguage = Loc.Find(string.IsNullOrEmpty(settings.Language) ? null : settings.Language);
@@ -1080,13 +1150,13 @@ public partial class MainViewModel : ViewModelBase
             await LoadAccountsAsync(settings);
             await LoadDocumentsAsync(settings);
             await LoadInsuranceAsync();
-            await LoadAssetsAsync();
-            await LoadDeadlinesAsync();
-            await LoadGoalsAsync();
-            await LoadTasksAsync();
-            await LoadAppointmentsAsync(settings);
-            await LoadNotesAsync();
-            await LoadRetirementAsync();
+            await Assets.LoadAssetsAsync();
+            await Deadlines.LoadDeadlinesAsync();
+            await Planning.LoadGoalsAsync();
+            await Tasks.LoadTasksAsync();
+            await Appointments.LoadAppointmentsAsync(settings);
+            await Notes.LoadAsync();
+            await Retirement.LoadRetirementAsync();
             await LoadHouseholdAsync();
 
             var transactions = await repository.GetTransactionsAsync();
@@ -1110,13 +1180,13 @@ public partial class MainViewModel : ViewModelBase
             _isLoading = false;
         }
 
-        StartBackups();
+        Backup.StartBackups();
         StartInbox();
         RefreshTaxes();
-        RefreshDeadlines();
-        RefreshPlanning();
+        Deadlines.RefreshDeadlines();
+        Planning.RefreshPlanning();
         ScheduleReminders();
-        _ = StartCalendarSyncAsync();
+        _ = Appointments.StartCalendarSyncAsync();
     }
 
     [RelayCommand]
@@ -1223,13 +1293,13 @@ public partial class MainViewModel : ViewModelBase
         IsDebtPanelOpen = false;
         IsImportPanelOpen = false;
         CloseDocumentPanel();
-        CloseTaskPanel();
-        CloseAppointmentPanel();
-        CloseRetirementPanels();
+        Tasks.CloseTaskPanel();
+        Appointments.CloseAppointmentPanel();
+        Retirement.CloseRetirementPanels();
         CloseInsurancePanel();
         CloseAccountPanel();
-        CloseDeadlinePanels();
-        ClosePlanningPanels();
+        Deadlines.CloseDeadlinePanels();
+        Planning.ClosePlanningPanels();
         if (IsBulkPanelOpen)
             CloseBulkPanel();
         IsEntryPanelOpen = true;
@@ -1582,7 +1652,7 @@ public partial class MainViewModel : ViewModelBase
 
     // ── Document import ─────────────────────────────────────────────────────
 
-    private readonly LocalAiClient _ai = new();
+    internal readonly LocalAiClient _ai = new();
     private CancellationTokenSource? _importCancellation;
 
     public ObservableCollection<ImportItem> ImportItems { get; } = [];
@@ -1847,39 +1917,39 @@ public partial class MainViewModel : ViewModelBase
     {
         // Lists of choices are rebuilt, which can clear their selection; keep what was chosen.
         var selections = (TransactionsTab, ScheduleFilterIndex, FinancialYearStartIndex,
-            DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, TaskStatusFilterIndex,
-            NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
-            LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
-            ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex,
-            AppointmentStatusFilterIndex, AppointmentReminderIndex, AssetKindIndex,
-            PersonBloodTypeIndex, EmploymentReportByIndex, EmploymentReportTimeIndex, DocumentTopicFilterIndex, SettingsTab);
+            DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, Tasks.TaskStatusFilterIndex,
+            Retirement.NewPensionPillarIndex, Retirement.PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
+            ReminderHourIndex, Deadlines.DeadlinesTab, Planning.PlanningTab, Deadlines.ContractKindIndex, Deadlines.ContractRecurrenceIndex,
+            Deadlines.ImportantDateKindIndex, Deadlines.ImportantDateRepeatIndex, Planning.ScenarioKindIndex, Tasks.TaskRepeatIndex,
+            Appointments.AppointmentStatusFilterIndex, Appointments.AppointmentReminderIndex, Assets.AssetKindIndex,
+            PersonBloodTypeIndex, DocumentTopicFilterIndex, SettingsTab);
         CategoryFilter = AllCategories;
         OnPropertyChanged(string.Empty);
+        foreach (var area in _areas)
+            area.RefreshTexts();
         (TransactionsTab, ScheduleFilterIndex, FinancialYearStartIndex,
-            DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, TaskStatusFilterIndex,
-            NewPensionPillarIndex, PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
-            LockDelayIndex, ReminderHourIndex, DeadlinesTab, PlanningTab, ContractKindIndex, ContractRecurrenceIndex,
-            ImportantDateKindIndex, ImportantDateRepeatIndex, ScenarioKindIndex, TaskRepeatIndex,
-            AppointmentStatusFilterIndex, AppointmentReminderIndex, AssetKindIndex,
-            PersonBloodTypeIndex, EmploymentReportByIndex, EmploymentReportTimeIndex, DocumentTopicFilterIndex, SettingsTab) = selections;
+            DocumentKindFilterIndex, DocumentStatusFilterIndex, NewRecurrence, DocumentKindIndex, Tasks.TaskStatusFilterIndex,
+            Retirement.NewPensionPillarIndex, Retirement.PensionPillarIndex, PolicyKindIndex, PolicyRecurrenceIndex, AccountKindIndex,
+            ReminderHourIndex, Deadlines.DeadlinesTab, Planning.PlanningTab, Deadlines.ContractKindIndex, Deadlines.ContractRecurrenceIndex,
+            Deadlines.ImportantDateKindIndex, Deadlines.ImportantDateRepeatIndex, Planning.ScenarioKindIndex, Tasks.TaskRepeatIndex,
+            Appointments.AppointmentStatusFilterIndex, Appointments.AppointmentReminderIndex, Assets.AssetKindIndex,
+            PersonBloodTypeIndex, DocumentTopicFilterIndex, SettingsTab) = selections;
 
         RefreshPersonOptions();
         RefreshDocumentRows();
         RefreshCover();
-        RefreshTaskRows();
-        RefreshAppointmentRows();
-        RefreshCalendarState();
-        RefreshNoteProjects();
-        RefreshNoteItems();
+        Tasks.RefreshTaskRows();
+        Appointments.RefreshAppointmentRows();
+        Appointments.RefreshCalendarState();
         foreach (var item in BulkItems)
             item.RefreshTexts();
         RefreshBulkTexts();
         RefreshAccountOptions();
         RefreshInsurance();
-        RefreshBackupStatus();
+        Backup.RefreshBackupStatus();
         Recalculate();
         RefreshTaxes();
-        RefreshDeadlines();
+        Deadlines.RefreshDeadlines();
         RefreshHousehold();
         RefreshAttentionFilters();
         RefreshDashboard();
@@ -1974,7 +2044,7 @@ public partial class MainViewModel : ViewModelBase
         AiStatusIsError = isError;
     }
 
-    private void InsertSorted(Transaction transaction)
+    internal void InsertSorted(Transaction transaction)
     {
         var index = 0;
         while (index < Transactions.Count && CompareForList(Transactions[index], transaction) < 0)
@@ -1993,9 +2063,9 @@ public partial class MainViewModel : ViewModelBase
         return byDate != 0 ? byDate : b.Id.CompareTo(a.Id);
     }
 
-    private void Recalculate()
+    internal void Recalculate()
     {
-        RefreshRetirement();
+        Retirement.RefreshRetirement();
         foreach (var item in Debts)
             item.Plan = DebtPlan.Build(item.Debt);
         DebtPlans = Debts.Select(d => d.Plan!).ToList();
@@ -2010,7 +2080,7 @@ public partial class MainViewModel : ViewModelBase
         RefreshUpcoming();
         RefreshDashboard();
         RefreshTaxes();
-        RefreshPlanning();
+        Planning.RefreshPlanning();
     }
 
     private void RebuildReport() =>

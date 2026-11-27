@@ -12,16 +12,16 @@
             <Border Classes="card">
                 <StackPanel Spacing="4">
                     <TextBlock Classes="label" Text="{l:T 'Assets today'}" />
-                    <TextBlock Classes="value" Text="{Binding AssetsTotalText}" />
-                    <TextBlock Classes="muted" FontSize="13" Text="{Binding AssetsChangeText}" TextWrapping="Wrap"
-                               Classes.negative="{Binding AssetsAreDown}" />
-                    <TextBlock Classes="muted" FontSize="12" Text="{Binding AssetsByKindText}" TextWrapping="Wrap" />
+                    <TextBlock Classes="value" Text="{Binding Assets.AssetsTotalText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Assets.AssetsChangeText}" TextWrapping="Wrap"
+                               Classes.negative="{Binding Assets.AssetsAreDown}" />
+                    <TextBlock Classes="muted" FontSize="12" Text="{Binding Assets.AssetsByKindText}" TextWrapping="Wrap" />
                 </StackPanel>
             </Border>
             <Border Grid.Column="1" Classes="card">
                 <StackPanel Spacing="4">
                     <TextBlock Classes="label" Text="{l:T 'Net worth'}" />
-                    <TextBlock Classes="value" Text="{Binding NetWorthWithAssetsText}" />
+                    <TextBlock Classes="value" Text="{Binding Assets.NetWorthWithAssetsText}" />
                     <TextBlock Classes="muted" FontSize="13" TextWrapping="Wrap"
                                Text="{l:T 'Cash, retirement savings and these assets, minus debts. Its history is on the Net worth tab.'}" />
                 </StackPanel>
@@ -31,14 +31,14 @@
         <Border Classes="card" Padding="8">
             <StackPanel Spacing="4">
                 <TextBlock Classes="sectionTitle" Text="{l:T 'Your assets'}" Margin="16,12,12,4" />
-                <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !HasAssetRows}"
+                <TextBlock Classes="muted" FontSize="13" Margin="16,4,16,12" TextWrapping="Wrap" IsVisible="{Binding !Assets.HasAssetRows}"
                            Text="{l:T 'No assets yet. Add a securities account, crypto, a flat or a car with what it is worth today, and update the value when a statement comes.'}" />
-                <Grid ColumnDefinitions="*,120,200,72" ColumnSpacing="16" Margin="28,4,28,6" IsVisible="{Binding HasAssetRows}">
+                <Grid ColumnDefinitions="*,120,200,72" ColumnSpacing="16" Margin="28,4,28,6" IsVisible="{Binding Assets.HasAssetRows}">
                     <controls:SortHeader Label="{l:T 'Asset'}" List="assets" Key="name" Sorts="{Binding ListSorts}" />
                     <controls:SortHeader Grid.Column="1" Label="{l:T 'Person'}" List="assets" Key="person" Sorts="{Binding ListSorts}" />
                     <controls:SortHeader Grid.Column="2" Label="{l:T 'Value'}" List="assets" Key="value" Sorts="{Binding ListSorts}" HorizontalAlignment="Right" />
                 </Grid>
-                <ItemsControl ItemsSource="{Binding AssetRows}" Margin="12,0,12,8" IsVisible="{Binding HasAssetRows}">
+                <ItemsControl ItemsSource="{Binding Assets.AssetRows}" Margin="12,0,12,8" IsVisible="{Binding Assets.HasAssetRows}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate x:DataType="vm:AssetRow">
                             <Border BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0" Padding="16,10">
@@ -61,12 +61,12 @@
                                     </StackPanel>
                                     <Grid Grid.Column="3" ColumnDefinitions="34,34" HorizontalAlignment="Right" VerticalAlignment="Center">
                                         <Button Classes="icon" ToolTip.Tip="{l:T 'Update the value or edit'}"
-                                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).EditAssetCommand}"
+                                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Assets.EditAssetCommand}"
                                                 CommandParameter="{Binding Asset}">
                                             <PathIcon Data="{StaticResource IconEdit}" />
                                         </Button>
                                         <Button Grid.Column="1" Classes="icon danger" ToolTip.Tip="{l:T 'Delete'}"
-                                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).DeleteAssetCommand}"
+                                                Command="{Binding $parent[UserControl].((vm:MainViewModel)DataContext).Assets.DeleteAssetCommand}"
                                                 CommandParameter="{Binding Asset}">
                                             <PathIcon Data="{StaticResource IconDelete}" />
                                         </Button>

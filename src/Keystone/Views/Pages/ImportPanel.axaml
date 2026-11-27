@@ -1,0 +1,123 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.ImportPanel"
+             x:DataType="vm:MainViewModel">
+    <!-- Entries read from a document or statement, to check before adding. -->
+    <DockPanel>
+        <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="28,24,20,8">
+            <StackPanel Spacing="2">
+                <TextBlock Text="{l:T 'Import document'}" FontSize="20" FontWeight="Bold" IsVisible="{Binding !IsBankImport}" />
+                <TextBlock Text="{l:T 'Import bank statement'}" FontSize="20" FontWeight="Bold" IsVisible="{Binding IsBankImport}" />
+                <TextBlock Classes="muted" FontSize="13" Text="{Binding ImportFileName}"
+                           TextTrimming="CharacterEllipsis" />
+            </StackPanel>
+            <Button Grid.Column="1" Classes="icon" Command="{Binding ClosePanelCommand}" ToolTip.Tip="{l:T 'Close (Esc)'}"
+                    VerticalAlignment="Top">
+                <PathIcon Data="{StaticResource IconClose}" />
+            </Button>
+        </Grid>
+
+        <Border DockPanel.Dock="Bottom" BorderBrush="{DynamicResource Hairline}" BorderThickness="0,1,0,0"
+                Padding="28,16">
+            <Grid ColumnDefinitions="Auto,*,Auto" ColumnSpacing="10">
+                <StackPanel Orientation="Horizontal" Spacing="8" VerticalAlignment="Center"
+                            IsVisible="{Binding HasImportItems}">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Person'}" VerticalAlignment="Center" />
+                    <ComboBox ItemsSource="{Binding PersonOptions}" SelectedItem="{Binding ImportPerson}" MinWidth="130" />
+                </StackPanel>
+                <Button Grid.Column="1" Classes="primary" Content="{Binding AddImportedText}"
+                        HorizontalAlignment="Stretch" IsVisible="{Binding HasImportItems}"
+                        IsEnabled="{Binding CanAddImported}" Command="{Binding AddImportedCommand}" />
+                <Button Grid.Column="2" Classes="secondary" Content="{l:T 'Cancel'}"
+                        Command="{Binding ClosePanelCommand}" />
+            </Grid>
+        </Border>
+
+        <ScrollViewer>
+            <StackPanel Spacing="12" Margin="28,12,28,20">
+                <StackPanel Spacing="10" IsVisible="{Binding IsImporting}" Margin="0,24">
+                    <ProgressBar Classes="thin" IsIndeterminate="True" />
+                    <TextBlock Classes="secondary" Text="{Binding ImportStatus}" TextWrapping="Wrap"
+                               HorizontalAlignment="Center" TextAlignment="Center" />
+                </StackPanel>
+
+                <TextBlock Classes="error" Text="{Binding ImportError}" IsVisible="{Binding HasImportError}"
+                           TextWrapping="Wrap" />
+                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10" IsVisible="{Binding IsBankImport}">
+                    <TextBlock Classes="fieldLabel" Text="{l:T 'Account'}" VerticalAlignment="Center" />
+                    <ComboBox Grid.Column="1" ItemsSource="{Binding AccountOptions}" SelectedItem="{Binding ImportAccount}"
+                              HorizontalAlignment="Stretch" />
+                </Grid>
+                <CheckBox IsChecked="{Binding ImportMatchBalance}" IsVisible="{Binding HasImportBalance}">
+                    <TextBlock Text="{Binding ImportBalanceText}" TextWrapping="Wrap" />
+                </CheckBox>
+                <TextBlock Classes="muted" Text="{Binding ImportNote}" TextWrapping="Wrap" />
+                <TextBlock Classes="muted" TextWrapping="Wrap" IsVisible="{Binding HasImportItems}"
+                           Text="{l:T 'Check what was found. Untick anything you don’t want, and fix the details before adding.'}" />
+
+                <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="14,12"
+                        IsVisible="{Binding HasImportItems}">
+                    <StackPanel Spacing="8">
+                        <TextBlock Classes="fieldLabel" Text="{l:T 'Tick'}" />
+                        <WrapPanel ItemSpacing="8" LineSpacing="8">
+                            <Button Classes="secondary" Content="{l:T 'All'}" Command="{Binding SelectImportedCommand}"
+                                    CommandParameter="all" />
+                            <Button Classes="secondary" Content="{Binding ImportExpensesOnlyText}"
+                                    Command="{Binding SelectImportedCommand}" CommandParameter="expenses" />
+                            <Button Classes="secondary" Content="{Binding ImportIncomeOnlyText}"
+                                    Command="{Binding SelectImportedCommand}" CommandParameter="income" />
+                            <Button Classes="secondary" Content="{l:T 'None'}" Command="{Binding SelectImportedCommand}"
+                                    CommandParameter="none" />
+                        </WrapPanel>
+                        <TextBlock Classes="muted" FontSize="12" Text="{Binding ImportSelectionText}" TextWrapping="Wrap" />
+                    </StackPanel>
+                </Border>
+
+                <ItemsControl ItemsSource="{Binding ImportItems}">
+                    <ItemsControl.ItemsPanel>
+                        <ItemsPanelTemplate>
+                            <StackPanel Spacing="10" />
+                        </ItemsPanelTemplate>
+                    </ItemsControl.ItemsPanel>
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate x:DataType="vm:ImportItem">
+                            <Border Background="{DynamicResource SurfaceSunken}" CornerRadius="10" Padding="12">
+                                <Grid ColumnDefinitions="Auto,*" ColumnSpacing="10">
+                                    <CheckBox IsChecked="{Binding IsSelected}" VerticalAlignment="Top" Margin="0,4,0,0" />
+                                    <StackPanel Grid.Column="1" Spacing="8">
+                                        <Grid ColumnDefinitions="*,120" ColumnSpacing="8">
+                                            <TextBox Text="{Binding Description}" PlaceholderText="{l:T 'Description'}" />
+                                            <NumericUpDown Grid.Column="1" Value="{Binding Amount}" Minimum="0"
+                                                           FormatString="N2" ShowButtonSpinner="False" />
+                                        </Grid>
+                                        <Grid ColumnDefinitions="100,128,118,*" ColumnSpacing="8">
+                                            <ComboBox ItemsSource="{Binding TypeNames}"
+                                                      SelectedIndex="{Binding TypeIndex}" HorizontalAlignment="Stretch" />
+                                            <CalendarDatePicker Grid.Column="1" SelectedDate="{Binding Date}"
+                                                                HorizontalAlignment="Stretch" />
+                                            <ComboBox Grid.Column="2" ItemsSource="{x:Static vm:ImportItem.RecurrenceNames}"
+                                                      SelectedIndex="{Binding RecurrenceIndex}" HorizontalAlignment="Stretch" />
+                                            <ComboBox Grid.Column="3" ItemsSource="{Binding CategoryOptions}"
+                                                      Text="{Binding Category}" IsEditable="True" IsVisible="{Binding IsNotTransfer}"
+                                                      PlaceholderText="{l:T 'Category'}" HorizontalAlignment="Stretch" />
+                                            <ComboBox Grid.Column="3" IsVisible="{Binding IsTransfer}" HorizontalAlignment="Stretch"
+                                                      ItemsSource="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).AccountOptions}"
+                                                      SelectedItem="{Binding CounterAccount}" ToolTip.Tip="{l:T 'The other account'}" />
+                                        </Grid>
+                                        <Border Classes="pill" HorizontalAlignment="Left" IsVisible="{Binding IsDuplicate}">
+                                            <TextBlock Text="{l:T 'Looks like an entry you already have'}" />
+                                        </Border>
+                                    </StackPanel>
+                                </Grid>
+                            </Border>
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+        </ScrollViewer>
+    </DockPanel>
+</UserControl>

@@ -5,13 +5,17 @@ using System.Threading;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using Keystone.Data;
 using Keystone.Localization;
 using Keystone.Services;
 
 namespace Keystone.ViewModels;
 
-/// <summary>Daily copies of the database next to the documents, and restoring one.</summary>
-public partial class MainViewModel
+/// <summary>Daily copies of the database next to the documents, and restoring one (Settings → Backup &amp; lock).</summary>
+/// <param name="documentsFolder">Where documents are kept; backups go in a folder there.</param>
+/// <param name="reload">Reloads everything after a restore.</param>
+public sealed partial class BackupViewModel(KeystoneRepository repository, Func<string> documentsFolder, Func<Task> reload)
+    : ViewModelBase
 {
     /// <summary>How often Keystone checks whether a backup is due while it is open.</summary>
     private static readonly TimeSpan BackupCheckInterval = TimeSpan.FromHours(1);
@@ -21,7 +25,7 @@ public partial class MainViewModel
     /// <summary>One backup at a time; a second request waits for the first, then makes its own copy.</summary>
     private readonly SemaphoreSlim _backupGate = new(1, 1);
 
-    public string BackupFolder => Path.Combine(DocumentsFolder, DatabaseBackup.FolderName);
+    public string BackupFolder => Path.Combine(documentsFolder(), DatabaseBackup.FolderName);
 
     public string BackupNote => Loc.F("Once a day Keystone saves a copy of all its data to {0} and keeps the last {1}.",
         BackupFolder, DatabaseBackup.Keep);
@@ -54,7 +58,7 @@ public partial class MainViewModel
                 ? Loc.F("yesterday at {0:t}", time)
                 : $"{Format.Date(DateOnly.FromDateTime(time))} {time:t}";
 
-    private void RefreshBackupStatus()
+    internal void RefreshBackupStatus()
     {
         OnPropertyChanged(nameof(BackupNote));
         var latest = DatabaseBackup.List(BackupFolder).FirstOrDefault();
@@ -64,7 +68,7 @@ public partial class MainViewModel
     }
 
     /// <summary>Backs up when the last copy is a day old, now and then every hour while Keystone is open.</summary>
-    private void StartBackups()
+    internal void StartBackups()
     {
         RefreshBackupStatus();
         if (_backupLoopStarted)
@@ -175,8 +179,7 @@ public partial class MainViewModel
             RestoreCandidate = null;
         }
 
-        CloseOtherPanels();
-        await LoadAsync();
+        await reload();
         BackupStatusText = Loc.F("Restored the backup from {0}.", FormatBackupTime(backup.CreatedAt));
     }
 }

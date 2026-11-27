@@ -29,7 +29,7 @@ public partial class MainViewModel
     [ObservableProperty]
     public partial int? SelectedMemberId { get; set; }
 
-    private Person? SelectedMember => People.FirstOrDefault(p => p.Id == SelectedMemberId);
+    internal Person? SelectedMember => People.FirstOrDefault(p => p.Id == SelectedMemberId);
 
     [ObservableProperty]
     [NotifyPropertyChangedFor(nameof(HasMembers))]
@@ -86,17 +86,17 @@ public partial class MainViewModel
 
     private async Task LoadHouseholdAsync()
     {
-        _medicines.Clear();
-        _medicines.AddRange(await repository.GetAllAsync<Medicine>());
-        _employments.Clear();
-        _employments.AddRange(await repository.GetAllAsync<Employment>());
-        _sickLeaves.Clear();
-        _sickLeaves.AddRange(await repository.GetAllAsync<SickLeave>());
+        Medicines.All.Clear();
+        Medicines.All.AddRange(await repository.GetAllAsync<Medicine>());
+        Work.Jobs.Clear();
+        Work.Jobs.AddRange(await repository.GetAllAsync<Employment>());
+        Work.SickLeaves.Clear();
+        Work.SickLeaves.AddRange(await repository.GetAllAsync<SickLeave>());
         RefreshHousehold();
     }
 
     /// <summary>Rebuilds the Household page for the selected member (the first one if none is chosen).</summary>
-    private void RefreshHousehold()
+    internal void RefreshHousehold()
     {
         if (SelectedMember is null)
             SelectedMemberId = People.FirstOrDefault()?.Id;
@@ -125,8 +125,8 @@ public partial class MainViewModel
                 string.Join(" · ", new[] { person.EmergencyName, person.EmergencyPhone }.Where(s => s != "")), CanCopy: person.EmergencyPhone != ""),
         ];
 
-        RefreshMedicineRows();
-        RefreshWorkRows();
+        Medicines.RefreshMedicineRows();
+        Work.RefreshWorkRows();
     }
 
     private string MemberSummaryText(Person person)
@@ -149,8 +149,8 @@ public partial class MainViewModel
 
     /// <summary>Something to act on for this member: medicine running out, a prescription ending, or off sick.</summary>
     private bool MemberNeedsAttention(int personId) =>
-        _medicines.Any(m => m.PersonId == personId && MedicineAlert(m) is not null) ||
-        _sickLeaves.Any(s => s.PersonId == personId && s.IsOngoing(Today));
+        Medicines.All.Any(m => m.PersonId == personId && Medicines.MedicineAlert(m) is not null) ||
+        Work.SickLeaves.Any(s => s.PersonId == personId && s.IsOngoing(Today));
 
     /// <summary>The member's profile as text, to read out to a doctor or hand to a babysitter.</summary>
     internal string HealthSummaryText(Person person)
@@ -166,7 +166,7 @@ public partial class MainViewModel
         Add(Loc.T("Allergies"), person.Allergies);
         Add(Loc.T("Conditions"), person.Conditions);
         Add(Loc.T("Blood type"), person.BloodType);
-        var medicines = _medicines.Where(m => m.PersonId == person.Id && m.IsTaken(Today)).OrderBy(m => m.Name).ToList();
+        var medicines = Medicines.All.Where(m => m.PersonId == person.Id && m.IsTaken(Today)).OrderBy(m => m.Name).ToList();
         if (medicines.Count > 0)
         {
             lines.Add(Loc.T("Medicines") + ":");
@@ -362,28 +362,28 @@ public partial class MainViewModel
     private void PeopleChanged()
     {
         RefreshPersonOptions();
-        RefreshBirthYearRows();
+        Planning.RefreshBirthYearRows();
         RefreshEntryRows();
         RefreshDocumentRows();
-        RefreshTaskRows();
-        RefreshRetirement();
+        Tasks.RefreshTaskRows();
+        Retirement.RefreshRetirement();
         RefreshInsurance();
         RefreshTaxes();
-        RefreshDeadlines();
-        RefreshPlanning();
-        RefreshAssets();
+        Deadlines.RefreshDeadlines();
+        Planning.RefreshPlanning();
+        Assets.RefreshAssets();
         RefreshHousehold();
         RefreshDashboard();
         ScheduleReminders();
     }
 
-    private void CloseHouseholdPanels()
+    internal void CloseHouseholdPanels()
     {
         IsPersonPanelOpen = false;
         EditingPerson = null;
-        CloseMedicinePanel();
-        CloseEmploymentPanel();
-        CloseSickLeavePanel();
+        Medicines.CloseMedicinePanel();
+        Work.CloseEmploymentPanel();
+        Work.CloseSickLeavePanel();
     }
 }
 

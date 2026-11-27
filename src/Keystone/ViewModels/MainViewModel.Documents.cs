@@ -16,7 +16,24 @@ namespace Keystone.ViewModels;
 /// <summary>The Documents page: bills, letters and notices filed per household member.</summary>
 public partial class MainViewModel
 {
-    private DocumentStore _documentStore = new(DocumentStore.DefaultRootFolder());
+    /// <summary>Documents to link to a contract, policy or warranty: the kinds that fit, newest first.</summary>
+    internal IReadOnlyList<DocumentOption> DocumentOptionsFor(int? selectedId, params DocumentKind[] kinds) =>
+    [
+        new DocumentOption(null, ""),
+        .. Documents
+            .Where(d => kinds.Contains(d.Kind) || d.Id == selectedId)
+            .OrderByDescending(d => d.Date)
+            .Select(DocumentOptionOf),
+    ];
+
+    internal DocumentOption DocumentOptionOf(HouseholdDocument document) => new(document,
+        document.Sender == "" ? document.Title : $"{document.Sender}: {document.Title}",
+        document.PersonId is null ? Loc.T(PersonOption.SharedName) : PersonName(document.PersonId), Format.Date(document.Date));
+
+    [RelayCommand]
+    private void OpenLinkedDocument(HouseholdDocument document) => OpenDocument(document);
+
+    internal DocumentStore _documentStore = new(DocumentStore.DefaultRootFolder());
     private CancellationTokenSource? _detailsCancellation;
 
     public ObservableCollection<HouseholdDocument> Documents { get; } = [];
@@ -102,7 +119,7 @@ public partial class MainViewModel
         CurrentPage = AppPage.Documents;
     }
 
-    private void RefreshDocumentRows()
+    internal void RefreshDocumentRows()
     {
         RefreshOwnPageLists();
         var names = People.ToDictionary(p => p.Id, p => p.Name);
@@ -208,7 +225,7 @@ public partial class MainViewModel
         OnPropertyChanged(nameof(DocumentsFolderNote));
         OnPropertyChanged(nameof(DropDetailText));
         if (!_isLoading)
-            RefreshBackupStatus();
+            Backup.RefreshBackupStatus();
     }
 
     /// <summary>
@@ -602,7 +619,7 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void OpenDocument(HouseholdDocument document) => RunFileAction(() => _documentStore.Open(document));
+    internal void OpenDocument(HouseholdDocument document) => RunFileAction(() => _documentStore.Open(document));
 
     [RelayCommand]
     private void RevealDocument(HouseholdDocument document) => RunFileAction(() => _documentStore.RevealInFinder(document));

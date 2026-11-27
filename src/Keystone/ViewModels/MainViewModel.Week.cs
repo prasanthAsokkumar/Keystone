@@ -75,14 +75,14 @@ public partial class MainViewModel
                 items.Add((on, order, new WeekItem(kind, text)));
         }
 
-        foreach (var a in _appointments.Where(a => !a.HasPassed(now)))
+        foreach (var a in Appointments.All.Where(a => !a.HasPassed(now)))
         {
             var day = DateOnly.FromDateTime(a.Start);
             if (day >= today)
                 Add(day, a.IsAllDay ? 0 : 1, AttentionKind.Appointment,
                     a.IsAllDay ? a.Title : $"{a.Start.ToString("HH:mm", CultureInfo.CurrentCulture)} {a.Title}");
         }
-        foreach (var t in _tasks.Where(t => !t.IsDone && t.DueDate is not null))
+        foreach (var t in Tasks.All.Where(t => !t.IsDone && t.DueDate is not null))
             Add(t.DueDate!.Value, 2, AttentionKind.Task, t.Title);
         foreach (var d in Documents.Where(d => d.IsOpenBill && d.NextDueDate is not null))
             Add(d.NextDueDate!.Value, 3, AttentionKind.Bill, d.Sender == "" ? d.Title : d.Sender);
@@ -93,12 +93,12 @@ public partial class MainViewModel
         foreach (var p in _policies.Where(p => !p.HasEnded(today)))
             if (p.NextDeadline(today) is { } d)
                 Add(d.CancelBy, 5, AttentionKind.Deadline, Loc.F("Cancel {0}", p.Insurer));
-        foreach (var c in _contracts.Where(c => !c.HasEnded(today)))
+        foreach (var c in Deadlines.Contracts.Where(c => !c.HasEnded(today)))
             if (c.NextDeadline(today) is { } d)
                 Add(d.CancelBy, 5, AttentionKind.Deadline, Loc.F("Cancel {0}", c.Provider));
-        foreach (var date in _dates.Where(d => !d.HasPassed(today)))
+        foreach (var date in Deadlines.Dates.Where(d => !d.HasPassed(today)))
             Add(date.NextDate(today), 5, AttentionKind.Date, date.Title);
-        foreach (var m in _medicines.Where(m => m.IsTaken(today) && m.RunsOutOn is not null && m.RunsOutOn >= today))
+        foreach (var m in Medicines.All.Where(m => m.IsTaken(today) && m.RunsOutOn is not null && m.RunsOutOn >= today))
             Add(m.RunsOutOn!.Value, 6, AttentionKind.Medicine, Loc.F("{0} runs out", m.Name));
 
         WeekDays = Enumerable.Range(0, 7).Select(i => today.AddDays(i)).Select(day =>

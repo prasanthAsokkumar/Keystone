@@ -257,7 +257,7 @@ public sealed class DuplicatesAndFollowUpTests : IDisposable
         vm.DocumentAddFollowUp = false;
         await vm.SaveDocumentCommand.ExecuteAsync(null);
         Assert.Equal(AppPage.Documents, vm.CurrentPage);
-        Assert.False(vm.IsContractPanelOpen);
+        Assert.False(vm.Deadlines.IsContractPanelOpen);
     }
 
     [Fact]

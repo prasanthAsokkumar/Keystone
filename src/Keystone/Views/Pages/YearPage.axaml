@@ -1,0 +1,93 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.YearPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Month-by-month income and spending of a financial year. -->
+    <Grid RowDefinitions="Auto,*" RowSpacing="16">
+        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
+            <Border Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Income'}" />
+                    <TextBlock Classes="value positive" Text="{Binding YearIncomeText}" />
+                    <TextBlock Classes="muted" Text="{Binding Report.RangeText}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Expenses'}" />
+                    <TextBlock Classes="value negative" Text="{Binding YearExpensesText}" />
+                    <TextBlock Classes="muted" Text="{Binding YearPlannedText}" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Net for the year'}" />
+                    <TextBlock Classes="value" Text="{Binding YearNetText}" />
+                    <TextBlock Classes="muted" Text="{l:T 'Income minus expenses'}" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="2*,*" ColumnSpacing="16">
+            <Border Classes="card">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,Auto" Margin="0,0,0,12">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Month by month'}" />
+                        <StackPanel Grid.Column="1" Orientation="Horizontal" Spacing="16">
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Ellipse Width="8" Height="8" Fill="#10B981" />
+                                <TextBlock Classes="muted" Text="{l:T 'Income'}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Ellipse Width="8" Height="8" Fill="#F97066" />
+                                <TextBlock Classes="muted" Text="{l:T 'Expenses'}" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="6" VerticalAlignment="Center">
+                                <Ellipse Width="8" Height="8" Fill="#F97066" Opacity="0.35" />
+                                <TextBlock Classes="muted" Text="{l:T 'Planned'}" />
+                            </StackPanel>
+                        </StackPanel>
+                    </Grid>
+                    <controls:MonthlyBarChart Months="{Binding Report.Months}"
+                                              Foreground="{DynamicResource TextMuted}" />
+                </DockPanel>
+            </Border>
+
+            <Border Grid.Column="1" Classes="card">
+                <DockPanel>
+                    <TextBlock DockPanel.Dock="Top" Classes="sectionTitle" Text="{l:T 'Where the money goes'}"
+                               Margin="0,0,0,14" />
+                    <TextBlock DockPanel.Dock="Top" Classes="muted" Text="{l:T 'No expenses this year'}"
+                               IsVisible="{Binding !HasCategoryRows}" />
+                    <ScrollViewer>
+                        <ItemsControl ItemsSource="{Binding CategoryRows}">
+                            <ItemsControl.ItemsPanel>
+                                <ItemsPanelTemplate>
+                                    <StackPanel Spacing="14" />
+                                </ItemsPanelTemplate>
+                            </ItemsControl.ItemsPanel>
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate x:DataType="vm:CategoryRow">
+                                    <StackPanel Spacing="6" Margin="0,0,8,0">
+                                        <Grid ColumnDefinitions="*,Auto,Auto" ColumnSpacing="8">
+                                            <TextBlock Text="{Binding Category}" FontWeight="Medium"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <TextBlock Grid.Column="1" Text="{Binding AmountText}" FontWeight="SemiBold" />
+                                            <TextBlock Grid.Column="2" Classes="muted" Text="{Binding ShareText}"
+                                                       MinWidth="34" TextAlignment="Right" VerticalAlignment="Center" />
+                                        </Grid>
+                                        <ProgressBar Classes="thin" Value="{Binding Percent}" Maximum="100" />
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                    </ScrollViewer>
+                </DockPanel>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>

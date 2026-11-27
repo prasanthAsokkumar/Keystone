@@ -1,0 +1,176 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:l="using:Keystone.Localization"
+             xmlns:vm="using:Keystone.ViewModels"
+             xmlns:models="using:Keystone.Models"
+             xmlns:controls="using:Keystone.Controls"
+             x:Class="Keystone.Views.Pages.RetirementPage"
+             x:DataType="vm:MainViewModel">
+    <!-- Retirement accounts per person and their yearly statements. -->
+    <Grid RowDefinitions="Auto,*" RowSpacing="16">
+        <Grid ColumnDefinitions="*,*,*" ColumnSpacing="16">
+            <Border Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Retirement savings'}" />
+                    <TextBlock Classes="value" Text="{Binding Retirement.RetirementSavingsText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Retirement.RetirementSavingsDetail}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="1" Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Expected pension at 65'}" />
+                    <TextBlock Classes="value" Text="{Binding Retirement.ExpectedPensionText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Retirement.ExpectedPensionDetail}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+            <Border Grid.Column="2" Classes="card">
+                <StackPanel Spacing="4">
+                    <TextBlock Classes="label" Text="{l:T 'Pension fund buy-in possible'}" />
+                    <TextBlock Classes="value" Text="{Binding Retirement.BuyInText}" />
+                    <TextBlock Classes="muted" FontSize="13" Text="{Binding Retirement.BuyInDetail}" TextWrapping="Wrap" />
+                </StackPanel>
+            </Border>
+        </Grid>
+
+        <Grid Grid.Row="1" ColumnDefinitions="*,350" ColumnSpacing="16" Margin="0,0,0,0">
+            <Border Classes="card" Padding="8">
+                <DockPanel>
+                    <Grid DockPanel.Dock="Top" ColumnDefinitions="*,160" Margin="16,12,12,8">
+                        <TextBlock Classes="sectionTitle" Text="{l:T 'Accounts'}" VerticalAlignment="Center" />
+                        <ComboBox Grid.Column="1" ItemsSource="{Binding PersonFilters}"
+                                  SelectedItem="{Binding Retirement.RetirementPersonFilter}" />
+                    </Grid>
+                    <Border DockPanel.Dock="Bottom" Padding="16,4" IsVisible="{Binding HasError}">
+                        <TextBlock Classes="error" Text="{Binding ErrorMessage}" />
+                    </Border>
+                    <Panel>
+                        <TextBlock Classes="secondary" Text="{Binding Retirement.RetirementEmptyText}"
+                                   IsVisible="{Binding !Retirement.HasPensionAccounts}" HorizontalAlignment="Center"
+                                   VerticalAlignment="Center" TextAlignment="Center" TextWrapping="Wrap" MaxWidth="380" />
+                        <StackPanel Orientation="Horizontal" Spacing="18" Margin="28,4,28,6" IsVisible="{Binding Retirement.HasPensionAccounts}" VerticalAlignment="Top">
+                            <TextBlock Classes="columnHeader" Text="{l:T 'Sort by'}" Opacity="0.7" VerticalAlignment="Center" />
+                            <controls:SortHeader Label="{l:T 'Name'}" List="pensionAccounts" Key="name" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Label="{l:T 'Person'}" List="pensionAccounts" Key="person" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Label="{l:T 'Pillar'}" List="pensionAccounts" Key="pillar" Sorts="{Binding ListSorts}" />
+                            <controls:SortHeader Label="{l:T 'Value'}" List="pensionAccounts" Key="balance" Sorts="{Binding ListSorts}" />
+                        </StackPanel>
+                        <ListBox Classes="table" ItemsSource="{Binding Retirement.PensionAccountRows}"
+                                 IsVisible="{Binding Retirement.HasPensionAccounts}" Margin="4,30,4,0">
+                            <ListBox.ItemTemplate>
+                                <DataTemplate x:DataType="vm:PensionAccountRow">
+                                    <Grid ColumnDefinitions="*,Auto,106" ColumnSpacing="16" Background="Transparent"
+                                          DoubleTapped="PensionAccountRow_DoubleTapped">
+                                        <StackPanel Spacing="5" VerticalAlignment="Center">
+                                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                                       TextTrimming="CharacterEllipsis" />
+                                            <StackPanel Orientation="Horizontal" Spacing="6">
+                                                <Border Classes="pill">
+                                                    <TextBlock Text="{Binding PillarText}" />
+                                                </Border>
+                                                <Border Classes="pill" Classes.brand="{Binding !IsShared}">
+                                                    <TextBlock Text="{Binding PersonName}" />
+                                                </Border>
+                                            </StackPanel>
+                                            <TextBlock Classes="muted" FontSize="13" Text="{Binding DetailText}"
+                                                       TextWrapping="Wrap" IsVisible="{Binding HasDetail}" />
+                                        </StackPanel>
+                                        <StackPanel Grid.Column="1" VerticalAlignment="Center" MinWidth="150">
+                                            <TextBlock Text="{Binding ValueText}" FontSize="17" FontWeight="SemiBold"
+                                                       TextAlignment="Right" Classes.muted="{Binding !HasStatement}" />
+                                            <TextBlock Classes="muted" FontSize="12" Text="{Binding AsOfText}"
+                                                       TextAlignment="Right" />
+                                            <TextBlock FontSize="12" Text="{Binding ChangeText}" TextAlignment="Right"
+                                                       IsVisible="{Binding HasChange}" Classes="positive"
+                                                       Classes.negative="{Binding IsChangeNegative}" />
+                                        </StackPanel>
+                                        <Grid Grid.Column="2" ColumnDefinitions="34,34,34" HorizontalAlignment="Right"
+                                              VerticalAlignment="Center">
+                                            <Button Classes="icon" ToolTip.Tip="{l:T 'Add statement'}"
+                                                    Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Retirement.AddStatementToCommand}"
+                                                    CommandParameter="{Binding Account}">
+                                                <PathIcon Data="{StaticResource IconPlus}" />
+                                            </Button>
+                                            <Button Grid.Column="1" Classes="icon" ToolTip.Tip="{l:T 'Edit and history'}"
+                                                    Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Retirement.EditPensionAccountCommand}"
+                                                    CommandParameter="{Binding Account}">
+                                                <PathIcon Data="{StaticResource IconEdit}" />
+                                            </Button>
+                                            <Button Grid.Column="2" Classes="icon danger"
+                                                    ToolTip.Tip="{l:T 'Delete account (letters stay in Documents)'}"
+                                                    Command="{Binding $parent[ListBox].((vm:MainViewModel)DataContext).Retirement.DeletePensionAccountCommand}"
+                                                    CommandParameter="{Binding Account}">
+                                                <PathIcon Data="{StaticResource IconDelete}" />
+                                            </Button>
+                                        </Grid>
+                                    </Grid>
+                                </DataTemplate>
+                            </ListBox.ItemTemplate>
+                        </ListBox>
+                    </Panel>
+                </DockPanel>
+            </Border>
+
+            <ScrollViewer Grid.Column="1" Margin="0,0,-14,0">
+                <StackPanel Spacing="16" Margin="0,0,14,0">
+                    <Border Classes="card">
+                        <StackPanel Spacing="12">
+                            <TextBlock Classes="sectionTitle" Text="{Binding Retirement.Pillar3aTitle}" />
+                            <ItemsControl ItemsSource="{Binding Retirement.Pillar3aRows}" IsVisible="{Binding Retirement.HasPillar3aRows}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="14" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="vm:Pillar3aRow">
+                                        <StackPanel Spacing="5">
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Text="{Binding PersonName}" FontWeight="SemiBold" />
+                                                <TextBlock Grid.Column="1" Text="{Binding PaidText}" FontSize="13" />
+                                            </Grid>
+                                            <ProgressBar Classes="thin" Minimum="0" Maximum="100" Value="{Binding Percent}"
+                                                         ToolTip.Tip="{Binding LimitNote}" />
+                                            <Grid ColumnDefinitions="*,Auto">
+                                                <TextBlock Classes="muted" FontSize="12" Text="{Binding StatusText}"
+                                                           Classes.negative="{Binding IsOver}" TextWrapping="Wrap" />
+                                                <Button Grid.Column="1" Classes="link" FontSize="12" Padding="0"
+                                                        Content="{l:T 'Add payment'}" IsVisible="{Binding !IsFull}"
+                                                        Command="{Binding $parent[ItemsControl].((vm:MainViewModel)DataContext).Retirement.AddPillar3aPaymentCommand}"
+                                                        CommandParameter="{Binding}" />
+                                            </Grid>
+                                        </StackPanel>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Classes="muted" FontSize="12" Text="{Binding Retirement.Pillar3aHint}" TextWrapping="Wrap" />
+                        </StackPanel>
+                    </Border>
+
+                    <Border Classes="card">
+                        <StackPanel Spacing="10">
+                            <TextBlock Classes="sectionTitle" Text="{l:T 'How it works in Switzerland'}" />
+                            <ItemsControl ItemsSource="{Binding Retirement.RetirementRules}">
+                                <ItemsControl.ItemsPanel>
+                                    <ItemsPanelTemplate>
+                                        <StackPanel Spacing="8" />
+                                    </ItemsPanelTemplate>
+                                </ItemsControl.ItemsPanel>
+                                <ItemsControl.ItemTemplate>
+                                    <DataTemplate x:DataType="x:String">
+                                        <Grid ColumnDefinitions="14,*">
+                                            <TextBlock Classes="muted" Text="•" FontSize="13" />
+                                            <TextBlock Grid.Column="1" Classes="secondary" FontSize="13" Text="{Binding}"
+                                                       TextWrapping="Wrap" />
+                                        </Grid>
+                                    </DataTemplate>
+                                </ItemsControl.ItemTemplate>
+                            </ItemsControl>
+                            <TextBlock Classes="muted" FontSize="12" TextWrapping="Wrap"
+                                       Text="{l:T 'A guide, not tax advice. Your letters and your canton’s rules count.'}" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </ScrollViewer>
+        </Grid>
+    </Grid>
+</UserControl>

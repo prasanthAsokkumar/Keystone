@@ -184,16 +184,16 @@ public partial class MainViewModel
                 await SaveOrderAsync<InsuranceRow, InsurancePolicy>(InsuranceRows, item, target, r => r.Policy, p => p.Id, (p, o) => p.SortOrder = o);
                 break;
             case "contracts":
-                await SaveOrderAsync<ContractRow, Contract>(ContractRows, item, target, r => r.Contract, c => c.Id, (c, o) => c.SortOrder = o);
+                await SaveOrderAsync<ContractRow, Contract>(Deadlines.ContractRows, item, target, r => r.Contract, c => c.Id, (c, o) => c.SortOrder = o);
                 break;
             case "tasks":
-                await SaveOrderAsync<TaskRow, TaskItem>(TaskRows, item, target, r => r.Task, t => t.Id, (t, o) => t.SortOrder = o);
+                await SaveOrderAsync<TaskRow, TaskItem>(Tasks.TaskRows, item, target, r => r.Task, t => t.Id, (t, o) => t.SortOrder = o);
                 break;
             case "goals":
-                await SaveOrderAsync<GoalRow, SavingsGoal>(GoalRows, item, target, r => r.Goal, g => g.Id, (g, o) => g.SortOrder = o);
+                await SaveOrderAsync<GoalRow, SavingsGoal>(Planning.GoalRows, item, target, r => r.Goal, g => g.Id, (g, o) => g.SortOrder = o);
                 break;
             case "assets":
-                await SaveOrderAsync<AssetRow, Asset>(AssetRows, item, target, r => r.Asset, a => a.Id, (a, o) => a.SortOrder = o);
+                await SaveOrderAsync<AssetRow, Asset>(Assets.AssetRows, item, target, r => r.Asset, a => a.Id, (a, o) => a.SortOrder = o);
                 break;
             case "debts":
                 await SaveOrderAsync<DebtItemViewModel, Debt>(Debts.ToList(), item, target, d => d.Debt, d => d.Id, (d, o) => d.SortOrder = o);

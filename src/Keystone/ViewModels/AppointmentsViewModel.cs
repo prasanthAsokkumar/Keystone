@@ -13,7 +13,8 @@ using Keystone.Services.Mac;
 namespace Keystone.ViewModels;
 
 /// <summary>The Appointments page, and keeping appointments in step with the Mac's Calendar app.</summary>
-public partial class MainViewModel
+/// <remarks>Its own view model; shared things (people, notices, reminders, the lock) come from the main one.</remarks>
+public sealed partial class AppointmentsViewModel(MainViewModel main) : ViewModelBase
 {
     /// <summary>Appointments within this many days show on the Overview.</summary>
     private const int AppointmentSoonDays = 7;
@@ -26,11 +27,12 @@ public partial class MainViewModel
     /// <summary>The usual reminder for a new appointment: an hour before.</summary>
     private const int DefaultAppointmentReminderIndex = 4;
 
-    private readonly List<Appointment> _appointments = [];
+    /// <summary>Every appointment, past ones too.</summary>
+    internal List<Appointment> All { get; } = [];
 
-    public IReadOnlyList<string> AppointmentStatusFilters => Translate("Upcoming", "Past", "All appointments");
+    public IReadOnlyList<string> AppointmentStatusFilters => MainViewModel.Translate("Upcoming", "Past", "All appointments");
 
-    public IReadOnlyList<string> AppointmentReminderNames => Translate(
+    public IReadOnlyList<string> AppointmentReminderNames => MainViewModel.Translate(
         "No reminder", "When it starts", "15 minutes before", "30 minutes before", "1 hour before", "2 hours before",
         "1 day before", "2 days before");
 
@@ -49,7 +51,7 @@ public partial class MainViewModel
 
     public bool HasAppointmentRows => AppointmentRows.Count > 0;
 
-    public string AppointmentsEmptyText => _appointments.Count == 0
+    public string AppointmentsEmptyText => All.Count == 0
         ? Loc.T("No appointments yet. Add one, or turn on calendar sync in Settings to bring in the ones from your calendar.")
         : AppointmentStatusFilterIndex == 0 && AppointmentSearch == "" && AppointmentPersonFilter is { IsEveryone: true }
             ? Loc.T("Nothing coming up.")
@@ -83,24 +85,24 @@ public partial class MainViewModel
         AppointmentSearch = "";
         AppointmentPersonFilter = PersonOption.Everyone;
         AppointmentStatusFilterIndex = 0;
-        CurrentPage = AppPage.Appointments;
+        main.CurrentPage = AppPage.Appointments;
     }
 
-    private async Task LoadAppointmentsAsync(AppSettings settings)
+    internal async Task LoadAppointmentsAsync(AppSettings settings)
     {
-        _appointments.Clear();
-        _appointments.AddRange(await repository.GetAllAsync<Appointment>());
+        All.Clear();
+        All.AddRange(await main.repository.GetAllAsync<Appointment>());
         _calendarId = settings.CalendarId;
         IsCalendarSyncEnabled = settings.CalendarSyncEnabled;
         RefreshAppointmentRows();
     }
 
-    private void RefreshAppointmentRows()
+    internal void RefreshAppointmentRows()
     {
         var now = DateTime.Now;
         var search = AppointmentSearch.Trim();
         var person = AppointmentPersonFilter ?? PersonOption.Everyone;
-        var shown = _appointments
+        var shown = All
             .Where(a => person.IsEveryone || a.PersonId == person.Id)
             .Where(a => AppointmentStatusFilterIndex switch
             {
@@ -116,16 +118,16 @@ public partial class MainViewModel
         shown = AppointmentStatusFilterIndex == 1
             ? shown.OrderByDescending(a => a.Start)
             : shown.OrderBy(a => a.HasPassed(now)).ThenBy(a => a.HasPassed(now) ? -a.Start.Ticks : a.Start.Ticks);
-        AppointmentRows = Sorted("appointments", shown.Select(a => new AppointmentRow(a, PersonName(a.PersonId), now)), null,
+        AppointmentRows = main.Sorted("appointments", shown.Select(a => new AppointmentRow(a, main.PersonName(a.PersonId), now)), null,
             new SortKey<AppointmentRow>("title", r => r.Appointment.Title),
             new SortKey<AppointmentRow>("person", r => r.PersonName),
             new SortKey<AppointmentRow>("date", r => r.Appointment.Start));
 
-        var upcoming = _appointments.Where(a => !a.HasPassed(now)).OrderBy(a => a.Start).ToList();
+        var upcoming = All.Where(a => !a.HasPassed(now)).OrderBy(a => a.Start).ToList();
         AppointmentCountText = Loc.F("{0} coming up", upcoming.Count);
         if (upcoming.FirstOrDefault() is { } next)
         {
-            var row = new AppointmentRow(next, PersonName(next.PersonId), now);
+            var row = new AppointmentRow(next, main.PersonName(next.PersonId), now);
             NextAppointmentText = next.Title;
             NextAppointmentDetail = string.Join(" · ", new[] { row.WhenText, row.TimeText, next.Location }.Where(t => t != ""));
         }
@@ -136,19 +138,19 @@ public partial class MainViewModel
         }
 
         var soon = upcoming.Count(a => a.Start < now.Date.AddDays(AppointmentSoonDays + 1));
-        var today = upcoming.Count(a => a.IsOn(Today));
+        var today = upcoming.Count(a => a.IsOn(MainViewModel.Today));
         AppointmentsSoonText = soon == 0
             ? ""
             : today > 0
                 ? Loc.Plural(today, "{0} appointment today", "{0} appointments today")
                 : Loc.Plural(soon, "{0} appointment this week", "{0} appointments this week");
 
-        ScheduleReminders();
+        main.ScheduleReminders();
     }
 
     /// <summary>Reminders for appointments that ask for one.</summary>
-    private IEnumerable<AppointmentReminder> AppointmentReminders(int allDayHour) =>
-        _appointments
+    internal IEnumerable<AppointmentReminder> AppointmentReminders(int allDayHour) =>
+        All
             .Where(a => a.RemindAt(allDayHour) is not null)
             .Select(a =>
             {
@@ -160,7 +162,6 @@ public partial class MainViewModel
     // ── Appointment panel ───────────────────────────────────────────────────
 
     [ObservableProperty]
-    [NotifyPropertyChangedFor(nameof(IsPanelOpen))]
     public partial bool IsAppointmentPanelOpen { get; set; }
 
     [ObservableProperty]
@@ -227,9 +228,9 @@ public partial class MainViewModel
     }
 
     [RelayCommand]
-    private void NewAppointment()
+    internal void NewAppointment()
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingAppointment = null;
         AppointmentTitle = "";
         AppointmentPerson = AppointmentPersonFilter is { IsEveryone: false } filter ? filter : PersonOption.Shared;
@@ -248,10 +249,10 @@ public partial class MainViewModel
     [RelayCommand]
     private void EditAppointment(Appointment appointment)
     {
-        CloseOtherPanels();
+        main.CloseOtherPanels();
         EditingAppointment = appointment;
         AppointmentTitle = appointment.Title;
-        AppointmentPerson = PersonOptions.FirstOrDefault(o => o.Id == appointment.PersonId) ?? PersonOption.Shared;
+        AppointmentPerson = main.PersonOptions.FirstOrDefault(o => o.Id == appointment.PersonId) ?? PersonOption.Shared;
         AppointmentDate = appointment.Start.Date;
         AppointmentAllDay = appointment.IsAllDay;
         AppointmentStartTime = null;
@@ -320,7 +321,7 @@ public partial class MainViewModel
         appointment.UpdatedAt = DateTime.Now;
         try
         {
-            await repository.SaveAsync(appointment, existing is null);
+            await main.repository.SaveAsync(appointment, existing is null);
         }
         catch (Exception ex)
         {
@@ -331,7 +332,7 @@ public partial class MainViewModel
         }
 
         if (existing is null)
-            _appointments.Add(appointment);
+            All.Add(appointment);
         CloseAppointmentPanel();
         RefreshAppointmentRows();
         await SyncCalendarAsync();
@@ -343,15 +344,15 @@ public partial class MainViewModel
         await WaitForCalendarSyncAsync();
         try
         {
-            await repository.DeleteAsync<Appointment>(a => a.Id == appointment.Id);
+            await main.repository.DeleteAsync<Appointment>(a => a.Id == appointment.Id);
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not delete: {0}", ex.Message);
             return;
         }
 
-        _appointments.Remove(appointment);
+        All.Remove(appointment);
         if (EditingAppointment == appointment)
             CloseAppointmentPanel();
         RefreshAppointmentRows();
@@ -371,7 +372,7 @@ public partial class MainViewModel
         }
     }
 
-    private void CloseAppointmentPanel()
+    internal void CloseAppointmentPanel()
     {
         IsAppointmentPanelOpen = false;
         EditingAppointment = null;
@@ -457,14 +458,14 @@ public partial class MainViewModel
 
     partial void OnIsCalendarSyncEnabledChanged(bool value)
     {
-        if (_isLoading)
+        if (main._isLoading)
             return;
         _ = TurnCalendarSyncAsync(value);
     }
 
     partial void OnSelectedCalendarChanged(CalendarInfo? value)
     {
-        if (_isLoading || _applyingCalendars || value is null || value.Id == _calendarId)
+        if (main._isLoading || _applyingCalendars || value is null || value.Id == _calendarId)
             return;
         _calendarId = value.Id;
         LastCalendarSync = null;
@@ -481,7 +482,7 @@ public partial class MainViewModel
     {
         if (on && MacCalendar.Permission == CalendarPermission.NotAsked)
         {
-            using (OwnWindow()) // the macOS prompt takes focus; that isn't leaving Keystone
+            using (main.Lock.OwnWindow()) // the macOS prompt takes focus; that isn't leaving Keystone
                 await MacCalendar.RequestAccessAsync();
             MacCalendar.Reset();
         }
@@ -496,16 +497,16 @@ public partial class MainViewModel
     {
         try
         {
-            await repository.SetCalendarSyncAsync(IsCalendarSyncEnabled, _calendarId);
+            await main.repository.SetCalendarSyncAsync(IsCalendarSyncEnabled, _calendarId);
         }
         catch (Exception ex)
         {
-            ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
+            main.ErrorMessage = Loc.F("Could not save: {0}", ex.Message);
         }
     }
 
     /// <summary>Starts syncing once Keystone has loaded, and keeps checking while it is open.</summary>
-    private async Task StartCalendarSyncAsync()
+    internal async Task StartCalendarSyncAsync()
     {
         RefreshCalendarState();
         await SyncCalendarAsync();
@@ -515,13 +516,13 @@ public partial class MainViewModel
         while (true)
         {
             await Task.Delay(CalendarSyncInterval);
-            if (!IsLocked)
+            if (!main.Lock.IsLocked)
                 await SyncCalendarAsync();
         }
     }
 
     /// <summary>The permission, the calendars to choose from and the chosen one.</summary>
-    private void RefreshCalendarState()
+    internal void RefreshCalendarState()
     {
         var permission = MacCalendar.Permission;
         IsCalendarAllowed = permission == CalendarPermission.Allowed;
@@ -593,14 +594,14 @@ public partial class MainViewModel
     [RelayCommand]
     private void ShowCalendarSettings()
     {
-        CurrentPage = AppPage.Settings;
-        SettingsTab = 3;
+        main.CurrentPage = AppPage.Settings;
+        main.SettingsTab = 3;
     }
 
     /// <summary>Syncs shortly, e.g. when coming back to Keystone; many requests in a row sync once.</summary>
-    private void ScheduleCalendarSync()
+    internal void ScheduleCalendarSync()
     {
-        if (_isLoading || !IsCalendarSyncReady)
+        if (main._isLoading || !IsCalendarSyncReady)
             return;
         _calendarSyncDelay?.Cancel();
         var delay = _calendarSyncDelay = new CancellationTokenSource();
@@ -654,18 +655,18 @@ public partial class MainViewModel
                 CalendarSyncResult result;
                 // EventKit objects live in the session; nothing is awaited inside it.
                 using (var session = MacCalendar.Open())
-                    result = CalendarSync.Run(session, calendarId, _appointments.ToList(), DateTime.Now);
+                    result = CalendarSync.Run(session, calendarId, All.ToList(), DateTime.Now);
 
                 if (result.ChangedKeystone)
                 {
-                    await repository.SaveAppointmentsAsync(result.Added, result.Changed.Distinct().ToList(), result.Removed.Select(a => a.Id));
+                    await main.repository.SaveAppointmentsAsync(result.Added, result.Changed.Distinct().ToList(), result.Removed.Select(a => a.Id));
                     foreach (var removed in result.Removed)
                     {
-                        _appointments.Remove(removed);
+                        All.Remove(removed);
                         if (EditingAppointment == removed)
                             CloseAppointmentPanel();
                     }
-                    _appointments.AddRange(result.Added);
+                    All.AddRange(result.Added);
                     RefreshAppointmentRows();
                 }
 
